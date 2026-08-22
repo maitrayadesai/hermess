@@ -102,7 +102,11 @@ HERMESS is a simulation-only fork of `PowerDynamicEstimator` (https://doi.org/10
 
 ## Citing
 
-If you use HERMESS in academic work, please cite the software release in the ETH Research Collection (DOI [10.3929/ethz-c-000805609](https://doi.org/10.3929/ethz-c-000805609), see also [`CITATION.cff`](CITATION.cff)) and the paper describing the underlying models:
+If you use HERMESS in academic work, please cite the software release in the ETH Research Collection (see also [`CITATION.cff`](CITATION.cff)):
+
+> M. A. Desai, M. Katanic, and G. Hug, "HERMESS: Hybrid EMT/RMS Modern Electric power System Simulator," version 1.0.0, ETH Zurich Research Collection, 2026, doi: [10.3929/ethz-c-000805609](https://doi.org/10.3929/ethz-c-000805609).
+
+and the paper describing the underlying models:
 
 > M. Katanic, J. Lygeros, and G. Hug, "Recursive dynamic state estimation for power systems with an incomplete nonlinear DAE model," *IET Generation, Transmission & Distribution*, vol. 18, no. 22, pp. 3657-3668, 2024, doi: [10.1049/gtd2.13308](https://doi.org/10.1049/gtd2.13308).
 
