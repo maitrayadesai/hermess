@@ -1,0 +1,9 @@
+# This file contains all simulation disturbances for the 3-bus load-step demo.
+#
+# A small load step: at t = 1.0 s the active demand at bus 2 is increased by
+# +10 MW (q unchanged). On a base of 100 MVA this is a +0.1 p.u. step -- small
+# enough to stay well inside the linear regime, large enough to clearly excite
+# the grid-forming converter's active-power / frequency response.
+#
+# Disturbance, time = [s], type = "LOAD", bus = "name", p_delta = [MW], q_delta = [MVAr]
+Disturbance, time = 1.0, type = "LOAD", bus = "2", p_delta = 10, q_delta = 0

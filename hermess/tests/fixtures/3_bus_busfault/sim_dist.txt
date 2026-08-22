@@ -1,0 +1,22 @@
+# This file contains all simulation disturbances.
+
+
+#Disturbance, time = 1.0, type = "LOAD", bus ="2", p_delta = 30, q_delta = 0
+
+#Disturbance, time = 1.0, type = "FAULT_LINE", bus_i = "3", bus_j = "1", y = 5
+#Disturbance, time = 1.1, type = "OPEN_LINE", bus_i = "3", bus_j = "1"
+
+
+
+
+
+Disturbance, time = 1.0, type = "FAULT_BUS", bus = "2", y = 20
+Disturbance, time = 1.04, type = "CLEAR_FAULT_BUS", bus = "2"
+#Disturbance, time = 1.1, type = "OPEN_LINE", bus_i = "1", bus_j = "2"
+
+
+#Disturbance, time = 7.0, type = "FAULT_LINE", bus_i = "1", bus_j = "2", y = 30
+#Disturbance, time = 7.04, type = "OPEN_LINE", bus_i = "1", bus_j = "2"
+#Disturbance, time = 7.0, type = "FAULT_BUS", bus = "2", y = 80
+#Disturbance, time = 7.04, type = "CLEAR_FAULT_BUS", bus = "2"
+

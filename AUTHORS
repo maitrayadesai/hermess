@@ -1,0 +1,15 @@
+Authors
+=======
+
+© 2024-2026 ETH Zurich
+
+Created by:
+  - Milos Katanic <mkatanic@ethz.ch>
+      Original author of PowerDynamicEstimator (https://doi.org/10.5905/ethz-1007-842),
+      from which HERMESS is derived.
+  - Maitraya Avadhut Desai <mdesai@ethz.ch>
+      Simulation-only fork (HERMESS) and maintainer.
+
+ETH Zurich holds the rights of use to this software (Art. 36 ETH Act); the
+creators are credited above. See CONTRIBUTORS for additional contributors and
+LICENSE.txt for the license terms (GPL-3.0-or-later).

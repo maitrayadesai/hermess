@@ -1,0 +1,54 @@
+# Created: 2024-12-01
+# Last Modified: 2026-06-19
+# (c) Copyright 2024 ETH Zurich, Milos Katanic
+# https://doi.org/10.5905/ethz-1007-842
+#
+# Licensed under the GNU General Public License v3.0 or later;
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at:
+#
+#     https://www.gnu.org/licenses/gpl-3.0.en.html
+#
+# This software is distributed "AS IS", WITHOUT WARRANTY OF ANY KIND,
+# express or implied. See the License for specific language governing
+# permissions and limitations under the License.
+#
+
+# ---------------------------------------------------------------------------
+# 3-bus load-step demo system (simulation-only branch).
+#
+# A small three-bus network used to illustrate the active-power / frequency
+# response of a droop grid-forming converter (GFM) to a small load step:
+#
+#       bus 1 ----(line)---- bus 2 ----(line)---- bus 3
+#         |                    |                    |
+#       SG1 (sync. gen.)     load (ZIP)         GFMI2 (grid-forming converter)
+#         \__________________(line)__________________/
+#
+# The synchronous machine at bus 1 is the slack; the grid-forming converter at
+# bus 3 provides the fast frequency response. A small constant-impedance load
+# sits at bus 2. The matching load step is defined in sim_dist.txt.
+# ---------------------------------------------------------------------------
+
+
+# --- Synchronous machine (Sauer-Pai subtransient model) at bus 1 (slack) ---
+SynchronousSubtransientSP, idx =  "SG1", bus = "1", Sn = 300, D =  0, H = 6.50, R_s =  0.0025, x_dprim = 0.3, x_qprim = 0.55, x_d = 1.8, x_q = 1.7, T_dprim =  8.00, T_qprim =  0.4, Rd =  0.05, Tch =  0.4, Tsv =  0.2,
+	Pref =  1.0, KA = 30.00, TA =  0.2, KF =  0.0, TF =  0.35, KE =  1.0, TE =  0.314, D =  0.00, f =  0.00, x_dsec = 0.25, x_qsec = 0.25, T_dsec =  0.03, T_qsec =  0.05, Vf_ref =  1.1, x_l = 0.2
+
+# --- Droop grid-forming converter at bus 3 ---
+# Kp is the active-power / frequency droop gain (omega_c = omega_net + Kp*(Pref - Pc_tilde)).
+# This droop law is exactly the control a learned (neural-network) controller can replace/augment.
+GridForming, idx = "GFMI2", bus = "3", Sn = 100, Kp = 0.01, Kq = 0.1, Vref = 1.05001, Rf = 0.003, Lf = 0.08, Cf = 0.074, Kpv = 0.866, Kiv = 433, Kffv = 0, Kpc = 0.143, Kic = 15.0, Kffc = 0, Rv = 0, Lv = 0.2, Lt = 0.2, Rt = 0.01
+
+# --- Network branches: Line, bus_i, bus_j, r, x, g, b, trafo [p.u.] ---
+Line, bus_i = "1", bus_j = "2", r = 0.01, x = 0.08, g = 0.001, b = 0.03, trafo = 1
+Line, bus_i = "2", bus_j = "3", r = 0.002, x = 0.1, g = 0.003, b = 0.05, trafo = 1
+Line, bus_i = "3", bus_j = "1", r = 0.006, x = 0.03, g = 0.001, b = 0.075, trafo = 1
+
+# --- Load at bus 2 (constant impedance: z_share = 1.0) ---
+StaticZIP, bus = "2", z_share = 1.0
+
+# --- Bus types (used only for the initial power flow / initialization) ---
+BusInit, bus = "1",	p = 0,	v = 1.0,	type ="slack"
+BusInit, bus = "3",	p = -50,	v = 1.0,	type ="PV"
+BusInit, bus = "2",	p = 100,	q = 10,	type ="PQ"

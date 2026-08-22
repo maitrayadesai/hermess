@@ -1,0 +1,111 @@
+# Created: 2025-03-06
+# Kundur 2-Area System (Example 12.6, Power System Stability and Control)
+# Converted to 100 MVA, 230 kV system base for per-unit EMT dq simulation
+#
+# Original data: 4 generators, 900 MVA, 20 kV machine base
+# 11-bus system: Generator buses 1-4, Transmission buses 5-11
+# Step-up transformers: 20/230 kV
+# Transmission voltage: 230 kV
+#
+# Generator parameters converted from 900 MVA to 100 MVA base:
+#   Impedances: Z_100 = Z_900 * (100/900)
+#   Inertia:    H_100 = H_900 * (900/100)
+#   Time constants: unchanged (open-circuit)
+#
+# Transmission line parameters given directly on 100 MVA, 230 kV base:
+#   r = 0.0001 pu/km, xL = 0.001 pu/km, bC = 0.00175 pu/km
+#
+# Shunt capacitors at bus 7 (200 MVAr) and bus 9 (350 MVAr)
+#   modeled as susceptance on lines incident to those buses
+#   or as negative Q loads.
+#
+# Operating point: Area 1 exports 400 MW to Area 2.
+
+
+# ============================================================
+# GENERATORS (SynchronousSubtransient model)
+# ============================================================
+# All on 100 MVA base. Exciter: AVRKundur_Filter. Governor: simple steam turbine.
+# KD = 0 as specified in textbook.
+
+SynchronousSubtransient, idx = "G1", bus = "B1", Sn = 100, D = 0, H = 58.50, R_s = 0.000278, x_dprim = 0.0333, x_qprim = 0.0611, x_d = 0.2000, x_q = 0.1889, T_dprim = 8.00, T_qprim = 0.40, Rd = 0.01, Tch = 0.05, T2 = 0.50, Tsv = 1.50,
+	Pref = 1.00, avr = "AVRKundur_ODE", KA = 50.0, TA = 1, TB = 10, TR = 0.01, Tfd=0.01, TE=0.1, Efd_max = 5.0, Efd_min = 0.0, Vref = 1.00, D = 0.00, f = 0.00, x_dsec = 0.0278, x_qsec = 0.0278, T_dsec = 0.030, T_qsec = 0.050, Vf_ref = 1.03
+
+SynchronousSubtransient, idx = "G2", bus = "B2", Sn = 100, D = 0, H = 58.50, R_s = 0.000278, x_dprim = 0.0333, x_qprim = 0.0611, x_d = 0.2000, x_q = 0.1889, T_dprim = 8.00, T_qprim = 0.40, Rd = 0.01, Tch = 0.05, T2 = 0.50, Tsv = 1.50,
+	Pref = 1.00, avr = "AVRKundur_ODE", KA = 50.0, TA = 1, TB = 10, TR = 0.01, Tfd=0.01, TE=0.1, Efd_max = 5.0, Efd_min = 0.0, Vref = 1.00, D = 0.00, f = 0.00, x_dsec = 0.0278, x_qsec = 0.0278, T_dsec = 0.030, T_qsec = 0.050, Vf_ref = 1.01
+
+SynchronousSubtransient, idx = "G3", bus = "B3", Sn = 100, D = 0, H = 55.575, R_s = 0.000278, x_dprim = 0.0333, x_qprim = 0.0611, x_d = 0.2000, x_q = 0.1889, T_dprim = 8.00, T_qprim = 0.40, Rd = 0.01, Tch = 0.05, T2 = 0.50, Tsv = 1.50,
+	Pref = 1.00, avr = "AVRKundur_ODE", KA = 50.0, TA = 1, TB = 10, TR = 0.01, Tfd=0.01, TE=0.1, Efd_max = 5.0, Efd_min = 0.0, Vref = 1.00, D = 0.00, f = 0.00, x_dsec = 0.0278, x_qsec = 0.0278, T_dsec = 0.030, T_qsec = 0.050, Vf_ref = 1.03
+
+SynchronousSubtransient, idx = "G4", bus = "B4", Sn = 100, D = 0, H = 55.575, R_s = 0.000278, x_dprim = 0.0333, x_qprim = 0.0611, x_d = 0.2000, x_q = 0.1889, T_dprim = 8.00, T_qprim = 0.40, Rd = 0.01, Tch = 0.05, T2 = 0.50, Tsv = 1.50,
+	Pref = 1.00, avr = "AVRKundur_ODE", KA = 50.0, TA = 1, TB = 10, TR = 0.01, Tfd=0.01, TE=0.1, Efd_max = 5.0, Efd_min = 0.0, Vref = 1.00, D = 0.00, f = 0.00, x_dsec = 0.0278, x_qsec = 0.0278, T_dsec = 0.030, T_qsec = 0.050, Vf_ref = 1.01
+
+
+# ============================================================
+# NETWORK: LINES AND TRANSFORMERS
+# ============================================================
+# Line, bus_i, bus_j, r [p.u.], x [p.u.], g [p.u.], b [p.u.], trafo [p.u.]
+#
+# Step-up transformers (20/230 kV, 0+j0.15 pu on 900 MVA -> 0+j0.0167 on 100 MVA)
+# Tap ratio = 1.0 (on-nominal). In this format, trafo=1 means nominal ratio.
+# Since generator buses are at 20 kV and network at 230 kV, we use trafo ratio
+# consistent with the 39-bus convention. With generators referred to system base,
+# the trafo field can represent the off-nominal tap.
+Line, bus_i = "B1", bus_j = "B5", r = 0, x = 0.0167, g = 0, b = 0, trafo = 1
+Line, bus_i = "B2", bus_j = "B6", r = 0, x = 0.0167, g = 0, b = 0, trafo = 1
+Line, bus_i = "B3", bus_j = "B11", r = 0, x = 0.0167, g = 0, b = 0, trafo = 1
+Line, bus_i = "B4", bus_j = "B10", r = 0, x = 0.0167, g = 0, b = 0, trafo = 1
+
+# Transmission lines (230 kV, pi-model, parameters on 100 MVA, 230 kV base)
+# r = 0.0001 pu/km, x = 0.001 pu/km, b = 0.00175 pu/km (total charging)
+Line, bus_i = "B5", bus_j = "B6", r = 0.0025, x = 0.0250, g = 0, b = 0.04375, trafo = 1
+Line, bus_i = "B6", bus_j = "B7", r = 0.0010, x = 0.0100, g = 0, b = 0.01750, trafo = 1
+Line, bus_i = "B7", bus_j = "B8", r = 0.00550, x = 0.05500, g = 0, b = 0.385, trafo = 1
+Line, bus_i = "B8", bus_j = "B9", r = 0.00550, x = 0.05500, g = 0, b = 0.385, trafo = 1
+Line, bus_i = "B9", bus_j = "B10", r = 0.0010, x = 0.0100, g = 0, b = 0.01750, trafo = 1
+Line, bus_i = "B10", bus_j = "B11", r = 0.0025, x = 0.0250, g = 0, b = 0.04375, trafo = 1
+
+Line, bus_i = "B9", bus_j = "B12", r = 0.0, x = 0.00250, g = 0, b = 0.0, trafo = 1
+
+
+# ============================================================
+# LOADS (constant power)
+# ============================================================
+# Standard Kundur 2-area load data:
+# Bus 7: PL = 967 MW, QL = 100 MVAr, Qc = 200 MVAr (shunt cap)
+# Bus 9: PL = 1767 MW, QL = 100 MVAr, Qc = 350 MVAr (shunt cap)
+# Net reactive at bus 7: Q = 100 - 200 = -100 MVAr
+# Net reactive at bus 9: Q = 100 - 350 = -250 MVAr
+# (Shunt capacitors modeled as negative reactive load)
+StaticZIP, bus = "B7", z_share = 0, i_share = 1, p_share = 0
+StaticZIP, bus = "B9", z_share = 0, i_share = 1, p_share = 0
+StaticZIP, bus = "B12", z_share = 0, i_share = 1, p_share = 0
+
+# ============================================================
+# BUS INITIALIZATION
+# ============================================================
+# Generator buses: PV type (P in MW, v in pu)
+# Load buses: PQ type (p in MW, q in MVAr)
+# Bus 1 (G1): slack bus
+# Note: Generator P values are negative (generation convention as in 39-bus file)
+# Shunt capacitors at buses 7 and 9 are included in the net Q of those buses.
+
+# Slack bus
+BusInit, bus = "B1",	p = 0,		v = 1.03,	type = "slack"
+
+# PV generator buses
+BusInit, bus = "B2",	p = -700,	v = 1.01,	type = "PV"
+BusInit, bus = "B3",	p = -219,	v = 1.03,	type = "PV"
+BusInit, bus = "B4",	p = -400,	v = 1.01,	type = "PV"
+
+# Load buses (with shunt cap reactive power netted into q)
+BusInit, bus = "B7",	p = 767,	q = -100,	type = "PQ"
+BusInit, bus = "B9",	p = 533.5,	q = -250,	type = "PQ"
+BusInit, bus = "B12",	p = 533.5,	q = 0,	type = "PQ"
+
+# Transit/zero-injection buses
+BusInit, bus = "B5",	p = 0,		q = 0,		type = "PQ"
+BusInit, bus = "B6",	p = 0,		q = 0,		type = "PQ"
+BusInit, bus = "B8",	p = 0,		q = 0,		type = "PQ"
+BusInit, bus = "B10",	p = 0,		q = 0,		type = "PQ"
+BusInit, bus = "B11",	p = 0,		q = 0,		type = "PQ"

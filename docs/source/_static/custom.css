@@ -1,0 +1,9 @@
+div.py.method, div.py.attribute {
+    display: none;
+}
+
+/* Force left alignment for MathJax equations */
+.MathJax_Display {
+    text-align: left !important;
+    margin-left: 0 !important;
+}

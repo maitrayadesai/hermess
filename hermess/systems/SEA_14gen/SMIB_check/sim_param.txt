@@ -1,0 +1,11 @@
+
+BusInit, bus = "M", p = -80, v = 1.0, type = "PV"
+BusInit, bus = "I", p = 0, v = 1.0, type = "slack"
+Line, bus_i = "M", bus_j = "I", r = 0, x = 0.3, g = 0, b = 0, trafo = 1
+StaticInfiniteBus, bus = "I", Sn = 100, fn = 50, r = 0, x = 1e-6
+GENROU, idx = "G1", bus = "M", avr = "AVRST1A", governor = "GOVCONST",
+	Sn = 100, fn = 50, H = 3.2, D = 0, f = 0, R_s = 0,
+	x_a = 0.2, x_d = 1.8, x_q = 1.75, x_dprim = 0.3,
+	x_qprim = 0.7, x_dsec = 0.21, x_qsec = 0.21,
+	T_d0prim = 8.5, T_q0prim = 0.3, T_d0sec = 0.04, T_q0sec = 0.08,
+	KA = 400.0, TA = 0.02, Tr = 1e-5, TB = 1.12, TC = 0.5, TB1 = 1e-5, TC1 = 1e-5

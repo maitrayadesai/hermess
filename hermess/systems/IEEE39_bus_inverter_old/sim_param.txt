@@ -1,0 +1,168 @@
+# © 2024-2026 ETH Zurich
+# Original author: Milos Katanic
+# Simulation-only fork & maintainer: Maitraya Avadhut Desai
+#
+# Licensed under the GNU General Public License v3.0 or later;
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at:
+#
+#     https://www.gnu.org/licenses/gpl-3.0.en.html
+#
+# This software is distributed "AS IS", WITHOUT WARRANTY OF ANY KIND,
+# express or implied. See the License for specific language governing
+# permissions and limitations under the License.
+#
+# Simulation-only fork of PowerDynamicEstimator
+# (https://doi.org/10.5905/ethz-1007-842); dynamic state estimation removed.
+# For inquiries, contact: mdesai@ethz.ch
+
+# This file contains parameters and models of the system used for simulation.
+
+
+
+SynchronousSubtransient, idx =  "SG1", bus = "39", Sn = 100, D =  0, H = 500.00, R_s =  0.00, x_dprim = 0.0060, x_qprim = 0.0080, x_d = 0.0200, x_q = 0.0190, T_dprim =  7.00, T_qprim =  0.70, Rd =  0.05, Tch =  0.4, Tsv =  0.2,
+	Pref =  1.00, KA = 20.00, TA =  0.2, KF =  0.063, TF =  0.35, KE =  1.0, TE =  0.314, D =  0.00, f =  0.00, x_dsec = 0.0054, x_qsec = 0.0072, T_dsec =  0.070, T_qsec =  0.007, Vf_ref =  1.1, x_l = 0.003
+
+GridForming, idx = "GFMI2", bus = "31", Sn = 100, Kp = 0.02, Kq = 0.1, Vref = 1.05001, Rf = 0.003, Lf = 0.08, Cf = 0.074, Kpv = 0.866, Kiv = 433, Kffv = 0, Kpc = 0.143, Kic = 15.0, Kffc = 0, Rv = 0, Lv = 0.2, Lt = 0.2, Rt = 0.01
+
+SynchronousSubtransient, idx =  "SG3", bus = "32", Sn = 100, D =  0, H =  35.80, R_s =  0.00, x_dprim = 0.0531, x_qprim = 0.0876, x_d = 0.2495, x_q = 0.2370, T_dprim =  5.70, T_qprim =  1.50, Rd =  0.05, Tch =  0.4, Tsv =  0.2,
+	Pref =  1.00, KA = 20.00, TA =  0.2, KF =  0.080, TF =  0.35, KE =  1.0, TE =  0.314, D =  0.00, f =  0.00, x_dsec = 0.0478, x_qsec = 0.0788, T_dsec =  0.057, T_qsec =  0.015, Vf_ref =  1.1, x_l = 0.0304
+
+GridForming, idx = "GFMI4", bus = "33", Sn = 100, Kp = 0.02, Kq = 0.1, Vref = 1.05001, Rf = 0.003, Lf = 0.08, Cf = 0.074, Kpv = 0.866, Kiv = 433, Kffv = 0, Kpc = 0.143, Kic = 15.0, Kffc = 0, Rv = 0, Lv = 0.2, Lt = 0.2, Rt = 0.01
+
+SynchronousSubtransient, idx =  "SG5", bus = "34", Sn = 100, D =  0, H =  26.00, R_s =  0.00, x_dprim = 0.1320, x_qprim = 0.1660, x_d = 0.6700, x_q = 0.6200, T_dprim =  5.40, T_qprim =  0.44, Rd =  0.05, Tch =  0.4, Tsv =  0.2,
+	Pref =  1.00, KA = 20.00, TA =  0.2, KF =  0.030, TF =  0.35, KE =  1.0, TE =  0.314, D =  0.00, f =  0.00, x_dsec = 0.1188, x_qsec = 0.1494, T_dsec =  0.054, T_qsec =  0.0044, Vf_ref =  1.1, x_l = 0.054
+
+SynchronousSubtransient, idx =  "SG6", bus = "35", Sn = 100, D =  0, H =  34.80, R_s =  0.00, x_dprim = 0.0500, x_qprim = 0.0814, x_d = 0.2540, x_q = 0.2410, T_dprim =  7.30, T_qprim =  0.40, Rd =  0.05, Tch =  0.4, Tsv =  0.2,
+	Pref =  1.00, KA = 20.00, TA =  0.2, KF =  0.0754, TF =  0.35, KE =  1.0, TE =  0.314, D =  0.00, f =  0.00, x_dsec = 0.0450, x_qsec = 0.0733, T_dsec =  0.073, T_qsec =  0.0040, Vf_ref =  1.1, x_l = 0.0224
+
+GridFollowing, idx = "GFLI7", bus = "36", Sn = 1000, Kp = 0.02, Kq = 0.1, Vref = 1.03056, Rf = 0.0001, Lf = 0.08, Cf = 0.074, Kpll_p = 0.9, Kpll_i = 5, Kpv = 0.59, Kiv = 736, Kffv = 0, Kpc = 1.27, Kic = 14.3, Kffc = 0, Rv = 0, Lv = 0.2, Lt = 0.2, Rt = 0.01
+
+
+GridFollowing, idx = "GFLI8", bus = "37", Sn = 1000, Kp = 0.02, Kq = 0.1, Vref = 1.03056, Rf = 0.0001, Lf = 0.08, Cf = 0.074, Kpll_p = 0.9, Kpll_i = 5, Kpv = 0.59, Kiv = 736, Kffv = 0, Kpc = 1.27, Kic = 14.3, Kffc = 0, Rv = 0, Lv = 0.2, Lt = 0.2, Rt = 0.01
+
+SynchronousSubtransient, idx =  "SG9", bus = "38", Sn = 100, D =  0, H =  34.50, R_s =  0.00, x_dprim = 0.0570, x_qprim = 0.0587, x_d = 0.2106, x_q = 0.2050, T_dprim =  4.79, T_qprim =  1.96, Rd =  0.05, Tch =  0.4, Tsv =  0.2,
+	Pref =  1.00, KA = 20.00, TA =  0.2, KF =  0.030, TF =  0.35, KE =  1.0, TE =  0.314, D =  0.00, f =  0.00, x_dsec = 0.0513, x_qsec = 0.0528, T_dsec =  0.067, T_qsec =  0.0040, Vf_ref =  1.1, x_l = 0.0298
+
+GridFollowing, idx = "GFLI10", bus = "30", Sn = 1000, Kp = 0.02, Kq = 0.1, Vref = 1.03056, Rf = 0.0001, Lf = 0.08, Cf = 0.074, Kpll_p = 0.9, Kpll_i = 5, Kpv = 0.59, Kiv = 736, Kffv = 0, Kpc = 1.27, Kic = 14.3, Kffc = 0, Rv = 0, Lv = 0.2, Lt = 0.2, Rt = 0.01
+
+
+
+
+# Add each line of the grid
+#Line, bus_i = "name", bus_j = "name", r = [p.u.], x = [p.u.], g = [p.u.], b = [p.u.], trafo = [p.u.]
+Line, bus_i = "1", bus_j = "2", r = 0.0035, x = 0.0411, g = 0, b = 0.6987, trafo = 1
+Line, bus_i = "1", bus_j = "39", r = 0.001, x = 0.025, g = 0, b = 0.75, trafo = 1
+Line, bus_i = "2", bus_j = "3", r = 0.0013, x = 0.0151, g = 0, b = 0.2572, trafo = 1
+Line, bus_i = "2", bus_j = "25", r = 0.007, x = 0.0086, g = 0, b = 0.146, trafo = 1
+Line, bus_i = "3", bus_j = "4", r = 0.0013, x = 0.0213, g = 0, b = 0.2214, trafo = 1
+Line, bus_i = "3", bus_j = "18", r = 0.0011, x = 0.0133, g = 0, b = 0.2138, trafo = 1
+Line, bus_i = "4", bus_j = "5", r = 0.0008, x = 0.0128, g = 0, b = 0.1342, trafo = 1
+Line, bus_i = "4", bus_j = "14", r = 0.0008, x = 0.0129, g = 0, b = 0.1382, trafo = 1
+Line, bus_i = "5", bus_j = "6", r = 0.0002, x = 0.0026, g = 0, b = 0.0434, trafo = 1
+Line, bus_i = "5", bus_j = "8", r = 0.0008, x = 0.0112, g = 0, b = 0.1476, trafo = 1
+Line, bus_i = "6", bus_j = "7", r = 0.0006, x = 0.0092, g = 0, b = 0.113, trafo = 1
+Line, bus_i = "6", bus_j = "11", r = 0.0007, x = 0.0082, g = 0, b = 0.1389, trafo = 1
+Line, bus_i = "7", bus_j = "8", r = 0.0004, x = 0.0046, g = 0, b = 0.078, trafo = 1
+Line, bus_i = "8", bus_j = "9", r = 0.0023, x = 0.0363, g = 0, b = 0.3804, trafo = 1
+Line, bus_i = "9", bus_j = "39", r = 0.001, x = 0.025, g = 0, b = 1.2, trafo = 1
+Line, bus_i = "10", bus_j = "11", r = 0.0004, x = 0.0043, g = 0, b = 0.0729, trafo = 1
+Line, bus_i = "10", bus_j = "13", r = 0.0004, x = 0.0043, g = 0, b = 0.0729, trafo = 1
+Line, bus_i = "13", bus_j = "14", r = 0.0009, x = 0.0101, g = 0, b = 0.1723, trafo = 1
+Line, bus_i = "14", bus_j = "15", r = 0.0018, x = 0.0217, g = 0, b = 0.366, trafo = 1
+Line, bus_i = "15", bus_j = "16", r = 0.0009, x = 0.0094, g = 0, b = 0.171, trafo = 1
+Line, bus_i = "16", bus_j = "17", r = 0.0007, x = 0.0089, g = 0, b = 0.1342, trafo = 1
+Line, bus_i = "16", bus_j = "19", r = 0.0016, x = 0.0195, g = 0, b = 0.304, trafo = 1
+Line, bus_i = "16", bus_j = "21", r = 0.0008, x = 0.0135, g = 0, b = 0.2548, trafo = 1
+Line, bus_i = "16", bus_j = "24", r = 0.0003, x = 0.0059, g = 0, b = 0.068, trafo = 1
+Line, bus_i = "17", bus_j = "18", r = 0.0007, x = 0.0082, g = 0, b = 0.1319, trafo = 1
+Line, bus_i = "17", bus_j = "27", r = 0.0013, x = 0.0173, g = 0, b = 0.3216, trafo = 1
+Line, bus_i = "21", bus_j = "22", r = 0.0008, x = 0.014, g = 0, b = 0.2565, trafo = 1
+Line, bus_i = "22", bus_j = "23", r = 0.0006, x = 0.0096, g = 0, b = 0.1846, trafo = 1
+Line, bus_i = "23", bus_j = "24", r = 0.0022, x = 0.035, g = 0, b = 0.361, trafo = 1
+Line, bus_i = "25", bus_j = "26", r = 0.0032, x = 0.0323, g = 0, b = 0.513, trafo = 1
+Line, bus_i = "26", bus_j = "27", r = 0.0014, x = 0.0147, g = 0, b = 0.2396, trafo = 1
+Line, bus_i = "26", bus_j = "28", r = 0.0043, x = 0.0474, g = 0, b = 0.7802, trafo = 1
+Line, bus_i = "26", bus_j = "29", r = 0.0057, x = 0.0625, g = 0, b = 1.029, trafo = 1
+Line, bus_i = "28", bus_j = "29", r = 0.0014, x = 0.0151, g = 0, b = 0.249, trafo = 1
+Line, bus_i = "2", bus_j = "30", r = 0, x = 0.0181, g = 0, b = 0, trafo = 1.025
+Line, bus_i = "25", bus_j = "37", r = 0.0006, x = 0.0232, g = 0, b = 0, trafo = 1.025
+Line, bus_i = "29", bus_j = "38", r = 0.0008, x = 0.0156, g = 0, b = 0, trafo = 1.025
+Line, bus_i = "36", bus_j = "23", r = 0.0005, x = 0.0272, g = 0, b = 0, trafo = 1
+Line, bus_i = "31", bus_j = "6", r = 0, x = 0.025, g = 0, b = 0, trafo = 0.934
+Line, bus_i = "32", bus_j = "10", r = 0, x = 0.02, g = 0, b = 0, trafo = 0.934
+Line, bus_i = "34", bus_j = "20", r = 0.0009, x = 0.018, g = 0, b = 0, trafo = 0.991
+Line, bus_i = "33", bus_j = "19", r = 0.0007, x = 0.0142, g = 0, b = 0, trafo = 0.934
+Line, bus_i = "35", bus_j = "22", r = 0, x = 0.0143, g = 0, b = 0, trafo = 0.976
+Line, bus_i = "11", bus_j = "12", r = 0.0016, x = 0.0435, g = 0, b = 0, trafo = 0.994
+Line, bus_i = "12", bus_j = "13", r = 0.0016, x = 0.0435, g = 0, b = 0, trafo = 1.006
+Line, bus_i = "19", bus_j = "20", r = 0.0007, x = 0.0138, g = 0, b = 0, trafo = 1.06
+
+
+
+
+
+# Specify loads
+#StaticZIP, bus = "name"
+StaticZIP, bus = "1"
+StaticZIP, bus = "3"
+StaticZIP, bus = "4"
+StaticZIP, bus = "7"
+StaticZIP, bus = "8"
+StaticZIP, bus = "12"
+StaticZIP, bus = "15"
+StaticZIP, bus = "16"
+StaticZIP, bus = "18"
+StaticZIP, bus = "20"
+StaticZIP, bus = "21"
+StaticZIP, bus = "23"
+StaticZIP, bus = "24"
+StaticZIP, bus = "25"
+StaticZIP, bus = "26"
+StaticZIP, bus = "27"
+StaticZIP, bus = "28"
+StaticZIP, bus = "29"
+
+
+# Specify bus types, used only for initialization
+#BusInit, bus = "name",	p = [MW],	q = [MW],	type ="type"
+BusInit, bus = "1",	p = 97.6,	q = 44.2,	type ="PQ"
+BusInit, bus = "3",	p = 322,	q = 2.4,	type ="PQ"
+BusInit, bus = "4",	p = 500,	q = 184,	type ="PQ"
+BusInit, bus = "7",	p = 233.8,	q = 84,		type ="PQ"
+BusInit, bus = "8",	p = 522,	q = 176,	type ="PQ"
+BusInit, bus = "12",	p = 6.5,	q = -66.6,	type ="PQ"
+BusInit, bus = "15",	p = 320,	q = 153,	type ="PQ"
+BusInit, bus = "16",	p = 329,	q = 32.3,	type ="PQ"
+BusInit, bus = "18",	p = 158,	q = 30,		type ="PQ"
+BusInit, bus = "20",	p = 680,	q = 103,	type ="PQ"
+BusInit, bus = "21",	p = 274,	q = 115,	type ="PQ"
+BusInit, bus = "23",	p = 247.5,	q = 84.6,	type ="PQ"
+BusInit, bus = "24",	p = 308.6,	q = -92.2,	type ="PQ"
+BusInit, bus = "25",	p = 224,	q = 47.2,	type ="PQ"
+BusInit, bus = "26",	p = 139,	q = 17,		type ="PQ"
+BusInit, bus = "27",	p = 281,	q = 75.5,	type ="PQ"
+BusInit, bus = "28",	p = 206,	q = 27.6,	type ="PQ"
+BusInit, bus = "29",	p = 283.5,	q = 26.9,	type ="PQ"
+BusInit, bus = "39",	p = 0,		v = 1.03,	type ="slack"
+BusInit, bus = "31",	p = -600,	v = 0.98,	type ="PV"
+BusInit, bus = "32",	p = -570,	v = 0.98,	type ="PV"
+BusInit, bus = "33",	p = -560,	v = 1,		type ="PV"
+BusInit, bus = "34",	p = -380,	v = 1.01,	type ="PV"
+BusInit, bus = "35",	p = -580,	v = 1.03,	type ="PV"
+BusInit, bus = "36",	p = -490,	v = 1.055,	type ="PV"
+BusInit, bus = "37",	p = -470,	v = 1.03,	type ="PV"
+BusInit, bus = "38",	p = -760,	v = 1.03,	type ="PV"
+BusInit, bus = "30",	p = -460,	v = 1.05,	type ="PV"
+BusInit, bus = "19",	p = 0,		q = 0,		type ="PQ"
+BusInit, bus = "22",	p = 0,		q = 0,		type ="PQ"
+BusInit, bus = "10",	p = 0,		q = 0,		type ="PQ"
+BusInit, bus = "11",	p = 0,		q = 0,		type ="PQ"
+BusInit, bus = "13",	p = 0,		q = 0,		type ="PQ"
+BusInit, bus = "14",	p = 0,		q = 0,		type ="PQ"
+BusInit, bus = "17",	p = 0,		q = 0,		type ="PQ"
+BusInit, bus = "2",	p = 0,		q = 0,		type ="PQ"
+BusInit, bus = "5",	p = 0,		q = 0,		type ="PQ"
+BusInit, bus = "6",	p = 0,		q = 0,		type ="PQ"
+BusInit, bus = "9",	p = 0,		q = 0,		type ="PQ"
+

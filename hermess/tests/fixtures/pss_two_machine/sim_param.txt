@@ -1,0 +1,19 @@
+# Two-synchronous-machine PSS test: both machines carry a PSSKundur stabilizer with
+# DIFFERENT parameters (K_stab, Tw, T1-T4). They share one vectorized device group
+# (same class + default AVR/governor + PSSKundur), so this checks that each machine's
+# PSS uses its OWN absolute speed minus the common nominal (omega_i - 1) and its OWN
+# parameters. See docs/algebraic_equations_design.md.
+
+SynchronousSubtransientSP, idx = "SG1", bus = "1", Sn = 300, D = 0, H = 6.50, R_s = 0.0025, x_dprim = 0.3, x_qprim = 0.55, x_d = 1.8, x_q = 1.7, T_dprim = 8.00, T_qprim = 0.4, Rd = 0.05, Tch = 0.4, Tsv = 0.2, Pref = 1.0, KA = 30.00, TA = 0.2, KF = 0.0, TF = 0.35, KE = 1.0, TE = 0.314, pss = "PSSKundur", K_stab = 10.0, Tw = 10.0, T1 = 0.5, T2 = 0.1, T3 = 0.5, T4 = 0.1, f = 0.00, x_dsec = 0.25, x_qsec = 0.25, T_dsec = 0.03, T_qsec = 0.05, Vf_ref = 1.1, x_l = 0.2
+
+SynchronousSubtransientSP, idx = "SG2", bus = "3", Sn = 100, D = 0, H = 4.00, R_s = 0.0025, x_dprim = 0.3, x_qprim = 0.55, x_d = 1.8, x_q = 1.7, T_dprim = 8.00, T_qprim = 0.4, Rd = 0.05, Tch = 0.4, Tsv = 0.2, Pref = 0.5, KA = 30.00, TA = 0.2, KF = 0.0, TF = 0.35, KE = 1.0, TE = 0.314, pss = "PSSKundur", K_stab = 25.0, Tw = 8.0, T1 = 0.4, T2 = 0.08, T3 = 0.4, T4 = 0.08, f = 0.00, x_dsec = 0.25, x_qsec = 0.25, T_dsec = 0.03, T_qsec = 0.05, Vf_ref = 1.1, x_l = 0.2
+
+Line, bus_i = "1", bus_j = "2", r = 0.01, x = 0.08, g = 0.001, b = 0.03, trafo = 1
+Line, bus_i = "2", bus_j = "3", r = 0.002, x = 0.1, g = 0.003, b = 0.05, trafo = 1
+Line, bus_i = "3", bus_j = "1", r = 0.006, x = 0.03, g = 0.001, b = 0.075, trafo = 1
+
+StaticZIP, bus = "2", z_share = 1.0
+
+BusInit, bus = "1", p = 0, v = 1.0, type = "slack"
+BusInit, bus = "3", p = -50, v = 1.0, type = "PV"
+BusInit, bus = "2", p = 100, q = 10, type = "PQ"

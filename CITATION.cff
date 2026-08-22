@@ -1,0 +1,55 @@
+# Citation metadata for HERMESS (Citation File Format, https://citation-file-format.github.io/)
+cff-version: 1.2.0
+message: >-
+  If you use HERMESS in your work, please cite the software and the paper
+  describing the underlying PowerDynamicEstimator models (preferred-citation).
+type: software
+title: "HERMESS: Hybrid EMT/RMS Modern Electric power System Simulator"
+abstract: >-
+  Time-domain dynamic simulator for power systems modeled by nonlinear
+  differential-algebraic equations (DAEs), with synchronous machine, converter,
+  static load and dynamic or quasi-static network models, disturbances and
+  small-signal analysis. Simulation-only fork of PowerDynamicEstimator.
+version: 1.0.0
+date-released: 2026-08-22
+license: GPL-3.0-or-later
+repository-code: https://github.com/maitrayadesai/hermess
+url: https://github.com/maitrayadesai/hermess
+keywords:
+  - power systems
+  - dynamic simulation
+  - differential-algebraic equations
+  - grid-forming converters
+  - small-signal stability
+authors:
+  - family-names: Katanic
+    given-names: Milos
+    affiliation: "Power Systems Laboratory, ETH Zurich"
+  - family-names: Desai
+    given-names: Maitraya Avadhut
+    affiliation: "Power Systems Laboratory, ETH Zurich"
+references:
+  - type: software
+    title: PowerDynamicEstimator
+    authors:
+      - family-names: Katanic
+        given-names: Milos
+    doi: 10.5905/ethz-1007-842
+    notes: "HERMESS is a simulation-only fork of this software (dynamic state estimation removed)."
+preferred-citation:
+  type: article
+  title: "Recursive dynamic state estimation for power systems with an incomplete nonlinear DAE model"
+  authors:
+    - family-names: Katanic
+      given-names: Milos
+    - family-names: Lygeros
+      given-names: John
+    - family-names: Hug
+      given-names: Gabriela
+  journal: "IET Generation, Transmission & Distribution"
+  volume: 18
+  issue: 22
+  start: 3657
+  end: 3668
+  year: 2024
+  doi: 10.1049/gtd2.13308

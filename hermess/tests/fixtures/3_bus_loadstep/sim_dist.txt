@@ -1,0 +1,7 @@
+# Test fixture: single 30 MW LOAD step on bus 2 at t = 1.0 s.
+#
+# Pinned for test_compute_i_full.py to exercise the LOAD-disturbance
+# path through compute_i_full post-processing. See ../README.md for
+# why this fixture is frozen.
+
+Disturbance, time = 1.0, type = "LOAD", bus ="2", p_delta = 30, q_delta = 0

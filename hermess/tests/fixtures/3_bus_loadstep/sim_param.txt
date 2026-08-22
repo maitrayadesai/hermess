@@ -1,0 +1,57 @@
+# © 2024-2026 ETH Zurich
+# Original author: Milos Katanic
+# Simulation-only fork & maintainer: Maitraya Avadhut Desai
+#
+# Licensed under the GNU General Public License v3.0 or later;
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at:
+#
+#     https://www.gnu.org/licenses/gpl-3.0.en.html
+#
+# This software is distributed "AS IS", WITHOUT WARRANTY OF ANY KIND,
+# express or implied. See the License for specific language governing
+# permissions and limitations under the License.
+#
+# Simulation-only fork of PowerDynamicEstimator
+# (https://doi.org/10.5905/ethz-1007-842); dynamic state estimation removed.
+# For inquiries, contact: mdesai@ethz.ch
+
+# This file contains parameters and models of the system used for simulation.
+
+
+
+SynchronousSubtransientSP, idx =  "SG1", bus = "1", Sn = 300, D =  0, H = 6.50, R_s =  0.0025, x_dprim = 0.3, x_qprim = 0.55, x_d = 1.8, x_q = 1.7, T_dprim =  8.00, T_qprim =  0.4, Rd =  0.05, Tch =  0.4, Tsv =  0.2,
+	Pref =  1.0, KA = 30.00, TA =  0.2, KF =  0.0, TF =  0.35, KE =  1.0, TE =  0.314, D =  0.00, f =  0.00, x_dsec = 0.25, x_qsec = 0.25, T_dsec =  0.03, T_qsec =  0.05, Vf_ref =  1.1, x_l = 0.2
+
+GridForming, idx = "GFMI2", bus = "3", Sn = 100, Kp = 0.01, Kq = 0.1, Vref = 1.05001, Rf = 0.003, Lf = 0.08, Cf = 0.074, Kpv = 0.866, Kiv = 433, Kffv = 0, Kpc = 0.143, Kic = 15.0, Kffc = 0, Rv = 0, Lv = 0.2, Lt = 0.2, Rt = 0.01
+
+# omega_f = 18.84955      (2pi*3)
+# omega_f = 37.699111843  (2pi*6)
+# omega_f = 43.98229715   (2pi*7)   
+
+# Add each line of the grid
+#Line, bus_i = "name", bus_j = "name", r = [p.u.], x = [p.u.], g = [p.u.], b = [p.u.], trafo = [p.u.]
+Line, bus_i = "1", bus_j = "2", r = 0.01, x = 0.08, g = 0.001, b = 0.03, trafo = 1
+Line, bus_i = "2", bus_j = "3", r = 0.002, x = 0.1, g = 0.003, b = 0.05, trafo = 1
+Line, bus_i = "3", bus_j = "1", r = 0.006, x = 0.03, g = 0.001, b = 0.075, trafo = 1
+
+
+## uncomment any one of the following lines 
+### works
+#Line, bus_i = "3", bus_j = "1", r = 0.001, x = 0.025, g = 0.002, b = 0.0075, trafo = 1
+
+#Line, bus_i = "2", bus_j = "3", r = 0.001, x = 0.025, g = 0.002, b = 0.0075, trafo = 1.0000939088425
+
+
+# Specify loads
+#StaticZIP, bus = "name"
+StaticZIP, bus = "2", z_share = 1.0
+
+
+# Specify bus types, used only for initialization
+#BusInit, bus = "name",	p = [MW],	q = [MW],	type ="type"
+BusInit, bus = "1",	p = 0,	v = 1.0,	type ="slack"
+BusInit, bus = "3",	p = -50,	v = 1.0,	type ="PV"
+BusInit, bus = "2",	p = 100,	q = 10,	type ="PQ"
+
+#BusInit, bus = "3",	p = -50,	v = 0.99,	type ="PV"

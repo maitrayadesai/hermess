@@ -1,0 +1,18 @@
+# DAE system for the Sauer-Pai parity test: identical to sp_ground but the
+# machine is SynchronousSubtransientSP_DAE, which declares the stator currents
+# (i_d, i_q) as device-private algebraic variables/equations instead of inlining
+# them. Must reproduce sp_ground to integrator tolerance.
+
+SynchronousSubtransientSP_DAE, idx = "SG1", bus = "1", Sn = 300, D = 0, H = 6.50, R_s = 0.0025, x_dprim = 0.3, x_qprim = 0.55, x_d = 1.8, x_q = 1.7, T_dprim = 8.00, T_qprim = 0.4, Rd = 0.05, Tch = 0.4, Tsv = 0.2, Pref = 1.0, KA = 30.00, TA = 0.2, KF = 0.0, TF = 0.35, KE = 1.0, TE = 0.314, f = 0.00, x_dsec = 0.25, x_qsec = 0.25, T_dsec = 0.03, T_qsec = 0.05, Vf_ref = 1.1, x_l = 0.2
+
+GridForming, idx = "GFMI2", bus = "3", Sn = 100, Kp = 0.01, Kq = 0.1, Vref = 1.05001, Rf = 0.003, Lf = 0.08, Cf = 0.074, Kpv = 0.866, Kiv = 433, Kffv = 0, Kpc = 0.143, Kic = 15.0, Kffc = 0, Rv = 0, Lv = 0.2, Lt = 0.2, Rt = 0.01
+
+Line, bus_i = "1", bus_j = "2", r = 0.01, x = 0.08, g = 0.001, b = 0.03, trafo = 1
+Line, bus_i = "2", bus_j = "3", r = 0.002, x = 0.1, g = 0.003, b = 0.05, trafo = 1
+Line, bus_i = "3", bus_j = "1", r = 0.006, x = 0.03, g = 0.001, b = 0.075, trafo = 1
+
+StaticZIP, bus = "2", z_share = 1.0
+
+BusInit, bus = "1", p = 0, v = 1.0, type = "slack"
+BusInit, bus = "3", p = -50, v = 1.0, type = "PV"
+BusInit, bus = "2", p = 100, q = 10, type = "PQ"

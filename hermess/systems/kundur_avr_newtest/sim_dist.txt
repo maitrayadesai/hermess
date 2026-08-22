@@ -1,0 +1,7 @@
+# This file contains all simulation disturbances.
+
+#Disturbance, time = 7.0, type = "FAULT_LINE", bus_i = "5", bus_j = "8", y = 30
+#Disturbance, time = 7.04, type = "OPEN_LINE", bus_i = "5", bus_j = "8"
+#Disturbance, time = 7.0, type = "FAULT_BUS", bus = "5", y = 80
+#Disturbance, time = 7.04, type = "CLEAR_FAULT_BUS", bus = "5"
+Disturbance, time = 1.0, type = "LOAD", bus ="B9", p_delta = 50, q_delta = 0

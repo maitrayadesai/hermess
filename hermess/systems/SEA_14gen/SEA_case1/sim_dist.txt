@@ -1,0 +1,3 @@
+# Default disturbance: 100 ms shunt fault at bus 217, then cleared
+Disturbance, time = 1.0, type = "FAULT_BUS", bus = "217", y = 10
+Disturbance, time = 1.1, type = "CLEAR_FAULT_BUS", bus = "217"

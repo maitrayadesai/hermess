@@ -1,0 +1,2 @@
+# Default disturbance: 50 MW / 10 Mvar load step at bus 217
+#Disturbance, time = 1.0, type = "LOAD", bus = "217", p_delta = 50, q_delta = 10
