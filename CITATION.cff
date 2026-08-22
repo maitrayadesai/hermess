@@ -13,6 +13,14 @@ abstract: >-
 version: 1.0.0
 date-released: 2026-08-22
 license: GPL-3.0-or-later
+doi: 10.3929/ethz-c-000805609
+identifiers:
+  - type: doi
+    value: 10.3929/ethz-c-000805609
+    description: "ETH Zurich Research Collection record of HERMESS 1.0.0"
+  - type: url
+    value: http://hdl.handle.net/20.500.11850/805609
+    description: "Persistent handle of the Research Collection record"
 repository-code: https://github.com/maitrayadesai/hermess
 url: https://github.com/maitrayadesai/hermess
 keywords:
