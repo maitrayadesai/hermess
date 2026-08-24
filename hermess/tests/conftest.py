@@ -24,8 +24,10 @@ Two safeguards keep the suite headless:
    ends in a blocking ``plt.show``. The autouse fixture forces the flag off; a
    test that needs the analysis opts back in via ``config.updated(...)``.
 
-2. Importing ``hermess.run`` selects the interactive TkAgg backend, so the
-   fixture re-forces the non-interactive Agg backend before every test.
+2. ``hermess.run.fplot`` selects an interactive backend when a run asks for the
+   built-in pop-up figures, so the fixture re-forces the non-interactive Agg
+   backend before every test. (Importing the package leaves the backend alone;
+   see ``test_public_api.test_import_does_not_hijack_the_matplotlib_backend``.)
 """
 
 import os

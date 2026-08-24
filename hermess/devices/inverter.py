@@ -236,6 +236,8 @@ class Inverter(DeviceRect):
         self.ifq_ref = None
         self.Vswd = None  # switching voltage (from the inner strategy)
         self.Vswq = None
+        self.Pc = None  # terminal active power (device p.u.); set in fgcall
+        self.Qc = None  # terminal reactive power (device p.u.); set in fgcall
 
         self.properties.update({"fplot": True})
 
@@ -366,6 +368,11 @@ class Inverter(DeviceRect):
 
         Pc = Vfd_int * itd_int + Vfq_int * itq_int
         Qc = -Vfd_int * itq_int + Vfq_int * itd_int
+        # Publish the instantaneous terminal powers (device p.u., on Sn). The
+        # states Pc_tilde / Qc_tilde are these passed through the measurement
+        # filter; keeping the unfiltered expressions lets them be read back after
+        # a run (plots, objectives) for any filter/control strategy.
+        self.Pc, self.Qc = Pc, Qc
 
         # Inner control (cascaded V/I + virtual impedance): consumes the converter-
         # frame quantities + omega_c, reads the voltage command via

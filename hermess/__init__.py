@@ -17,11 +17,79 @@
 # For inquiries, contact: mdesai@ethz.ch
 
 from importlib.metadata import version, PackageNotFoundError
+from pathlib import Path
+from typing import TYPE_CHECKING, Any
+
+from hermess.registry import register, registered, unregister
+
+if TYPE_CHECKING:  # pragma: no cover - import kept out of the runtime path
+    from hermess.system import DaeSim
 
 try:
     __version__ = version("hermess")  # Must match the name in pyproject.toml
 except PackageNotFoundError:  # running from source without an install
     __version__ = "1.0.0"
+
+
+__all__ = [
+    "__version__",
+    "SYSTEMS_DIR",
+    "list_systems",
+    "simulate",
+    "register",
+    "registered",
+    "unregister",
+    "help",
+]
+
+SYSTEMS_DIR = Path(__file__).parent / "systems"
+
+
+def list_systems(root: "str | Path | None" = None) -> list:
+    """Names of the ready-made systems, usable as the first argument of
+    :func:`simulate` (or as ``testsystemfile`` in a :class:`~hermess.config.Config`)."""
+    root = Path(root) if root is not None else SYSTEMS_DIR
+    return sorted(str(p.parent.relative_to(root)) for p in root.rglob("sim_param.txt"))
+
+
+def simulate(system: str, system_root: "str | Path | None" = None, **overrides: Any) -> "DaeSim":
+    """Run one simulation and return the finished :class:`~hermess.system.DaeSim`.
+
+    The short form of ``config.updated(...)`` followed by
+    :func:`hermess.run.run`, for the common case of "simulate this system with a
+    few settings changed"::
+
+        import hermess
+        dae = hermess.simulate("3_bus_loadstep", T_end=5.0)
+        dae = hermess.simulate("IEEE39_bus", line_dyn=False, T_end=10.0, plot=True)
+
+    :param system: A system name from :func:`list_systems`, or a folder name under
+        ``system_root``.
+    :param system_root: Where to look for the system folder (default: the systems
+        shipped with the package). Point it at your own directory to run a system
+        you wrote or edited.
+    :param overrides: Any field of :class:`~hermess.config.Config`
+        (``T_end``, ``ts``, ``line_dyn``, ``omega_mode``, ``small_signal_analysis``,
+        ``plot``, ...). Plotting is off by default here, unlike the shipped
+        configuration, so the call returns quietly and you plot what you want from
+        the returned object.
+    :returns: The :class:`~hermess.system.DaeSim` holding the symbolic model and
+        the trajectories.
+    """
+    from hermess.config import config as _default_config
+    from hermess.run import run as _run
+
+    settings = dict(
+        testsystemfile=system,
+        system_root=Path(system_root) if system_root is not None else None,
+        plot=False,
+        plot_voltage=False,
+        plot_diff=False,
+        print_power_flow=False,
+        small_signal_analysis=False,
+    )
+    settings.update(overrides)
+    return _run(_default_config.updated(**settings))
 
 
 def help() -> None:
@@ -36,12 +104,17 @@ def help() -> None:
     differential-algebraic equations (DAEs).
 
     🔧 Key Modules:
-    - run.py     : Simulation execution
-    - system.py  : DAE system model
+    - run.py      : Simulation execution
+    - system.py   : DAE system model
+    - config.py   : Simulation settings
+    - registry.py : Registration of user-defined models
 
     🚀 Usage:
     >>> import hermess
-    >>> hermess.help()
+    >>> hermess.list_systems()                       # what is available
+    >>> dae = hermess.simulate("3_bus", T_end=5.0)   # run one
+    >>> hermess.registered("angle")                  # selectable strategies
+    >>> hermess.register(MyAngleSource, "VSM")       # add your own
 
     🧾 License:
     GNU General Public License v3.0 or later (GPL-3.0-or-later)

@@ -31,12 +31,22 @@ import os
 
 import matplotlib
 
-# Use the interactive TkAgg backend, falling back to the non-interactive Agg
-# backend in headless environments (e.g. CI) where Tk and a display are absent.
-try:
-    matplotlib.use("TkAgg")
-except ImportError:
-    matplotlib.use("Agg")
+
+def _use_interactive_backend() -> None:
+    """Switch to the interactive TkAgg backend for the built-in pop-up figures.
+
+    Called from :func:`fplot` (i.e. only when ``config.plot`` is set), never at
+    import time: importing hermess must not take over the caller's backend, or
+    inline figures in Jupyter stop rendering. Falls back to the non-interactive
+    Agg backend in headless environments (e.g. CI) where Tk or a display is
+    absent, and leaves an already-interactive backend alone.
+    """
+    if matplotlib.get_backend().lower() not in ("agg", "template"):
+        return
+    try:
+        matplotlib.use("TkAgg")
+    except Exception:
+        matplotlib.use("Agg")
 
 
 def warn_filter_network_mismatch(device_list, line_dyn: bool) -> None:
@@ -164,6 +174,7 @@ def run(config: Config) -> system.DaeSim:
 def fplot(config: Config):
     """Plot voltage and differential states from the simulation."""
     logging.basicConfig(level=logging.WARNING)
+    _use_interactive_backend()
 
     if config.plot_voltage:
         plt.figure(figsize=(15, 11))

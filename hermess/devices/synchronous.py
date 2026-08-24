@@ -233,6 +233,8 @@ class Synchronous(DeviceRect):
             for sp_name in self._pss.setpoints():
                 setattr(self, sp_name, np.array([], dtype=float))
         self.properties.update({"fplot": True})
+        # Air-gap electrical power (device p.u.); set symbolically in fgcall.
+        self.Pe = None
 
     def gcall(self, dae: Dae, i_d: ca.SX, i_q: ca.SX) -> None:
         # algebraic equations (current balance in rectangular coordinates) + scale the current back to the grid reference power
@@ -277,6 +279,10 @@ class Synchronous(DeviceRect):
         defines stator currents + flux dynamics and returns the air-gap power;
         the base wires the rotor, the controller ports, and the network."""
         i_d, i_q, Pe = self.electromagnetic(dae)
+        # Publish the air-gap electrical power (device p.u., on Sn) so it can be
+        # read back after a run -- e.g. evaluated along the trajectory for plots
+        # or used in an objective -- without re-deriving it from the states.
+        self.Pe = Pe
         self.rotor(dae, Pe)
         self.governor_fcall(dae)
         self.avr_fcall(dae)

@@ -70,6 +70,24 @@ python -m hermess
 
 This runs the simulation defined by the configuration in `./hermess/config.py` and plots the resulting voltage and state trajectories.
 
+From Python, to run a system without editing `config.py`:
+
+```python
+import hermess
+
+hermess.list_systems()                        # the ready-made systems
+dae = hermess.simulate("3_bus", T_end=5.0)    # run one; returns the finished model
+```
+
+User-written models are selectable from a system file once registered, and the
+same call takes devices and every pluggable strategy (AVR, governor, PSS, shaft,
+converter filter / angle / voltage / inner / PLL):
+
+```python
+hermess.register(VSMAngle, "VSM")   # now:  angle = "VSM"  in sim_param.txt
+hermess.registered("angle")         # what can be selected today
+```
+
 ## Examples
 
 You can check out the available examples in the `./examples` directory to get started.

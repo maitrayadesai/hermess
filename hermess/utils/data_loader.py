@@ -89,6 +89,19 @@ def create_device_instance(
     :return: The instance, or raises an ImportError if not found.
     """
     found_class = False
+
+    # User-registered devices (hermess.register) take precedence over the package
+    # scan below, so a device class defined in a script or notebook is selectable
+    # from a system file by its class name like any shipped device.
+    from hermess.registry import DEVICE_REGISTRY
+
+    if class_name in DEVICE_REGISTRY:
+        instance = DEVICE_REGISTRY[class_name]()
+        setattr(system, instance_name, instance)
+        logging.info(f"Created {instance_name} of registered class {class_name}().")
+        exec(f"system.device_list_{typ}.append(system.{instance_name})")
+        return instance
+
     for folder in ["hermess.devices"]:
         package = importlib.import_module(folder)
         # Get the directory of the subpackage

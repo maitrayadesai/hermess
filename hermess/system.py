@@ -872,10 +872,15 @@ class GridSim(Grid):
         self.build_Bsum()
         self.build_Gsum()
 
-    def print_init_power_flow(self, dae: DaeSim) -> None:
-        # Print results of initialization
-        print("\nPower flow for initialization successfully solved")
+    def power_flow_tables(self, dae: DaeSim) -> tuple:
+        """Initial power flow as two pandas DataFrames: ``(bus, branch)``.
 
+        The bus table carries the initialized voltage magnitude/angle, the net
+        injection at every bus and the shunt contributions; the branch table the
+        sending/receiving-end flows and the losses. This is the data behind
+        :meth:`print_init_power_flow`, returned instead of printed so it can be
+        inspected, filtered or exported.
+        """
         # ---- BUS RESULTS ----
         idx_bus_re = [i for i in range(2 * self.nn) if i % 2 == 0]
         idx_bus_im = [i for i in range(2 * self.nn) if i % 2 != 0]
@@ -922,8 +927,6 @@ class GridSim(Grid):
                 "Q Shunt Trafo (MVAr)": pd.Series(Qloss_shunt2, dtype=float),
             }
         )
-
-        power_flow_bus_table = tabulate(power_flow_bus_table, headers="keys")
 
         # ---- BRANCH RESULTS ----
         # calculate the voltage across each branch (v_from - v_to)
@@ -996,8 +999,15 @@ class GridSim(Grid):
             }
         )
 
+        return power_flow_bus_table, power_flow_branch_table
+
+    def print_init_power_flow(self, dae: DaeSim) -> None:
+        """Print the initial power flow (bus and branch tables)."""
+        power_flow_bus_table, power_flow_branch_table = self.power_flow_tables(dae)
+        power_flow_bus_table = tabulate(power_flow_bus_table, headers="keys")
         power_flow_branch_table = tabulate(power_flow_branch_table, headers="keys")
 
+        print("\nPower flow for initialization successfully solved")
         print(
             "======================================================================================================="
         )
@@ -2230,6 +2240,7 @@ class DaeSim(Dae):
         self.int_scheme_sim = None
         self.int_scheme_sim_options: dict = {}
         self.eigenvalues = None
+        self.A = None  # reduced state matrix at the operating point (eigenvalue_analysis)
         self.participation_factors = None
         self.participation_factors_normalized = None
         self.state_names: list = []
@@ -2335,12 +2346,24 @@ class DaeSim(Dae):
             logging.warning(
                 "No C compiler (gcc) found on PATH; disabling integrator JIT for this run."
             )
+        # An empty output grid crashes the CasADi/SUNDIALS integrator (a hard
+        # segfault, no exception), so it is refused here with an explanation.
+        # It arises when a segment is shorter than one output step -- typically
+        # T_end at or just after the last disturbance.
+        out_grid = self.tf if tout is None else tout
+        if np.size(out_grid) == 0:
+            raise ValueError(
+                "Empty integrator output grid: the interval to integrate is "
+                f"shorter than one output step (ts = {self.t}). This usually means "
+                f"T_end ({self.T_end}) is at or just after the last disturbance; "
+                "extend T_end by at least one time step."
+            )
         FG = ca.integrator(
             "FG",
             self.int_scheme_sim,
             dae_dict,
             self.T_start if tout is not None else self.t0,
-            self.tf if tout is None else tout,
+            out_grid,
             sim_options,
         )
         if tout is not None:
@@ -2589,6 +2612,12 @@ class DaeSim(Dae):
                 if tf > self.T_end:
                     continue
                 self.tf = np.arange(self.t0 + self.t, tf + self.t - 1e-10, self.t)
+                if self.tf.size == 0:
+                    # Two disturbances closer together than one output step: there
+                    # is nothing to integrate between them, so apply the next one
+                    # at the same operating point.
+                    self.check_disturbance(dist, math.ceil(tf / self.t))
+                    continue
                 self.fgcall()
 
                 try:
@@ -2638,28 +2667,38 @@ class DaeSim(Dae):
                 pbar.n = progress
                 pbar.refresh()
 
-            # Now do the last interval
+            # Now do the last interval, unless the last disturbance leaves less
+            # than one output step before T_end (then the trajectory is complete).
             self.tf = np.arange(self.t0 + self.t, self.T_end - 1e-10, self.t)
-            self.fgcall()
-            try:
-                if self.line_dyn:
-                    xf, yf, _ifinal = self._line_dyn_integrate(x0, y0, i0, s0, sl0)
-                else:
-                    res_grid = self.FG(x0=x0, z0=y0, p=s0)
-            except RuntimeError:
-                logging.critical(
-                    f"Simulation failed numerically at or before time {self.T_end}. Check the log for details. \n "
-                    "Try reducing the disturbance, changing the operating point, "
-                    "reducing the time step, or tuning model parameters."
+            if self.tf.size == 0:
+                logging.warning(
+                    "T_end (%s) is less than one time step (%s) after the last "
+                    "disturbance at %s; the simulation ends there.",
+                    self.T_end,
+                    self.t,
+                    self.t0,
                 )
-                raise
+            else:
+                self.fgcall()
+                try:
+                    if self.line_dyn:
+                        xf, yf, _ifinal = self._line_dyn_integrate(x0, y0, i0, s0, sl0)
+                    else:
+                        res_grid = self.FG(x0=x0, z0=y0, p=s0)
+                except RuntimeError:
+                    logging.critical(
+                        f"Simulation failed numerically at or before time {self.T_end}. Check the log for details. \n "
+                        "Try reducing the disturbance, changing the operating point, "
+                        "reducing the time step, or tuning model parameters."
+                    )
+                    raise
 
-            if not self.line_dyn:
-                xf = res_grid["xf"].full()
-                yf = res_grid["zf"].full()
+                if not self.line_dyn:
+                    xf = res_grid["xf"].full()
+                    yf = res_grid["zf"].full()
 
-            x_segments.append(xf)
-            y_segments.append(yf)
+                x_segments.append(xf)
+                y_segments.append(yf)
             self.x_full = np.hstack(x_segments)
             self.y_full = np.hstack(y_segments)
 
@@ -2901,6 +2940,13 @@ class DaeSim(Dae):
             self.eigenvalues = np.array([])
             return
 
+        # Keep the reduced state matrix: it is the linearization of the model at
+        # the operating point (dx/dt = A dx, after eliminating the algebraic
+        # variables) and is what a user needs for any further analysis --
+        # controllability, model reduction, control design. Rows/columns follow
+        # ``self.state_names``, built below.
+        self.A = np.array(As)
+
         # Compute eigenvalues and right eigenvectors of the reduced state matrix.
         self.eigenvalues, right_eigenvectors = np.linalg.eig(As)
         # Left eigenvectors are the rows of the inverse modal matrix. For a
@@ -3083,6 +3129,32 @@ class DaeSim(Dae):
         report = header_line + "\n" + table
         print("\n" + report + "\n")
         return report
+
+    def participation_table(self, mode: int = 1, top: int | None = 10):
+        """Participation factors of one mode as a pandas DataFrame.
+
+        ``mode`` is the mode id shown by :meth:`print_modal_report` (1 = least
+        damped). The rows are the states, sorted by participation, with the
+        normalized factor in [0, 1]. ``top=None`` returns every state.
+        """
+        import pandas as pd
+
+        if not getattr(self, "modes", None):
+            logging.info("No eigenvalue data available; run eigenvalue_analysis() first.")
+            return pd.DataFrame()
+        match = [m for m in self.modes if m["id"] == mode]
+        if not match:
+            raise KeyError(f"no mode with id {mode}; ids run 1..{len(self.modes)}")
+        m = match[0]
+        df = pd.DataFrame(
+            {"state": [n for n, _ in m["dominant"]],
+             "participation": [round(p, 4) for _, p in m["dominant"]]}
+        )
+        df.attrs["mode"] = mode
+        df.attrs["eigenvalue"] = m["eig"]
+        df.attrs["freq_hz"] = m["freq_hz"]
+        df.attrs["zeta"] = m["zeta"]
+        return df.head(top) if top else df
 
     def plot_eigenvalues(self, damping_ref: float = 0.05) -> None:
         """Simple eigenvalue (s-plane) scatter of the reduced state matrix.
