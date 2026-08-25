@@ -35,10 +35,13 @@ from hermess.tests.baselines.inverter_baseline import (
     run_inverter_case,
 )
 
-for case, path in BASELINES.items():
-    arr = run_inverter_case(case)
-    with open(path, "wb") as file:
-        pickle.dump(arr, file)
-    print(f"  {case:8s} {str(arr.shape):14s} -> {path.name}")
+if __name__ == "__main__":
+    # Guarded so that importing this module can never rewrite the pinned
+    # baselines; the documented invocation (python -m ...) still runs it.
+    for case, path in BASELINES.items():
+        arr = run_inverter_case(case)
+        with open(path, "wb") as file:
+            pickle.dump(arr, file)
+        print(f"  {case:8s} {str(arr.shape):14s} -> {path.name}")
 
-print("Inverter baselines saved.")
+    print("Inverter baselines saved.")

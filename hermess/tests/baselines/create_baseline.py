@@ -47,15 +47,18 @@ baseline_config = config.updated(
     small_signal_analysis=False,
 )
 
-baseline_result_sim = run(baseline_config)
+if __name__ == "__main__":
+    # Guarded so that importing this module can never rewrite the pinned
+    # baseline: the simulation and the pickle dump run only when the script is
+    # executed deliberately (python -m hermess.tests.baselines.create_baseline).
+    baseline_result_sim = run(baseline_config)
 
-out_dir = os.path.dirname(os.path.abspath(__file__))
+    out_dir = os.path.dirname(os.path.abspath(__file__))
 
-# Store only the x_full array (not the whole DaeSim): pickling the object ties
-# the baseline to a module path, which breaks across renames and pytest's
-# importlib mode. The array is all the gate compares.
-with open(os.path.join(out_dir, "baseline_result_sim.pkl"), "wb") as file:
-    pickle.dump(np.asarray(baseline_result_sim.x_full), file)
+    # Store only the x_full array (not the whole DaeSim): pickling the object
+    # ties the baseline to a module path, which breaks across renames and
+    # pytest's importlib mode. The array is all the gate compares.
+    with open(os.path.join(out_dir, "baseline_result_sim.pkl"), "wb") as file:
+        pickle.dump(np.asarray(baseline_result_sim.x_full), file)
 
-
-print("Baseline results saved successfully.")
+    print("Baseline results saved successfully.")
