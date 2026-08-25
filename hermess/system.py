@@ -20,6 +20,7 @@ from __future__ import annotations  # Postponed type evaluation
 from typing import Literal, Optional, Sequence, Tuple
 from hermess.devices.device import Line, BusInit, Disturbance
 from hermess.config import config
+from hermess.errors import SimulationCancelled
 import casadi as ca
 import numpy as np
 import pandas as pd
@@ -2259,6 +2260,12 @@ class DaeSim(Dae):
         # Gated by config; when True the small-signal eigenvalue analysis is run
         # and its figures shown at the operating point before the simulation.
         self.small_signal_analysis: bool = False
+        #: Optional hook called during :meth:`simulate` with the completed
+        #: fraction in [0, 1]. Returning ``False`` cancels the run by raising
+        #: :class:`~hermess.errors.SimulationCancelled`. Granularity: one call
+        #: per accepted block with ``incl_lim``, one per disturbance interval
+        #: otherwise (a disturbance-free run reports only 0 and 1).
+        self.progress_callback = None
         self.t0: float  # Start of the next DAE call
         self.tf: float  # End of the next DAE call
         self.line_dyn: bool  # Simulate with dynamic lines or not
@@ -2462,21 +2469,28 @@ class DaeSim(Dae):
         if getattr(self, "small_signal_analysis", False):
             self.eigenvalue_analysis()
             self.print_modal_report()
-            self.plot_eigenvalues()
-            self.plot_participation_bands()
-            import matplotlib
-            import matplotlib.pyplot as plt
+            if getattr(self, "small_signal_figures", True):
+                self.plot_eigenvalues()
+                self.plot_participation_bands()
+                import matplotlib
+                import matplotlib.pyplot as plt
 
-            # Block only on an interactive backend (so the user sees the figures
-            # before the run proceeds); on a non-interactive backend (headless/CI)
-            # the figures are built but plt.show would only warn, so skip it.
-            _non_interactive = {"agg", "pdf", "svg", "ps", "template", "cairo", "pgf"}
-            if matplotlib.get_backend().lower() not in _non_interactive:
-                plt.show(block=True)
+                # Block only on an interactive backend (so the user sees the
+                # figures before the run proceeds); on a non-interactive backend
+                # (headless/CI) the figures are built but plt.show would only
+                # warn, so skip it.
+                _non_interactive = {
+                    "agg", "pdf", "svg", "ps", "template", "cairo", "pgf",
+                }
+                if matplotlib.get_backend().lower() not in _non_interactive:
+                    plt.show(block=True)
 
         # Snapshot initial admittance state for post-processing branch currents
         self.grid.build_y()
         self._fault_intervals = [(0, self._snapshot_branch_params())]
+
+        # The model is built and initialized; time stepping starts now.
+        self._report_progress(0.0)
 
         if self.incl_lim:
             # Limit-aware block stepping. Runs of steps with no pending
@@ -2573,6 +2587,7 @@ class DaeSim(Dae):
                     i0 = i_s[:, n_acc - 1]
                 iter_forward += n_acc
                 pbar.update(n_acc)
+                self._report_progress(iter_forward / max(self.nts - 1, 1))
 
                 current_value = round(iter_forward * self.t, 0)
                 # Log only when the first digit after the decimal changes
@@ -2677,6 +2692,7 @@ class DaeSim(Dae):
                 progress = (self.t0 - self.T_start) / total_duration * 100
                 pbar.n = progress
                 pbar.refresh()
+                self._report_progress(progress / 100.0)
 
             # Now do the last interval, unless the last disturbance leaves less
             # than one output step before T_end (then the trajectory is complete).
@@ -2717,12 +2733,26 @@ class DaeSim(Dae):
             pbar.refresh()
             pbar.close()
 
+        self._report_progress(1.0)
+
         # Reconcile nts with actual data size (np.arange rounding can cause off-by-one)
         self.nts = self.x_full.shape[1]
         self.time_steps = np.linspace(self.T_start, self.T_end, self.nts)
 
         # Compute branch currents in post-processing (vectorized NumPy)
         self.compute_i_full()
+
+    def _report_progress(self, fraction: float) -> None:
+        """Invoke :attr:`progress_callback`, if set, with the completed fraction
+        of the run clamped to [0, 1]. A callback returning ``False`` (exactly)
+        cancels the run by raising
+        :class:`~hermess.errors.SimulationCancelled`."""
+        if self.progress_callback is None:
+            return
+        if self.progress_callback(min(max(fraction, 0.0), 1.0)) is False:
+            raise SimulationCancelled(
+                f"Simulation cancelled at {fraction:.0%} by the progress callback."
+            )
 
     def _snapshot_branch_params(self) -> dict:
         """Snapshot the current numeric branch admittance parameters from Grid.build_y()."""

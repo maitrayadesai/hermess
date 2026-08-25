@@ -65,6 +65,11 @@ class Config(BaseModel):
         False  # Run small-signal eigenvalue/participation analysis at the
         # operating point (before the simulation) and show the figures
     )
+    small_signal_figures: bool = (
+        True  # Show the small-signal figures (eigenvalue map, participation
+        # bands) when small_signal_analysis is set; False computes the data
+        # only, for headless or embedded (GUI) use
+    )
     log_level: Levels
 
     def updated(self, **kwargs: Any) -> "Config":
@@ -137,6 +142,11 @@ class Config(BaseModel):
             analysis at the operating point (before the simulation) and show the
             frequency-banded participation figures plus the modal report.
         :type small_signal_analysis: bool
+        :param small_signal_figures: Show the small-signal figures when
+            ``small_signal_analysis`` is set. ``False`` computes the data only
+            (``eigenvalues``, ``modes``, participation factors on the returned
+            model), for headless or embedded use.
+        :type small_signal_figures: bool
 
         :returns: A new instance of the :class:`Config` class configured with the provided parameters.
         :rtype: Config

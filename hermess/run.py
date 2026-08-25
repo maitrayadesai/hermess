@@ -89,8 +89,14 @@ def warn_filter_network_mismatch(device_list, line_dyn: bool) -> None:
             )
 
 
-def run(config: Config) -> system.DaeSim:
-    """Initialize and run the dynamic simulation."""
+def run(config: Config, progress_callback=None) -> system.DaeSim:
+    """Initialize and run the dynamic simulation.
+
+    :param progress_callback: Optional hook called during the time stepping
+        with the completed fraction in [0, 1]. Returning ``False`` cancels the
+        run by raising :class:`~hermess.errors.SimulationCancelled`. See
+        :attr:`hermess.system.DaeSim.progress_callback` for the granularity.
+    """
 
     clear_module("hermess.system")
     importlib.reload(system)
@@ -152,6 +158,8 @@ def run(config: Config) -> system.DaeSim:
     system.grid_sim.gcall(system.dae_sim, line=system.line_sim)
 
     system.disturbance_sim.sort_chrono()
+
+    system.dae_sim.progress_callback = progress_callback
 
     system.dae_sim.check_initialization()
 

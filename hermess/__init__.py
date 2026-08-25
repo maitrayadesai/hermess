@@ -20,9 +20,11 @@ from importlib.metadata import version, PackageNotFoundError
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from hermess.errors import SimulationCancelled
 from hermess.registry import register, registered, unregister
 
 if TYPE_CHECKING:  # pragma: no cover - import kept out of the runtime path
+    from hermess.results import SimulationResults
     from hermess.system import DaeSim
 
 try:
@@ -39,10 +41,23 @@ __all__ = [
     "register",
     "registered",
     "unregister",
+    "extract_results",
+    "SimulationResults",
+    "SimulationCancelled",
     "help",
 ]
 
 SYSTEMS_DIR = Path(__file__).parent / "systems"
+
+
+def __getattr__(name: str) -> Any:
+    # Lazy re-exports of the results container, so `import hermess` does not
+    # pull pandas until results are actually extracted.
+    if name in ("extract_results", "SimulationResults"):
+        from hermess import results as _results
+
+        return getattr(_results, name)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 def list_systems(root: "str | Path | None" = None) -> list:
@@ -52,7 +67,12 @@ def list_systems(root: "str | Path | None" = None) -> list:
     return sorted(str(p.parent.relative_to(root)) for p in root.rglob("sim_param.txt"))
 
 
-def simulate(system: str, system_root: "str | Path | None" = None, **overrides: Any) -> "DaeSim":
+def simulate(
+    system: str,
+    system_root: "str | Path | None" = None,
+    progress_callback: Any = None,
+    **overrides: Any,
+) -> "DaeSim":
     """Run one simulation and return the finished :class:`~hermess.system.DaeSim`.
 
     The short form of ``config.updated(...)`` followed by
@@ -68,6 +88,9 @@ def simulate(system: str, system_root: "str | Path | None" = None, **overrides: 
     :param system_root: Where to look for the system folder (default: the systems
         shipped with the package). Point it at your own directory to run a system
         you wrote or edited.
+    :param progress_callback: Optional hook called during the time stepping with
+        the completed fraction in [0, 1]; returning ``False`` cancels the run by
+        raising :class:`~hermess.errors.SimulationCancelled`.
     :param overrides: Any field of :class:`~hermess.config.Config`
         (``T_end``, ``ts``, ``line_dyn``, ``omega_mode``, ``small_signal_analysis``,
         ``plot``, ...). Plotting is off by default here, unlike the shipped
@@ -89,7 +112,9 @@ def simulate(system: str, system_root: "str | Path | None" = None, **overrides: 
         small_signal_analysis=False,
     )
     settings.update(overrides)
-    return _run(_default_config.updated(**settings))
+    return _run(
+        _default_config.updated(**settings), progress_callback=progress_callback
+    )
 
 
 def help() -> None:
