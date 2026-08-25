@@ -2,22 +2,29 @@
 \input{style.tex}
 \begin{document}
 \begin{tikzpicture}[node distance=8mm and 14mm]
-  \node[block, minimum width=30mm, minimum height=13mm] (em) {electromagnetic model\\[-1pt]{\footnotesize (machine class)}};
-  \node[block, left=16mm of em, minimum width=22mm] (shaft) {shaft\\[-1pt]{\footnotesize\texttt{shaft =}}};
-  \node[block, above=10mm of shaft, minimum width=22mm] (gov) {governor\\[-1pt]{\footnotesize\texttt{governor =}}};
-  \node[block, above=10mm of em, minimum width=22mm] (avr) {AVR\\[-1pt]{\footnotesize\texttt{avr =}}};
-  \node[block, above=10mm of avr, minimum width=22mm] (pss) {PSS\\[-1pt]{\footnotesize\texttt{pss =}}};
-  \node[block, right=16mm of em, minimum width=20mm, fill=ethpetrol!10, draw=ethpetrol] (grid) {network\\[-1pt]{\footnotesize bus $\bar v_n$}};
-  \draw[sig] (gov) -- (shaft) node[midway, left, lbl] {$p_m$};
+  % power path (bottom row)
+  \node[block, minimum width=32mm, minimum height=13mm] (em) {electromagnetic model\\[-1pt]{\footnotesize (machine class)}};
+  \node[block, left=15mm of em, minimum width=22mm, minimum height=13mm] (shaft) {shaft\\[-1pt]{\footnotesize\texttt{shaft =}}};
+  \node[block, right=15mm of em, minimum width=20mm, minimum height=13mm, fill=ethpetrol!10, draw=ethpetrol] (grid) {network\\[-1pt]{\footnotesize bus $\bar v_n$}};
+  % controllers (top row)
+  \node[block, above=11mm of shaft, minimum width=22mm] (gov) {governor\\[-1pt]{\footnotesize\texttt{governor =}}};
+  \node[block, above=11mm of em, minimum width=22mm] (avr) {AVR\\[-1pt]{\footnotesize\texttt{avr =}}};
+  \node[block, above=11mm of grid, minimum width=22mm] (pss) {PSS\\[-1pt]{\footnotesize\texttt{pss =}}};
+  % power-path wiring
+  \draw[sig] ($(shaft.east)+(0,0.3)$) -- ($(em.west)+(0,0.3)$) node[midway, above, lbl] {$\delta,\ \omega$};
+  \draw[sig] ($(em.west)+(0,-0.3)$) -- ($(shaft.east)+(0,-0.3)$) node[midway, below, lbl] {$P_e$};
+  \draw[sig] ($(em.east)+(0,0.3)$) -- ($(grid.west)+(0,0.3)$) node[midway, above, lbl] {$\bar\imath$};
+  \draw[sig] ($(grid.west)+(0,-0.3)$) -- ($(em.east)+(0,-0.3)$) node[midway, below, lbl] {$\bar v_n$};
+  % controller wiring (straight verticals + one clean feedback)
+  \draw[sig] (gov) -- (shaft) node[midway, right, lbl] {$p_m$};
   \draw[sig] (avr) -- (em) node[midway, right, lbl] {$E_{fd}$};
-  \draw[sig] (pss) -- (avr) node[midway, right, lbl] {$V_s$};
-  \draw[sig] (shaft) -- (em) node[midway, above, lbl] {$\delta,\ \omega$};
-  \draw[sig] ($(em.west)+(0,-0.35)$) -- ($(shaft.east)+(0,-0.35)$) node[midway, below, lbl] {$P_e$};
-  \draw[sig] (em) -- (grid) node[midway, above, lbl] {$\bar\imath$};
-  \draw[sig] ($(grid.west)+(0,-0.35)$) -- ($(em.east)+(0,-0.35)$) node[midway, below, lbl] {$\bar v_n$};
-  \draw[sig] (shaft.north west) ++(-0.15,0.1) |- ($(gov.west)+(0,0.35)$) node[pos=0.8, above, lbl] {$\omega$};
-  \draw[sig] ($(grid.north)+(0,0.1)$) |- (pss.east) node[pos=0.85, above, lbl] {$\omega,\ V_t$};
-  \node[lbl, text=ethgrey] at ($(em.south)+(0,-0.75)$)
-    {\footnotesize every port variable (\,$p_m$, $E_{fd}$, $V_s$\,) may be a state or a private algebraic, per strategy};
+  \draw[sig] (pss.west) -- (avr.east) node[midway, above, lbl] {$V_s$};
+  % omega feedback: shaft top-left up to governor west, orthogonal
+  \draw[sig] ($(shaft.west)+(0,0.3)$) -- ++(-0.75,0) |- (gov.west)
+      node[pos=0.25, left, lbl] {$\omega$};
+  % PSS measurement input: from the network top to the PSS east
+  \draw[sig] (grid.north) -- (pss.south) node[midway, right, lbl] {$\omega,\ V_t$};
+  \node[lbl, text=ethgrey] at ($(em.south)+(0,-0.8)$)
+    {\footnotesize every port variable ($p_m$, $E_{fd}$, $V_s$) may be a state or a private algebraic, per strategy};
 \end{tikzpicture}
 \end{document}
