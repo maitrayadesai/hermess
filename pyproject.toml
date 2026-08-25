@@ -45,6 +45,11 @@ numpy = "^2.2.4"
 pandas = "^2.2.3"
 pydantic = "^2.10.3"
 tqdm = "^4.66.0"
+pyside6 = { version = "^6.6", optional = true }
+pyqtgraph = { version = "^0.13.7", optional = true }
+
+[tool.poetry.extras]
+gui = ["pyside6", "pyqtgraph"]
 
 
 [tool.poetry.group.dev.dependencies]
@@ -76,6 +81,7 @@ addopts = [
 [tool.poetry.scripts]
 main = "hermess.main:main"
 hermess = "hermess.__main__:main"
+hermess-gui = "hermess.gui.app:main"
 
 
 

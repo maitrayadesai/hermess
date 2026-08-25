@@ -1,0 +1,199 @@
+# © 2024-2026 ETH Zurich
+# Original author: Milos Katanic
+# Simulation-only fork & maintainer: Maitraya Avadhut Desai
+#
+# Licensed under the GNU General Public License v3.0 or later;
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at:
+#
+#     https://www.gnu.org/licenses/gpl-3.0.en.html
+#
+# This software is distributed "AS IS", WITHOUT WARRANTY OF ANY KIND,
+# express or implied. See the License for specific language governing
+# permissions and limitations under the License.
+#
+# Simulation-only fork of PowerDynamicEstimator
+# (https://doi.org/10.5905/ethz-1007-842); dynamic state estimation removed.
+# For inquiries, contact: mdesai@ethz.ch
+
+"""Tests of the GUI's non-Qt logic: the system-file display parser, the
+worker-process protocol, the results extraction and the CSV export. None of
+these need PySide6, so they run in the core CI."""
+
+import csv
+import pickle
+import threading
+
+import numpy as np
+import pytest
+
+import hermess
+from hermess.gui import sysparse
+from hermess.gui.export import export_csv
+from hermess.gui.graphlayout import spring_layout
+from hermess.gui.worker import RunRequest, simulation_worker
+from hermess.results import SimulationResults, extract_results
+
+
+# ---- sysparse ---------------------------------------------------------------
+
+
+def test_parse_shipped_3bus_system():
+    desc = sysparse.parse_system(hermess.SYSTEMS_DIR / "3_bus")
+    kinds = [e.kind for e in desc.devices]
+    assert kinds == ["SynchronousSubtransientSP", "GridForming", "StaticZIP"]
+    assert len(desc.lines) == 3
+    assert len(desc.bus_inits) == 3
+    assert desc.buses() == ["1", "2", "3"]
+
+    # The synchronous machine entry spans a continuation line; parameters from
+    # both physical lines must land in the same entry.
+    machine = desc.devices[0]
+    assert machine.get("idx") == "SG1"
+    assert machine.get("H") == "6.50"
+    assert machine.get("x_l") == "0.2"  # from the continuation line
+
+    dist = sysparse.parse_system(hermess.SYSTEMS_DIR / "3_bus_loadstep")
+    assert [e.get("type") for e in dist.disturbances] == ["LOAD"]
+
+
+def test_parse_entries_tolerates_junk():
+    entries = sysparse.parse_entries(
+        "# comment only\n"
+        "\n"
+        'Line, bus_i = "1", stray-fragment, bus_j = "2"\n'
+    )
+    assert len(entries) == 1
+    assert entries[0].params == {"bus_i": "1", "bus_j": "2"}
+
+
+# ---- graph layout -----------------------------------------------------------
+
+
+def test_spring_layout_deterministic_and_bounded():
+    edges = [(0, 1), (1, 2), (2, 3), (3, 0)]
+    a = spring_layout(4, edges)
+    b = spring_layout(4, edges)
+    assert np.array_equal(a, b)
+    assert a.shape == (4, 2)
+    assert a.min() >= 0.0 and a.max() <= 1.0
+    # Degenerate sizes must not crash.
+    assert spring_layout(0, []).shape == (0, 2)
+    assert spring_layout(1, []).shape == (1, 2)
+
+
+def test_spring_layout_separates_non_neighbors():
+    # In a path 0-1-2-3, adjacent nodes must end up closer than the endpoints.
+    pos = spring_layout(4, [(0, 1), (1, 2), (2, 3)])
+    d01 = np.linalg.norm(pos[0] - pos[1])
+    d03 = np.linalg.norm(pos[0] - pos[3])
+    assert d01 < d03
+
+
+# ---- worker protocol --------------------------------------------------------
+
+
+class _ListConn:
+    """In-process stand-in for the worker's pipe connection."""
+
+    def __init__(self):
+        self.messages = []
+
+    def send(self, msg):
+        self.messages.append(msg)
+
+    def close(self):
+        pass
+
+
+@pytest.fixture(scope="module")
+def worker_messages():
+    conn = _ListConn()
+    request = RunRequest(
+        system="3_bus_loadstep",
+        overrides={"T_end": 0.5, "small_signal_analysis": True},
+    )
+    simulation_worker(conn, request, threading.Event())
+    return conn.messages
+
+
+def test_worker_completes_with_results(worker_messages):
+    kinds = [m[0] for m in worker_messages]
+    assert kinds[-1] == "done"
+    assert "progress" in kinds
+    results = worker_messages[-1][1]
+    assert isinstance(results, SimulationResults)
+    assert results.system == "3_bus_loadstep"
+    assert set(results.voltage) == {"1", "2", "3"}
+    assert results.small_signal is not None
+    assert results.small_signal.eigenvalues.size > 0
+    assert results.power_flow_bus is not None
+    assert results.config["T_end"] == 0.5
+    # The container must cross a process boundary.
+    assert pickle.loads(pickle.dumps(results)).system == "3_bus_loadstep"
+
+
+def test_worker_progress_monotonic(worker_messages):
+    fractions = [m[1] for m in worker_messages if m[0] == "progress"]
+    assert fractions == sorted(fractions)
+    assert fractions[0] == 0.0
+    assert fractions[-1] == 1.0
+
+
+def test_worker_cancels_immediately():
+    conn = _ListConn()
+    event = threading.Event()
+    event.set()  # cancel before the time stepping starts
+    simulation_worker(
+        conn, RunRequest(system="3_bus_loadstep", overrides={"T_end": 0.5}), event
+    )
+    assert conn.messages[-1] == ("cancelled",)
+
+
+def test_worker_reports_errors():
+    conn = _ListConn()
+    simulation_worker(
+        conn, RunRequest(system="no_such_system"), threading.Event()
+    )
+    final = conn.messages[-1]
+    assert final[0] == "error"
+    assert final[1] == "FileNotFoundError"
+
+
+# ---- results extraction -----------------------------------------------------
+
+
+def test_extract_results_from_simulate():
+    dae = hermess.simulate("3_bus_loadstep", T_end=0.5)
+    results = extract_results(dae)
+    assert results.t.shape == (dae.nts,)
+    assert np.allclose(np.abs(results.voltage["1"][0]), 1.0, atol=0.1)
+    units = {d.unit for d in results.devices}
+    assert {"SG1", "GFMI2"} <= units
+    machine = next(d for d in results.devices if d.unit == "SG1")
+    assert "omega" in machine.states
+    assert machine.states["omega"].shape == (dae.nts,)
+
+
+# ---- CSV export -------------------------------------------------------------
+
+
+def test_export_csv(tmp_path):
+    results = SimulationResults(
+        system="demo",
+        t=np.array([0.0, 0.1, 0.2]),
+        voltage={"1": np.array([1.0 + 0j, 1.0 + 0j, 0.9 + 0j])},
+        power={},
+        config={"T_end": 0.2},
+        hermess_version="1.0.0",
+        created="2026-08-25T12:00:00",
+    )
+    target = tmp_path / "demo.csv"
+    sidecar = export_csv(target, results, [("V1", results.voltage_magnitude("1"))])
+
+    with open(target) as fid:
+        rows = list(csv.reader(fid))
+    assert rows[0] == ["t", "V1"]
+    assert [float(x) for x in rows[3]] == [0.2, 0.9]
+    assert sidecar.exists()
+    assert "demo" in sidecar.read_text()
