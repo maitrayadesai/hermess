@@ -33,6 +33,7 @@ dynamic state estimation layer has been removed.
    - **Reference-frame modes** — center-of-inertia, single-machine, nominal and distributed.
    - **Small-signal analysis** — eigenvalues, the reduced state matrix and participation factors at the operating point.
    - **Extensible** — user-written devices and control strategies become selectable from a system file through :func:`hermess.register`.
+   - **Graphical interface** — an optional desktop GUI (``hermess-gui``) for interactive runs, topology, time-domain, small-signal and power-flow views; see :ref:`gui`.
    - **Benchmarks included** — IEEE 39-bus (with converter variants), Kundur two-area, and the 14-generator South East Australian system.
 
 Getting started
@@ -58,6 +59,7 @@ See :ref:`installation` to set up, :ref:`usage` for the everyday entry points an
 
    installation
    usage
+   gui
    advanced_usage
    configuration
    cases

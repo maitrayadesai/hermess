@@ -94,6 +94,22 @@ hermess.register(VSMAngle, "VSM")   # now:  angle = "VSM"  in sim_param.txt
 hermess.registered("angle")         # what can be selected today
 ```
 
+### Graphical interface
+
+An optional desktop GUI covers the interactive workflow: select a shipped or
+user-written system, adjust the simulation options, run with live progress, and
+inspect the one-line diagram, the time-domain trajectories, the small-signal
+modes and the initial power flow. Results export as plot-ready CSV.
+
+```bash
+pip install -e ".[gui]"   # or: uv sync --extra gui
+hermess-gui
+```
+
+![HERMESS GUI](docs/source/_static/gui_timedomain.png)
+
+See the [GUI guide](https://maitrayadesai.github.io/hermess/gui.html) for a tour.
+
 ## Examples
 
 You can check out the available examples in the `./examples` directory to get started, and the [documentation](https://maitrayadesai.github.io/hermess/) for the full usage guide and API reference.

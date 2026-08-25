@@ -27,6 +27,12 @@ Clone the repository and install the package in editable mode:
 The dependencies (CasADi, NumPy, SciPy, pandas, matplotlib, pydantic, tabulate,
 tqdm) are declared in ``pyproject.toml`` and are installed with the package.
 
+To also install the optional desktop GUI (PySide6, pyqtgraph; see :ref:`gui`):
+
+.. code-block:: bash
+
+   pip install -e ".[gui]"
+
 With uv
 ^^^^^^^
 
