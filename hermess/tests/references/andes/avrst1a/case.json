@@ -1,0 +1,50 @@
+{
+ "model": "AVRST1A",
+ "description": "AVRST1A static exciter on GENROU machines vs ANDES EXST1 with KF = 0; constant mechanical power.",
+ "initial_maps": {
+  "GENROU": {
+   "delta": "delta",
+   "omega": "omega",
+   "e_qprim": "e1q",
+   "e_dprim": "e1d",
+   "psi_kd": "e2d",
+   "psi_kq": "e2q",
+   "Pref": "tm"
+  },
+  "EXST1": {
+   "Vtr": "LG_y",
+   "Vll1": "LL_x",
+   "Efd": "LR_y",
+   "Vf_ref": "vref"
+  }
+ },
+ "extra_trajectories": {
+  "Efd": "efd"
+ },
+ "event_times": [1.0],
+ "tolerances": {
+  "initial": 1e-05,
+  "eig_abs": 0.0001,
+  "eig_rel": 0.0001,
+  "traj": {
+   "omega": 1e-05,
+   "delta": 0.005,
+   "v": 0.0001,
+   "p": 0.0005,
+   "q": 0.0005,
+   "efd": 0.005
+  }
+ },
+ "achieved_2026_08": {
+  "initial": 1.8e-07,
+  "eig_abs": 3.7e-07,
+  "traj": {
+   "omega": 1.5e-07,
+   "delta": 3.0e-05,
+   "v": 1.1e-05,
+   "p": 2.3e-05,
+   "q": 3.7e-05,
+   "efd": 4.9e-04
+  }
+ }
+}

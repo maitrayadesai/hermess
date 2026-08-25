@@ -65,6 +65,7 @@ See :ref:`installation` to set up, :ref:`usage` for the everyday entry points an
    cases
    models
    models_static
+   validation
    license
 
 Background

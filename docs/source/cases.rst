@@ -38,6 +38,54 @@ point and the one used by most of the test suite. Disturbance: a line opening.
 The same three-bus network with a single load step instead of the line opening.
 Used by the grid-forming control example in ``examples/neural_gfm_control``.
 
+.. _3bus_genrou:
+
+``3bus_genrou``
+^^^^^^^^^^^^^^^
+
+A three-bus triangle with two round-rotor GENROU machines (buses 1 and 3) and
+a constant-impedance load (bus 2), with excitation and turbine dynamics
+deliberately excluded (``AVRCONST`` / ``GOVCONST``). This is the cross-tool
+validation case for the GENROU machine model, compared against ANDES in CI;
+see :ref:`validation`. Disturbance: a line opening.
+
+.. _3bus_gensal:
+
+``3bus_gensal``
+^^^^^^^^^^^^^^^
+
+The same network with two salient-pole GENSAL machines: the cross-tool
+validation case for GENSAL (see :ref:`validation`). Disturbance: a line
+opening.
+
+.. _3bus_tgov1:
+
+``3bus_tgov1``
+^^^^^^^^^^^^^^
+
+The GENROU pair with a TGOV1 turbine governor closed around each machine and
+no other speed feedback (D = 0): the cross-tool validation case for TGOV1
+(see :ref:`validation`). Disturbance: a line opening, which leaves a power
+imbalance for the governors to pick up.
+
+.. _3bus_sexst:
+
+``3bus_sexst``
+^^^^^^^^^^^^^^
+
+The GENROU pair with the simplified static exciter SEXST closed around each
+machine: the cross-tool validation case for SEXST (see :ref:`validation`).
+Disturbance: a line opening, whose voltage step exercises the exciters.
+
+.. _3bus_avrst1a:
+
+``3bus_avrst1a``
+^^^^^^^^^^^^^^^^
+
+The GENROU pair with the ST1A static exciter (transducer,
+transient-gain-reduction lead-lag, regulator lag): the cross-tool validation
+case for AVRST1A (see :ref:`validation`). Disturbance: a line opening.
+
 .. _kundur:
 
 ``kundur``

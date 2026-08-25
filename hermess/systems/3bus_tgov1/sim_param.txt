@@ -1,0 +1,26 @@
+# Cross-tool validation case: TGOV1 vs ANDES.
+#
+# Same three-bus triangle and GENROU machines as the genrou case, with the
+# TGOV1 turbine governor closed around both machines (D = 0, so the governor
+# is the only speed feedback). The ANDES TGOV1 reduces to ours with the
+# lead-lag disabled: R = Rd, T1 = Tsv, T2 = 0, T3 = Tch, Dt = 0, and the valve
+# limits wide open. Excitation stays constant (AVRCONST).
+#
+# This is the demo-workspace copy; the validated snapshot lives in
+# hermess/tests/references/andes/tgov1/ together with the ANDES twin
+# (generate.py) and the committed reference data. Machine parameters are on
+# the system base (Sn = Sb = 100 MVA).
+
+GENROU, idx = "SG1", bus = "1", avr = "AVRCONST", governor = "TGOV1", Rd = 0.05, Tsv = 0.5, Tch = 1.0, psv_min = -10, psv_max = 10, Sn = 100, fn = 50, H = 6.5, D = 0, f = 0, R_s = 0.0025, x_a = 0.2, x_d = 1.8, x_q = 1.7, x_dprim = 0.3, x_qprim = 0.55, x_dsec = 0.25, x_qsec = 0.25, T_d0prim = 8.0, T_q0prim = 0.4, T_d0sec = 0.03, T_q0sec = 0.05
+
+GENROU, idx = "SG2", bus = "3", avr = "AVRCONST", governor = "TGOV1", Rd = 0.05, Tsv = 0.5, Tch = 1.0, psv_min = -10, psv_max = 10, Sn = 100, fn = 50, H = 6.5, D = 0, f = 0, R_s = 0.0025, x_a = 0.2, x_d = 1.8, x_q = 1.7, x_dprim = 0.3, x_qprim = 0.55, x_dsec = 0.25, x_qsec = 0.25, T_d0prim = 8.0, T_q0prim = 0.4, T_d0sec = 0.03, T_q0sec = 0.05
+
+Line, bus_i = "1", bus_j = "2", r = 0.01, x = 0.08, g = 0, b = 0.03, trafo = 1
+Line, bus_i = "2", bus_j = "3", r = 0.002, x = 0.1, g = 0, b = 0.05, trafo = 1
+Line, bus_i = "3", bus_j = "1", r = 0.006, x = 0.03, g = 0, b = 0.075, trafo = 1
+
+StaticZIP, bus = "2", z_share = 1.0
+
+BusInit, bus = "1", p = 0, v = 1.03, type = "slack"
+BusInit, bus = "3", p = -60, v = 1.02, type = "PV"
+BusInit, bus = "2", p = 150, q = 40, type = "PQ"

@@ -1,0 +1,28 @@
+# Cross-tool validation case: SEXST vs ANDES.
+#
+# The GENROU pair of the genrou case with the simplified static exciter SEXST
+# closed around each machine (governor stays GOVCONST). The ANDES SEXS
+# reduces exactly to SEXST with its lead-lag disabled (TATB = 1): what
+# remains is the same single lag K/(1 + s TE) on the voltage error. The
+# then-decoupled ANDES lead-lag state contributes one spurious eigenvalue
+# -1/TB per machine, placed at -815 rad/s so the test can drop it
+# unambiguously.
+#
+# This is the demo-workspace copy; the validated snapshot lives in
+# hermess/tests/references/andes/sexst/ together with the ANDES twin
+# (generate.py) and the committed reference data. Machine parameters are on
+# the system base (Sn = Sb = 100 MVA).
+
+GENROU, idx = "SG1", bus = "1", avr = "SEXST", KA = 50, TE = 0.5, governor = "GOVCONST", Sn = 100, fn = 50, H = 6.5, D = 2, f = 0, R_s = 0.0025, x_a = 0.2, x_d = 1.8, x_q = 1.7, x_dprim = 0.3, x_qprim = 0.55, x_dsec = 0.25, x_qsec = 0.25, T_d0prim = 8.0, T_q0prim = 0.4, T_d0sec = 0.03, T_q0sec = 0.05
+
+GENROU, idx = "SG2", bus = "3", avr = "SEXST", KA = 50, TE = 0.5, governor = "GOVCONST", Sn = 100, fn = 50, H = 6.5, D = 2, f = 0, R_s = 0.0025, x_a = 0.2, x_d = 1.8, x_q = 1.7, x_dprim = 0.3, x_qprim = 0.55, x_dsec = 0.25, x_qsec = 0.25, T_d0prim = 8.0, T_q0prim = 0.4, T_d0sec = 0.03, T_q0sec = 0.05
+
+Line, bus_i = "1", bus_j = "2", r = 0.01, x = 0.08, g = 0, b = 0.03, trafo = 1
+Line, bus_i = "2", bus_j = "3", r = 0.002, x = 0.1, g = 0, b = 0.05, trafo = 1
+Line, bus_i = "3", bus_j = "1", r = 0.006, x = 0.03, g = 0, b = 0.075, trafo = 1
+
+StaticZIP, bus = "2", z_share = 1.0
+
+BusInit, bus = "1", p = 0, v = 1.03, type = "slack"
+BusInit, bus = "3", p = -60, v = 1.02, type = "PV"
+BusInit, bus = "2", p = 150, q = 40, type = "PQ"

@@ -1,29 +1,35 @@
 hermess
++---devices
 +---gui
 +---systems
-|   +---3_bus
-|   +---3_bus_loadstep
-|   +---IEEE39_bus
-|   +---IEEE39_bus_ideal
-|   +---IEEE39_bus_inverter
-|   +---IEEE39_bus_inverter_old
-|   +---SEA_14gen
-|   |   +---SEA_case1
-|   |   +---SEA_case1_conv
-|   |   +---SEA_case1_nopss
-|   |   +---SEA_case2
-|   |   +---SEA_case2_nopss
-|   |   +---SEA_case3
-|   |   +---SEA_case3_nopss
-|   |   +---SEA_case4
-|   |   +---SEA_case4_nopss
-|   |   +---SEA_case5
-|   |   +---SEA_case5_nopss
-|   |   +---SEA_case6
-|   |   +---SEA_case6_nopss
-|   |   +---SMIB_check
-|   +---kundur_avr_newtest
-|   +---kundur_converter
+|   +---3bus
+|   +---3bus_avrst1a
+|   +---3bus_genrou
+|   +---3bus_gensal
+|   +---3bus_loadstep
+|   +---3bus_sexst
+|   +---3bus_tgov1
+|   +---ieee39
+|   +---ieee39_conv
+|   +---ieee39_conv_old
+|   +---ieee39_ideal
+|   +---kundur
+|   +---kundur_conv
+|   +---sea14gen
+|   |   +---case1
+|   |   +---case1_conv
+|   |   +---case1_nopss
+|   |   +---case2
+|   |   +---case2_nopss
+|   |   +---case3
+|   |   +---case3_nopss
+|   |   +---case4
+|   |   +---case4_nopss
+|   |   +---case5
+|   |   +---case5_nopss
+|   |   +---case6
+|   |   +---case6_nopss
+|   |   +---smib
 +---tests
 |   +---baselines
 |   +---fixtures
@@ -46,4 +52,16 @@ hermess
 |   |   +---sp6_ground
 |   |   +---sp_dae
 |   |   +---sp_ground
+|   +---references
+|   |   +---andes
+|   |   |   +---avrst1a
+|   |   |   |   +---system
+|   |   |   +---genrou
+|   |   |   |   +---system
+|   |   |   +---gensal
+|   |   |   |   +---system
+|   |   |   +---sexst
+|   |   |   |   +---system
+|   |   |   +---tgov1
+|   |   |   |   +---system
 +---utils

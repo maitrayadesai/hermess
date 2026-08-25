@@ -1,0 +1,26 @@
+# Cross-tool validation case: GENSAL vs ANDES.
+#
+# Same three-bus triangle as the GENROU case, with two identical salient-pole
+# GENSAL machines. ANDES ships no GENSAL, so the twin uses ANDES GENROU with
+# xq1 = xq: then e1d stays identically zero and the GENROU q-axis collapses to
+# the GENSAL equation T''_q0 psi''_q' = -psi''_q + (x_q - x''_q) i_q, with
+# psi''_q = (xq - xq2)/(xq - xl) * e2q.
+#
+# This is the demo-workspace copy; the validated snapshot lives in
+# hermess/tests/references/andes/gensal/ together with the ANDES twin
+# (generate.py) and the committed reference data. Machine parameters are on
+# the system base (Sn = Sb = 100 MVA).
+
+GENSAL, idx = "SG1", bus = "1", avr = "AVRCONST", governor = "GOVCONST", Sn = 100, fn = 50, H = 5.0, D = 2, f = 0, R_s = 0.0025, x_a = 0.15, x_d = 1.1, x_q = 0.7, x_dprim = 0.35, x_dsec = 0.25, x_qsec = 0.25, T_d0prim = 6.0, T_d0sec = 0.04, T_q0sec = 0.06
+
+GENSAL, idx = "SG2", bus = "3", avr = "AVRCONST", governor = "GOVCONST", Sn = 100, fn = 50, H = 5.0, D = 2, f = 0, R_s = 0.0025, x_a = 0.15, x_d = 1.1, x_q = 0.7, x_dprim = 0.35, x_dsec = 0.25, x_qsec = 0.25, T_d0prim = 6.0, T_d0sec = 0.04, T_q0sec = 0.06
+
+Line, bus_i = "1", bus_j = "2", r = 0.01, x = 0.08, g = 0, b = 0.03, trafo = 1
+Line, bus_i = "2", bus_j = "3", r = 0.002, x = 0.1, g = 0, b = 0.05, trafo = 1
+Line, bus_i = "3", bus_j = "1", r = 0.006, x = 0.03, g = 0, b = 0.075, trafo = 1
+
+StaticZIP, bus = "2", z_share = 1.0
+
+BusInit, bus = "1", p = 0, v = 1.03, type = "slack"
+BusInit, bus = "3", p = -60, v = 1.02, type = "PV"
+BusInit, bus = "2", p = 150, q = 40, type = "PQ"

@@ -1,0 +1,53 @@
+{
+ "model": "SEXST",
+ "description": "SEXST simplified static exciter on GENROU machines vs ANDES SEXS with its lead-lag disabled (TATB = 1); constant mechanical power.",
+ "initial_maps": {
+  "GENROU": {
+   "delta": "delta",
+   "omega": "omega",
+   "e_qprim": "e1q",
+   "e_dprim": "e1d",
+   "psi_kd": "e2d",
+   "psi_kq": "e2q",
+   "Pref": "tm"
+  },
+  "SEXS": {
+   "Efd": "LAW_y",
+   "Vf_ref": "vref"
+  }
+ },
+ "extra_trajectories": {
+  "Efd": "efd"
+ },
+ "drop_reference_eigenvalues": {
+  "near": [-815.0, 0.0],
+  "count": 2,
+  "why": "decoupled lead-lag modes at -1/TB of the ANDES SEXS with TATB = 1"
+ },
+ "event_times": [1.0],
+ "tolerances": {
+  "initial": 1e-05,
+  "eig_abs": 0.0001,
+  "eig_rel": 0.0001,
+  "traj": {
+   "omega": 1e-05,
+   "delta": 0.005,
+   "v": 0.0001,
+   "p": 0.0005,
+   "q": 0.0005,
+   "efd": 0.005
+  }
+ },
+ "achieved_2026_08": {
+  "initial": 1.8e-07,
+  "eig_abs": 1.3e-05,
+  "traj": {
+   "omega": 1.4e-07,
+   "delta": 6.0e-05,
+   "v": 1.1e-05,
+   "p": 2.3e-05,
+   "q": 3.7e-05,
+   "efd": 1.8e-04
+  }
+ }
+}

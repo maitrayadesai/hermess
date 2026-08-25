@@ -1,0 +1,40 @@
+{
+ "model": "GENROU",
+ "description": "Round-rotor GENROU vs ANDES GENROU; constant field voltage and mechanical power.",
+ "initial_maps": {
+  "GENROU": {
+   "delta": "delta",
+   "omega": "omega",
+   "e_qprim": "e1q",
+   "e_dprim": "e1d",
+   "psi_kd": "e2d",
+   "psi_kq": "e2q",
+   "Pref": "tm",
+   "Vf_ref": "vf"
+  }
+ },
+ "event_times": [1.0],
+ "tolerances": {
+  "initial": 1e-05,
+  "eig_abs": 0.0001,
+  "eig_rel": 0.0001,
+  "traj": {
+   "omega": 1e-05,
+   "delta": 0.005,
+   "v": 0.0001,
+   "p": 0.0005,
+   "q": 0.0005
+  }
+ },
+ "achieved_2026_08": {
+  "initial": 1.8e-07,
+  "eig_abs": 3.0e-07,
+  "traj": {
+   "omega": 1.7e-07,
+   "delta": 2.1e-04,
+   "v": 1.1e-05,
+   "p": 2.3e-05,
+   "q": 3.7e-05
+  }
+ }
+}

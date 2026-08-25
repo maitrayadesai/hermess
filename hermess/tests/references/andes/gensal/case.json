@@ -1,0 +1,44 @@
+{
+ "model": "GENSAL",
+ "description": "Salient-pole GENSAL vs ANDES GENROU reduced to it (xq1 = xq); constant field voltage and mechanical power.",
+ "initial_maps": {
+  "GENROU": {
+   "delta": "delta",
+   "omega": "omega",
+   "e_qprim": "e1q",
+   "psi_kd": "e2d",
+   "psi_qsec": "psi2q",
+   "Pref": "tm",
+   "Vf_ref": "vf"
+  }
+ },
+ "drop_reference_eigenvalues": {
+  "near": [-810.0, 0.0],
+  "count": 2,
+  "why": "decoupled e1d modes at -1/Tq10 of the ANDES GENROU-to-GENSAL reduction"
+ },
+ "event_times": [1.0],
+ "tolerances": {
+  "initial": 1e-05,
+  "eig_abs": 0.0001,
+  "eig_rel": 0.0001,
+  "traj": {
+   "omega": 1e-05,
+   "delta": 0.005,
+   "v": 0.0001,
+   "p": 0.0005,
+   "q": 0.0005
+  }
+ },
+ "achieved_2026_08": {
+  "initial": 1.4e-07,
+  "eig_abs": 4.3e-07,
+  "traj": {
+   "omega": 9.0e-08,
+   "delta": 1.7e-04,
+   "v": 6.9e-06,
+   "p": 1.4e-05,
+   "q": 2.9e-05
+  }
+ }
+}

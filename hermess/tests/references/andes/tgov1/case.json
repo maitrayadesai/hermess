@@ -1,0 +1,52 @@
+{
+ "model": "TGOV1",
+ "description": "TGOV1 turbine governor on GENROU machines vs ANDES TGOV1 (lead-lag disabled: T2 = 0); constant field voltage.",
+ "initial_maps": {
+  "GENROU": {
+   "delta": "delta",
+   "omega": "omega",
+   "e_qprim": "e1q",
+   "e_dprim": "e1d",
+   "psi_kd": "e2d",
+   "psi_kq": "e2q",
+   "Pref": "tm",
+   "Vf_ref": "vf"
+  },
+  "TGOV1": {
+   "psv": "LAG_y",
+   "pm": "LL_x"
+  }
+ },
+ "extra_trajectories": {
+  "psv": "psv",
+  "pm": "pm"
+ },
+ "event_times": [1.0],
+ "tolerances": {
+  "initial": 1e-05,
+  "eig_abs": 0.0001,
+  "eig_rel": 0.0001,
+  "traj": {
+   "omega": 1e-05,
+   "delta": 0.005,
+   "v": 0.0001,
+   "p": 0.0005,
+   "q": 0.0005,
+   "psv": 0.0001,
+   "pm": 0.0001
+  }
+ },
+ "achieved_2026_08": {
+  "initial": 1.8e-07,
+  "eig_abs": 3.0e-07,
+  "traj": {
+   "omega": 1.7e-07,
+   "delta": 6.1e-05,
+   "v": 1.1e-05,
+   "p": 2.3e-05,
+   "q": 3.7e-05,
+   "psv": 2.4e-06,
+   "pm": 1.6e-06
+  }
+ }
+}
