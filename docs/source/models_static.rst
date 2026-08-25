@@ -71,7 +71,7 @@ Infinite bus
 
 An ideal voltage source behind a specifiable resistance and reactance, with its
 voltage set during initialization. Used to terminate a study system, as in the
-``SMIB_check`` case.
+``smib`` case.
 
 .. autoclass:: hermess.devices.static.StaticInfiniteBus
    :no-index:

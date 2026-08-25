@@ -46,7 +46,7 @@ SB = 100.0
 def main() -> None:
     case = int(sys.argv[1]) if len(sys.argv) > 1 else 1
     no_pss = "--no-pss" in sys.argv
-    case_dir = HERE / f"SEA_case{case}{'_nopss' if no_pss else ''}"
+    case_dir = HERE / f"case{case}{'_nopss' if no_pss else ''}"
 
     with open(case_dir / "sim_param.txt") as fid:
         data_loader.read(fid, "sim")
@@ -56,7 +56,7 @@ def main() -> None:
             item.xy_index(system.dae_sim, system.grid_sim)
 
     new_config = config.updated(
-        testsystemfile=f"SEA_case{case}", system_root=HERE, fn=50, Sb=100,
+        testsystemfile=f"case{case}", system_root=HERE, fn=50, Sb=100,
         omega_mode="nom",
         ts=1e-3, T_start=0.0, T_end=0.01,
         int_scheme_sim="idas",

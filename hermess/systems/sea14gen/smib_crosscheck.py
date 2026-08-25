@@ -217,7 +217,7 @@ def main() -> None:
             print(f"   {e.real:+9.4f} {e.imag:+9.4f}j")
 
     # ---- (a) same setup through the simulator -------------------------------
-    case_dir = HERE / "SMIB_check"
+    case_dir = HERE / "smib"
     case_dir.mkdir(exist_ok=True)
     theta = np.degrees(np.angle(vm))
     pgen = -(s.real) * 100
@@ -247,7 +247,7 @@ GENROU, idx = "G1", bus = "M", avr = "AVRST1A", governor = "GOVCONST",
         if item.properties["xy_index"]:
             item.xy_index(system.dae_sim, system.grid_sim)
     new_config = config.updated(
-        testsystemfile="SMIB_check", system_root=HERE, fn=50, Sb=100,
+        testsystemfile="smib", system_root=HERE, fn=50, Sb=100,
         omega_mode="nom", ts=1e-3, T_start=0.0, T_end=0.01,
         plot=False, plot_voltage=False, plot_diff=False, log_level="WARNING",
         incl_lim=False, line_dyn=False, skip_disturance=True,

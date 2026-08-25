@@ -39,7 +39,11 @@ system definition it pins:
 Most fixtures are snapshots of folders that also live in
 `hermess/systems/` — copies are intentional so that
 interactive edits to the demo workspace cannot silently change test
-behavior.
+behavior. The fixture folders deliberately keep their original names
+(`3_bus`, `IEEE39_bus`, ...) although the folders under
+`hermess/systems/` were later renamed (`3bus`, `ieee39`, ...): fixtures
+are frozen test inputs and renaming them would churn every pinned test
+for no behavioral gain.
 
 When adding a new fixture, prefer copying an existing one and naming
 it after the test scenario (`<base_grid>_<disturbance_kind>` is the

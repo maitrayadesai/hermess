@@ -166,8 +166,8 @@ class Config(BaseModel):
 
 
 config = Config(
-    testsystemfile="IEEE39_bus_inverter",
-    # testsystemfile="3_bus",
+    testsystemfile="ieee39_conv",
+    # testsystemfile="3bus",
     omega_mode="nom",
     omega_single_idx="GFMI2",  # reference device for single-mode (None → uses slack bus)
     fn=50,

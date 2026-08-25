@@ -15,14 +15,14 @@ The list is available at runtime, so it never goes out of date:
    import hermess
 
    hermess.list_systems()
-   dae = hermess.simulate("IEEE39_bus", T_end=10.0)
+   dae = hermess.simulate("ieee39", T_end=10.0)
 
 Small systems
 -------------
 
-.. _3_bus:
+.. _3bus:
 
-``3_bus``
+``3bus``
 ^^^^^^^^^
 
 Three buses and three lines: a Sauer-Pai synchronous machine at bus 1, a
@@ -30,26 +30,26 @@ grid-forming converter at bus 3 and a ZIP load at bus 2. The smallest system tha
 still contains both a machine and a converter, which makes it the usual starting
 point and the one used by most of the test suite. Disturbance: a line opening.
 
-.. _3_bus_loadstep:
+.. _3bus_loadstep:
 
-``3_bus_loadstep``
+``3bus_loadstep``
 ^^^^^^^^^^^^^^^^^^
 
 The same three-bus network with a single load step instead of the line opening.
 Used by the grid-forming control example in ``examples/neural_gfm_control``.
 
-.. _kundur_avr_newtest:
+.. _kundur:
 
-``kundur_avr_newtest``
+``kundur``
 ^^^^^^^^^^^^^^^^^^^^^^
 
 The Kundur two-area system, twelve buses with four subtransient machines and
 three ZIP loads, exercising the automatic voltage regulators. Disturbance: a load
 step. The classic system for inter-area oscillation studies.
 
-.. _kundur_converter:
+.. _kundur_conv:
 
-``kundur_converter``
+``kundur_conv``
 ^^^^^^^^^^^^^^^^^^^^
 
 The two-area system with two of the four machines replaced by grid-forming
@@ -59,9 +59,9 @@ on an otherwise identical network. Disturbance: a load step.
 IEEE 39-bus systems
 -------------------
 
-.. _IEEE39_bus:
+.. _ieee39:
 
-``IEEE39_bus``
+``ieee39``
 ^^^^^^^^^^^^^^
 
 The standard IEEE 39-bus (New England) benchmark: 39 buses, 46 branches, ten
@@ -79,9 +79,9 @@ disturbances:
 
    Figure 1: The IEEE 39-bus network.
 
-.. _IEEE39_bus_inverter:
+.. _ieee39_conv:
 
-``IEEE39_bus_inverter``
+``ieee39_conv``
 ^^^^^^^^^^^^^^^^^^^^^^^
 
 A converter-penetrated variant of the same network: five Sauer-Pai synchronous
@@ -94,9 +94,9 @@ loads. Disturbance: a bus fault and its clearing.
 
    Figure 2: The IEEE 39-bus network with grid-forming and grid-following converters.
 
-.. _IEEE39_bus_ideal:
+.. _ieee39_ideal:
 
-``IEEE39_bus_ideal``
+``ieee39_ideal``
 ^^^^^^^^^^^^^^^^^^^^
 
 The 39-bus network with constant-power loads instead of ZIP loads and a longer
@@ -105,16 +105,16 @@ its clearing, and a load step. Inherited from the parent project, where
 it served as the idealized-measurement scenario, and kept as a functional test
 that the simulator reproduces the expected response.
 
-.. _IEEE39_bus_inverter_old:
+.. _ieee39_conv_old:
 
-``IEEE39_bus_inverter_old``
+``ieee39_conv_old``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 An earlier converter-penetrated variant, kept for comparison with results
 produced before the converter models were reworked. Prefer
-:ref:`IEEE39_bus_inverter` for new work.
+:ref:`ieee39_conv` for new work.
 
-.. _SEA_14gen:
+.. _sea14gen:
 
 The 14-generator South East Australian system
 ---------------------------------------------
@@ -131,32 +131,32 @@ against the published load flow and rotor modes with ``validate_sea.py``:
 
 .. code-block:: bash
 
-   python hermess/systems/SEA_14gen/build_sea_system.py 1
-   python hermess/systems/SEA_14gen/validate_sea.py 1
-   python hermess/systems/SEA_14gen/build_sea_system.py 1 --no-pss
+   python hermess/systems/sea14gen/build_sea_system.py 1
+   python hermess/systems/sea14gen/validate_sea.py 1
+   python hermess/systems/sea14gen/build_sea_system.py 1 --no-pss
 
-``SEA_case1``
-^^^^^^^^^^^^^
+``sea14gen/case1``
+^^^^^^^^^^^^^^^^^^^^
 
 Operating case 1 of the benchmark: twelve round-rotor (``GENROU``) and two
 salient-pole (``GENSAL``) machines with ST1A and AC1A exciters and speed
 stabilizers, five SVCs and thirty-two ZIP loads. Disturbance: a bus fault and its
 clearing.
 
-``SEA_case1_nopss``
-^^^^^^^^^^^^^^^^^^^
+``sea14gen/case1_nopss``
+^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Operating case 1 with the power system stabilizers removed, which is how the
 benchmark exposes its poorly damped inter-area modes.
 
-``SEA_case1_conv``
-^^^^^^^^^^^^^^^^^^
+``sea14gen/case1_conv``
+^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Operating case 1 with three of the stations replaced by converters, two
 grid-forming and one grid-following, keeping the SVCs and the load pattern.
 
-``SEA_case2`` ... ``SEA_case6``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+``sea14gen/case2`` ... ``sea14gen/case6``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The remaining five published operating conditions of the benchmark, spanning
 heavy to light system loading, each with the exciter and stabilizer settings of
@@ -176,8 +176,8 @@ Case  Total generation      Total load
 6     14840 MW             14630 MW
 ===== ==================== =============
 
-``SMIB_check``
-^^^^^^^^^^^^^^
+``sea14gen/smib``
+^^^^^^^^^^^^^^^^^
 
 A single ``GENROU`` machine against an infinite bus, used to cross-check the
 machine implementation against the benchmark equations in isolation. No

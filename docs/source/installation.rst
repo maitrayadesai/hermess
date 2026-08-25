@@ -66,7 +66,7 @@ Run the shipped configuration:
    python -m hermess
 
 This simulates the system selected in ``hermess/config.py`` -- as shipped, ten
-seconds of the IEEE 39-bus converter system (:ref:`IEEE39_bus_inverter`) with
+seconds of the IEEE 39-bus converter system (:ref:`ieee39_conv`) with
 dynamic line models and a small-signal analysis at the operating point, so
 expect a runtime of a few minutes -- and plots the bus voltages and the
 internal states. If the two figures below appear, the installation works.
@@ -78,7 +78,7 @@ Alternatively, from Python:
    import hermess
 
    hermess.list_systems()                       # the systems that ship with the package
-   dae = hermess.simulate("3_bus", T_end=5.0)   # run one and get the finished model back
+   dae = hermess.simulate("3bus", T_end=5.0)   # run one and get the finished model back
    print(dae.x_full.shape)
 
 The test suite is another check, and needs ``pytest``:

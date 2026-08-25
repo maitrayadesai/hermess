@@ -71,9 +71,9 @@ def _run_3bus(**overrides):
 
 def test_list_systems_finds_the_shipped_cases():
     names = hermess.list_systems()
-    assert "3_bus" in names and "IEEE39_bus" in names
+    assert "3bus" in names and "ieee39" in names
     # nested folders are addressed by their relative path
-    assert any(n.startswith("SEA_14gen/") for n in names)
+    assert any(n.startswith("sea14gen/") for n in names)
     # every name is usable as testsystemfile
     for name in names:
         assert (hermess.SYSTEMS_DIR / name / "sim_param.txt").is_file()

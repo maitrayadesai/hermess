@@ -10,22 +10,22 @@ repository). 59 buses, 5 areas,
 ## Layout
 
 ```
-hermess/systems/SEA_14gen/
+hermess/systems/sea14gen/
   sea_data.py          # Tables 1, 8-14: network, loads, schedules (transcribed)
   sea_dynamics.py      # Tables 15-20, 26/27, Fig. 22, Tables 2-7 (modes)
-  build_sea_system.py  # emits SEA_case<N>[ _nopss | _conv ]/sim_param.txt
+  build_sea_system.py  # emits case<N>[ _nopss | _conv ]/sim_param.txt
   validate_sea.py      # loadflow + rotor-mode validation vs the PDF tables
   smib_crosscheck.py   # machine-implementation cross-check (SMIB)
-  SEA_case1/ ...       # generated system files
+  case1/ ...       # generated system files
 ```
 
 Build and validate (case 1..6):
 
 ```
-python hermess/systems/SEA_14gen/build_sea_system.py 1
-python hermess/systems/SEA_14gen/validate_sea.py 1
-python hermess/systems/SEA_14gen/build_sea_system.py 1 --no-pss
-python hermess/systems/SEA_14gen/validate_sea.py 1 --no-pss
+python hermess/systems/sea14gen/build_sea_system.py 1
+python hermess/systems/sea14gen/validate_sea.py 1
+python hermess/systems/sea14gen/build_sea_system.py 1 --no-pss
+python hermess/systems/sea14gen/validate_sea.py 1 --no-pss
 # converter variant: replace stations by GFM/GFL converters
 python .../build_sea_system.py 1 --gfm "SPS_4,GPS_4" --gfl "TPS_5"
 ```

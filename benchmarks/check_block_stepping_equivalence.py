@@ -42,7 +42,7 @@ block_max, out_file = int(sys.argv[1]), sys.argv[2]
 root = Path(sys.argv[3])
 
 new_config = config.updated(
-    testsystemfile="IEEE39_bus_ideal", system_root=root, fn=50, Sb=100,
+    testsystemfile="ieee39_ideal", system_root=root, fn=50, Sb=100,
     ts=0.001, T_start=0.0, T_end=1.5, int_scheme_sim="idas",
     int_scheme_sim_options={"reltol": 1e-14, "max_num_steps": 10000,
                             "max_step_size": 0.01, "jit": True},
@@ -50,9 +50,9 @@ new_config = config.updated(
     incl_lim=True, line_dyn=False, skip_disturance=False,
     print_power_flow=False, small_signal_analysis=False)
 
-with open(root / "IEEE39_bus_ideal" / "sim_param.txt") as fid:
+with open(root / "ieee39_ideal" / "sim_param.txt") as fid:
     data_loader.read(fid, "sim")
-with open(root / "IEEE39_bus_ideal" / "sim_dist.txt") as fid:
+with open(root / "ieee39_ideal" / "sim_dist.txt") as fid:
     data_loader.read(fid, "sim")
 
 system.grid_sim.add_lines(system.line_sim)

@@ -82,7 +82,7 @@ From Python, to run a system without editing `config.py`:
 import hermess
 
 hermess.list_systems()                        # the ready-made systems
-dae = hermess.simulate("3_bus", T_end=5.0)    # run one; returns the finished model
+dae = hermess.simulate("3bus", T_end=5.0)    # run one; returns the finished model
 ```
 
 User-written models are selectable from a system file once registered, and the

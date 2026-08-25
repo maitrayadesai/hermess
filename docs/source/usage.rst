@@ -26,8 +26,8 @@ To run a system from a script or a notebook, without touching ``config.py``:
    import hermess
 
    hermess.list_systems()                              # what is available
-   dae = hermess.simulate("3_bus", T_end=5.0)          # run one, get the finished model back
-   dae = hermess.simulate("IEEE39_bus", line_dyn=False, T_end=10.0, small_signal_analysis=True)
+   dae = hermess.simulate("3bus", T_end=5.0)          # run one, get the finished model back
+   dae = hermess.simulate("ieee39", line_dyn=False, T_end=10.0, small_signal_analysis=True)
 
 Any field of :class:`~hermess.config.Config` can be passed as a keyword argument
 (see :ref:`configuration` for the full list), and ``system_root`` points at a

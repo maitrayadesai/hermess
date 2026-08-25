@@ -28,9 +28,9 @@
 #       [--block-max N]
 #
 # Examples:
-#   python benchmarks/benchmark_simulation.py --system IEEE39_bus_ideal
+#   python benchmarks/benchmark_simulation.py --system ieee39_ideal
 #   # the worst case: dynamic lines, small step, limiter loop
-#   python benchmarks/benchmark_simulation.py --system IEEE39_bus_inverter \
+#   python benchmarks/benchmark_simulation.py --system ieee39_conv \
 #       --ts 1e-4 --t-end 0.2 --line-dyn --incl-lim
 
 import argparse
@@ -50,7 +50,7 @@ SEARCH_ROOTS = [
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--system", default="IEEE39_bus_ideal")
+    ap.add_argument("--system", default="ieee39_ideal")
     ap.add_argument("--t-end", type=float, default=2.0)
     ap.add_argument("--ts", type=float, default=0.001)
     ap.add_argument("--line-dyn", action="store_true")

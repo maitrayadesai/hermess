@@ -202,7 +202,7 @@ trajectories:
 
 .. code-block:: python
 
-   dae = hermess.simulate("3_bus", T_end=5.0, small_signal_analysis=True)
+   dae = hermess.simulate("3bus", T_end=5.0, small_signal_analysis=True)
 
    dae.time_steps                       # the time grid
    dae.x_full, dae.y_full               # differential and algebraic trajectories

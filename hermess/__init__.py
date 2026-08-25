@@ -80,8 +80,8 @@ def simulate(
     few settings changed"::
 
         import hermess
-        dae = hermess.simulate("3_bus_loadstep", T_end=5.0)
-        dae = hermess.simulate("IEEE39_bus", line_dyn=False, T_end=10.0, plot=True)
+        dae = hermess.simulate("3bus_loadstep", T_end=5.0)
+        dae = hermess.simulate("ieee39", line_dyn=False, T_end=10.0, plot=True)
 
     :param system: A system name from :func:`list_systems`, or a folder name under
         ``system_root``.
@@ -137,7 +137,7 @@ def help() -> None:
     🚀 Usage:
     >>> import hermess
     >>> hermess.list_systems()                       # what is available
-    >>> dae = hermess.simulate("3_bus", T_end=5.0)   # run one
+    >>> dae = hermess.simulate("3bus", T_end=5.0)   # run one
     >>> hermess.registered("angle")                  # selectable strategies
     >>> hermess.register(MyAngleSource, "VSM")       # add your own
 

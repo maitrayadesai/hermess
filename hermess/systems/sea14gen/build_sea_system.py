@@ -23,7 +23,7 @@
 # Usage:
 #   python build_sea_system.py [case]            # default case 1
 #
-# Writes  SEA_case<N>/sim_param.txt and sim_dist.txt  next to this script.
+# Writes  case<N>/sim_param.txt and sim_dist.txt  next to this script.
 #
 # Conventions/choices (see the PDF for table references):
 # - All machine parameters are converted to the system base (100 MVA):
@@ -220,7 +220,7 @@ def _arg_list(flag: str) -> list:
 def converter_line(gen: str, bus: str, s_agg: float, kind: str) -> str:
     """Grid-forming / grid-following converter replacing power station `gen`.
 
-    Control parameters follow the IEEE39_bus_inverter fixture (droop GFM /
+    Control parameters follow the ieee39_conv fixture (droop GFM /
     PLL GFL with cascaded voltage/current control); the quasi-static LCL
     realization matches the static network model. Ratings and dispatch come
     from the loadflow (sequential init solves the setpoints)."""
@@ -382,7 +382,7 @@ def main() -> None:
     suffix = "_nopss" if "--no-pss" in sys.argv else ""
     if "--gfm" in sys.argv or "--gfl" in sys.argv:
         suffix += "_conv"
-    out_dir = HERE / f"SEA_case{case}{suffix}"
+    out_dir = HERE / f"case{case}{suffix}"
 
     # Iterate the shunt-voltage calibration: BusInit q at shunt buses depends
     # on the solved voltage (constant-impedance shunts), which depends on q.

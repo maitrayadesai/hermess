@@ -164,14 +164,14 @@ def test_topology_tab(app, results):
     from hermess.gui.topology_tab import TopologyTab
 
     tab = TopologyTab()
-    desc = sysparse.parse_system(hermess.SYSTEMS_DIR / "3_bus")
+    desc = sysparse.parse_system(hermess.SYSTEMS_DIR / "3bus")
     tab.set_system(desc)
     assert tab._pos.shape == (3, 2)
     assert len(tab._bus_labels) == 3
     assert len(tab._device_items) == 3  # SG1, GFMI2, StaticZIP
 
     # Annotation only applies when the run matches the shown system.
-    results.system = "3_bus"
+    results.system = "3bus"
     results.power_flow_bus = pd.DataFrame(
         {
             "Bus": ["1", "2", "3"],
@@ -239,7 +239,7 @@ def test_settings_roundtrip(app, tmp_path):
     # A user folder holding one system, opened in the first session.
     system_dir = tmp_path / "my_system"
     system_dir.mkdir()
-    source = hermess.SYSTEMS_DIR / "3_bus"
+    source = hermess.SYSTEMS_DIR / "3bus"
     for name in ("sim_param.txt", "sim_dist.txt"):
         (system_dir / name).write_text((source / name).read_text())
 

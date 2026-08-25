@@ -48,7 +48,7 @@ Getting started
    import hermess
 
    hermess.list_systems()                       # the systems that ship with the package
-   dae = hermess.simulate("3_bus", T_end=5.0)   # run one and get the finished model back
+   dae = hermess.simulate("3bus", T_end=5.0)   # run one and get the finished model back
 
 See :ref:`installation` to set up, :ref:`usage` for the everyday entry points and
 :ref:`advanced_usage` for the system-file format and the analysis outputs.

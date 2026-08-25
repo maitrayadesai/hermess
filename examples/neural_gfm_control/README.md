@@ -41,6 +41,6 @@ that `line_dyn=True` retains.
 
 ## The system
 
-Defined in [`hermess/systems/3_bus_loadstep/`](../../hermess/systems/3_bus_loadstep).
+Defined in [`hermess/systems/3bus_loadstep/`](../../hermess/systems/3bus_loadstep).
 Edit `sim_param.txt` (e.g. the droop gain `Kp`) or `sim_dist.txt` (the load step) to
 change the experiment.

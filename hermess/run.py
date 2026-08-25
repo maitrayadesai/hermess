@@ -28,6 +28,7 @@ import numpy as np
 import logging
 import sys
 import os
+import warnings
 
 import matplotlib
 
@@ -47,6 +48,35 @@ def _use_interactive_backend() -> None:
         matplotlib.use("TkAgg")
     except Exception:
         matplotlib.use("Agg")
+
+
+#: Pre-rename folder names of the shipped systems, mapped to the uniform
+#: names introduced later; consulted (with a DeprecationWarning) when a
+#: requested system folder does not exist.
+_LEGACY_SYSTEM_NAMES = {
+    "3_bus": "3bus",
+    "3_bus_loadstep": "3bus_loadstep",
+    "IEEE39_bus": "ieee39",
+    "IEEE39_bus_ideal": "ieee39_ideal",
+    "IEEE39_bus_inverter": "ieee39_conv",
+    "IEEE39_bus_inverter_old": "ieee39_conv_old",
+    "kundur_avr_newtest": "kundur",
+    "kundur_converter": "kundur_conv",
+    "SEA_14gen/SEA_case1": "sea14gen/case1",
+    "SEA_14gen/SEA_case1_conv": "sea14gen/case1_conv",
+    "SEA_14gen/SEA_case1_nopss": "sea14gen/case1_nopss",
+    "SEA_14gen/SEA_case2": "sea14gen/case2",
+    "SEA_14gen/SEA_case2_nopss": "sea14gen/case2_nopss",
+    "SEA_14gen/SEA_case3": "sea14gen/case3",
+    "SEA_14gen/SEA_case3_nopss": "sea14gen/case3_nopss",
+    "SEA_14gen/SEA_case4": "sea14gen/case4",
+    "SEA_14gen/SEA_case4_nopss": "sea14gen/case4_nopss",
+    "SEA_14gen/SEA_case5": "sea14gen/case5",
+    "SEA_14gen/SEA_case5_nopss": "sea14gen/case5_nopss",
+    "SEA_14gen/SEA_case6": "sea14gen/case6",
+    "SEA_14gen/SEA_case6_nopss": "sea14gen/case6_nopss",
+    "SEA_14gen/SMIB_check": "sea14gen/smib",
+}
 
 
 def warn_filter_network_mismatch(device_list, line_dyn: bool) -> None:
@@ -104,6 +134,24 @@ def run(config: Config, progress_callback=None) -> system.DaeSim:
     # Set up logging
     logging.basicConfig(level=config.get_log_level())
     base_dir = Path(os.path.dirname(os.path.abspath(__file__)))
+    # The system folders were renamed to a uniform scheme; accept the old
+    # names for a transition period so existing scripts keep working.
+    legacy = _LEGACY_SYSTEM_NAMES.get(config.testsystemfile)
+    if legacy is not None:
+        root = (
+            Path(config.system_root)
+            if config.system_root is not None
+            else Path(__file__).parent / "systems"
+        )
+        if not (root / config.testsystemfile).exists() and (root / legacy).exists():
+            warnings.warn(
+                f"system '{config.testsystemfile}' was renamed to '{legacy}'; "
+                "update the name, the old one will stop working in a future release",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            config = config.updated(testsystemfile=legacy)
+
     system_root = (
         Path(config.system_root)
         if config.system_root is not None

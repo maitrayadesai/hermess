@@ -39,7 +39,7 @@ from hermess.results import SimulationResults, extract_results
 
 
 def test_parse_shipped_3bus_system():
-    desc = sysparse.parse_system(hermess.SYSTEMS_DIR / "3_bus")
+    desc = sysparse.parse_system(hermess.SYSTEMS_DIR / "3bus")
     kinds = [e.kind for e in desc.devices]
     assert kinds == ["SynchronousSubtransientSP", "GridForming", "StaticZIP"]
     assert len(desc.lines) == 3
@@ -53,7 +53,7 @@ def test_parse_shipped_3bus_system():
     assert machine.get("H") == "6.50"
     assert machine.get("x_l") == "0.2"  # from the continuation line
 
-    dist = sysparse.parse_system(hermess.SYSTEMS_DIR / "3_bus_loadstep")
+    dist = sysparse.parse_system(hermess.SYSTEMS_DIR / "3bus_loadstep")
     assert [e.get("type") for e in dist.disturbances] == ["LOAD"]
 
 
@@ -110,7 +110,7 @@ class _ListConn:
 def worker_messages():
     conn = _ListConn()
     request = RunRequest(
-        system="3_bus_loadstep",
+        system="3bus_loadstep",
         overrides={"T_end": 0.5, "small_signal_analysis": True},
     )
     simulation_worker(conn, request, threading.Event())
@@ -123,14 +123,14 @@ def test_worker_completes_with_results(worker_messages):
     assert "progress" in kinds
     results = worker_messages[-1][1]
     assert isinstance(results, SimulationResults)
-    assert results.system == "3_bus_loadstep"
+    assert results.system == "3bus_loadstep"
     assert set(results.voltage) == {"1", "2", "3"}
     assert results.small_signal is not None
     assert results.small_signal.eigenvalues.size > 0
     assert results.power_flow_bus is not None
     assert results.config["T_end"] == 0.5
     # The container must cross a process boundary.
-    assert pickle.loads(pickle.dumps(results)).system == "3_bus_loadstep"
+    assert pickle.loads(pickle.dumps(results)).system == "3bus_loadstep"
 
 
 def test_worker_progress_monotonic(worker_messages):
@@ -145,7 +145,7 @@ def test_worker_cancels_immediately():
     event = threading.Event()
     event.set()  # cancel before the time stepping starts
     simulation_worker(
-        conn, RunRequest(system="3_bus_loadstep", overrides={"T_end": 0.5}), event
+        conn, RunRequest(system="3bus_loadstep", overrides={"T_end": 0.5}), event
     )
     assert conn.messages[-1] == ("cancelled",)
 
@@ -164,7 +164,7 @@ def test_worker_reports_errors():
 
 
 def test_extract_results_from_simulate():
-    dae = hermess.simulate("3_bus_loadstep", T_end=0.5)
+    dae = hermess.simulate("3bus_loadstep", T_end=0.5)
     results = extract_results(dae)
     assert results.t.shape == (dae.nts,)
     assert np.allclose(np.abs(results.voltage["1"][0]), 1.0, atol=0.1)
