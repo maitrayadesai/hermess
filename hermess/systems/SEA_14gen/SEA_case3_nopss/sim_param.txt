@@ -184,31 +184,31 @@ StaticZIP, bus = "415", Sn = 100, fn = 50, z_share = 1.0, i_share = 0.0, p_share
 StaticZIP, bus = "416", Sn = 100, fn = 50, z_share = 1.0, i_share = 0.0, p_share = 0.0
 
 # Synchronous machines (Tables 15/16/26/27, Appendix I.5)
-SynchronousSEA5, idx = "HPS_1", bus = "101", avr = "AVRST1A", governor = "GOVCONST",
+GENSAL, idx = "HPS_1", bus = "101", avr = "AVRST1A", governor = "GOVCONST",
 	Sn = 100, fn = 50, H = 143.9856, D = 0, f = 0, R_s = 0, x_a = 0.003500350035, x_d = 0.02750275028, x_q = 0.01625162516, x_dprim = 0.006250625063, x_qprim = 0.01625162516, x_dsec = 0.006250625063, x_qsec = 0.006250625063, T_d0prim = 8.5, T_q0prim = 1, T_d0sec = 0.05, T_q0sec = 0.2, KA = 200, TA = 0.1, Tr = 0.001, TB = 13.25, TC = 2.5, TB1 = 0.001, TC1 = 0.001
-SynchronousSEA6, idx = "BPS_2", bus = "201", avr = "AVRST1A", governor = "GOVCONST",
+GENROU, idx = "BPS_2", bus = "201", avr = "AVRST1A", governor = "GOVCONST",
 	Sn = 100, fn = 50, H = 128.0064, D = 0, f = 0, R_s = 0, x_a = 0.004999750012, x_d = 0.04499775011, x_q = 0.04374781261, x_dprim = 0.007499625019, x_qprim = 0.01749912504, x_dsec = 0.005249737513, x_qsec = 0.005249737513, T_d0prim = 8.5, T_q0prim = 0.3, T_d0sec = 0.04, T_q0sec = 0.08, KA = 400, TA = 0.02, Tr = 0.001, TB = 1.12, TC = 0.5, TB1 = 0.001, TC1 = 0.001
-SynchronousSEA6, idx = "EPS_2", bus = "202", avr = "AVRAC1A", governor = "GOVCONST",
+GENROU, idx = "EPS_2", bus = "202", avr = "AVRAC1A", governor = "GOVCONST",
 	Sn = 100, fn = 50, H = 77.784, D = 0, f = 0, R_s = 0, x_a = 0.006119510439, x_d = 0.07919366451, x_q = 0.07559395248, x_dprim = 0.01079913607, x_qprim = 0.01799856012, x_dsec = 0.007199424046, x_qsec = 0.007559395248, T_d0prim = 4.5, T_q0prim = 1.5, T_d0sec = 0.04, T_q0sec = 0.06, KA = 400, TA = 0.02, KE = 1, TE = 1, KF = 0.029, TF = 1
-SynchronousSEA6, idx = "VPS_2", bus = "203", avr = "AVRST1A", governor = "GOVCONST",
+GENROU, idx = "VPS_2", bus = "203", avr = "AVRST1A", governor = "GOVCONST",
 	Sn = 100, fn = 50, H = 28.8912, D = 0, f = 0, R_s = 0, x_a = 0.01799856012, x_d = 0.2069834413, x_q = 0.152987761, x_dprim = 0.02699784017, x_qprim = 0.03599712023, x_dsec = 0.02249820014, x_qsec = 0.02249820014, T_d0prim = 5, T_q0prim = 2, T_d0sec = 0.03, T_q0sec = 0.25, KA = 300, TA = 0.01, Tr = 0.001, TB = 0.7, TC = 0.35, TB1 = 0.001, TC1 = 0.001
-SynchronousSEA6, idx = "MPS_2", bus = "204", avr = "AVRST1A", governor = "GOVCONST",
+GENROU, idx = "MPS_2", bus = "204", avr = "AVRST1A", governor = "GOVCONST",
 	Sn = 100, fn = 50, H = 128.0064, D = 0, f = 0, R_s = 0, x_a = 0.004999750012, x_d = 0.04499775011, x_q = 0.04374781261, x_dprim = 0.007499625019, x_qprim = 0.01749912504, x_dsec = 0.005249737513, x_qsec = 0.005249737513, T_d0prim = 8.5, T_q0prim = 0.3, T_d0sec = 0.04, T_q0sec = 0.08, KA = 400, TA = 0.02, Tr = 0.001, TB = 1.12, TC = 0.5, TB1 = 0.001, TC1 = 0.001
-SynchronousSEA6, idx = "LPS_3", bus = "301", avr = "AVRST1A", governor = "GOVCONST",
+GENROU, idx = "LPS_3", bus = "301", avr = "AVRST1A", governor = "GOVCONST",
 	Sn = 100, fn = 50, H = 149.3408, D = 0, f = 0, R_s = 0, x_a = 0.003749812509, x_d = 0.05062246888, x_q = 0.02812359382, x_dprim = 0.005624718764, x_qprim = 0.01593670316, x_dsec = 0.004687265637, x_qsec = 0.004687265637, T_d0prim = 7.5, T_q0prim = 0.85, T_d0sec = 0.04, T_q0sec = 0.12, KA = 400, TA = 0.05, Tr = 0.001, TB = 6.42, TC = 1.14, TB1 = 0.001, TC1 = 0.001
-SynchronousSEA5, idx = "YPS_3", bus = "302", avr = "AVRAC1A", governor = "GOVCONST",
+GENSAL, idx = "YPS_3", bus = "302", avr = "AVRAC1A", governor = "GOVCONST",
 	Sn = 100, fn = 50, H = 62.216, D = 0, f = 0, R_s = 0, x_a = 0.008438343834, x_d = 0.1125112511, x_q = 0.101260126, x_dprim = 0.01406390639, x_qprim = 0.101260126, x_dsec = 0.01125112511, x_qsec = 0.01125112511, T_d0prim = 7.5, T_q0prim = 1, T_d0sec = 0.04, T_q0sec = 0.25, KA = 200, TA = 0.05, KE = 1, TE = 1.333, KF = 0.02, TF = 0.8
-SynchronousSEA6, idx = "TPS_4", bus = "401", avr = "AVRST1A", governor = "GOVCONST",
+GENROU, idx = "TPS_4", bus = "401", avr = "AVRST1A", governor = "GOVCONST",
 	Sn = 100, fn = 50, H = 46.2176, D = 0, f = 0, R_s = 0, x_a = 0.01125112511, x_d = 0.1293879388, x_q = 0.09563456346, x_dprim = 0.01687668767, x_qprim = 0.02250225023, x_dsec = 0.01406390639, x_qsec = 0.01406390639, T_d0prim = 5, T_q0prim = 2, T_d0sec = 0.03, T_q0sec = 0.25, KA = 300, TA = 0.1, Tr = 0.001, TB = 40, TC = 4, TB1 = 0.001, TC1 = 0.001
-SynchronousSEA6, idx = "CPS_4", bus = "402", avr = "AVRST1A", governor = "GOVCONST",
+GENROU, idx = "CPS_4", bus = "402", avr = "AVRST1A", governor = "GOVCONST",
 	Sn = 100, fn = 50, H = 29.997, D = 0, f = 0, R_s = 0, x_a = 0.0200020002, x_d = 0.1900190019, x_q = 0.1800180018, x_dprim = 0.0300030003, x_qprim = 0.05500550055, x_dsec = 0.02600260026, x_qsec = 0.02600260026, T_d0prim = 6.5, T_q0prim = 1.4, T_d0sec = 0.035, T_q0sec = 0.04, KA = 300, TA = 0.05, Tr = 0.02, TB = 9.8, TC = 1.52, TB1 = 0.001, TC1 = 0.001
-SynchronousSEA6, idx = "SPS_4", bus = "403", avr = "AVRST1A", governor = "GOVCONST",
+GENROU, idx = "SPS_4", bus = "403", avr = "AVRST1A", governor = "GOVCONST",
 	Sn = 100, fn = 50, H = 46.2176, D = 0, f = 0, R_s = 0, x_a = 0.01125112511, x_d = 0.1293879388, x_q = 0.09563456346, x_dprim = 0.01687668767, x_qprim = 0.02250225023, x_dsec = 0.01406390639, x_qsec = 0.01406390639, T_d0prim = 5, T_q0prim = 2, T_d0sec = 0.03, T_q0sec = 0.25, KA = 300, TA = 0.01, Tr = 0.001, TB = 0.7, TC = 0.35, TB1 = 0.001, TC1 = 0.001
-SynchronousSEA6, idx = "GPS_4", bus = "404", avr = "AVRST1A", governor = "GOVCONST",
+GENROU, idx = "GPS_4", bus = "404", avr = "AVRST1A", governor = "GOVCONST",
 	Sn = 100, fn = 50, H = 79.992, D = 0, f = 0, R_s = 0, x_a = 0.00900090009, x_d = 0.1100110011, x_q = 0.0700070007, x_dprim = 0.01600160016, x_qprim = 0.03750375038, x_dsec = 0.01200120012, x_qsec = 0.01200120012, T_d0prim = 9, T_q0prim = 1.4, T_d0sec = 0.04, T_q0sec = 0.13, KA = 250, TA = 0.2, Tr = 0.001, TB = 0.0232, TC = 0.136, TB1 = 0.001, TC1 = 0.001
-SynchronousSEA6, idx = "NPS_5", bus = "501", avr = "AVRAC1A", governor = "GOVCONST",
+GENROU, idx = "NPS_5", bus = "501", avr = "AVRAC1A", governor = "GOVCONST",
 	Sn = 100, fn = 50, H = 23.331, D = 0, f = 0, R_s = 0, x_a = 0.02250225023, x_d = 0.3300330033, x_q = 0.2550255026, x_dprim = 0.04500450045, x_qprim = 0.1200120012, x_dsec = 0.03600360036, x_qsec = 0.03600360036, T_d0prim = 7.5, T_q0prim = 1.5, T_d0sec = 0.025, T_q0sec = 0.1, KA = 1000, TA = 0.04, KE = 1, TE = 0.87, KF = 0.004, TF = 0.27
-SynchronousSEA6, idx = "TPS_5", bus = "502", avr = "AVRST1A", governor = "GOVCONST",
+GENROU, idx = "TPS_5", bus = "502", avr = "AVRST1A", governor = "GOVCONST",
 	Sn = 100, fn = 50, H = 40, D = 0, f = 0, R_s = 0, x_a = 0.02, x_d = 0.2, x_q = 0.15, x_dprim = 0.03, x_qprim = 0.08, x_dsec = 0.022, x_qsec = 0.022, T_d0prim = 7.5, T_q0prim = 3, T_d0sec = 0.04, T_q0sec = 0.2, KA = 400, TA = 0.5, Tr = 0.001, TB = 16, TC = 1.4, TB1 = 0.05, TC1 = 0.6
-SynchronousSEA6, idx = "PPS_5", bus = "503", avr = "AVRST1A", governor = "GOVCONST",
+GENROU, idx = "PPS_5", bus = "503", avr = "AVRST1A", governor = "GOVCONST",
 	Sn = 100, fn = 50, H = 75.015, D = 0, f = 0, R_s = 0, x_a = 0.0149970006, x_d = 0.2299540092, x_q = 0.199960008, x_dprim = 0.024995001, x_qprim = 0.0349930014, x_dsec = 0.01699660068, x_qsec = 0.01699660068, T_d0prim = 5, T_q0prim = 1, T_d0sec = 0.022, T_q0sec = 0.035, KA = 300, TA = 0.01, Tr = 0.001, TB = 0.8, TC = 0.2, TB1 = 0.001, TC1 = 0.001
