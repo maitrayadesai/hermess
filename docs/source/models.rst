@@ -191,6 +191,8 @@ Automatic voltage regulators (``avr = ...``)
    :no-index:
 .. autoclass:: hermess.devices.avr.AVRKundur_NoTGR
    :no-index:
+.. autoclass:: hermess.devices.avr.AVRCONST
+   :no-index:
 
 Governors (``governor = ...``)
 """"""""""""""""""""""""""""""

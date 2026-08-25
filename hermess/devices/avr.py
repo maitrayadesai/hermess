@@ -901,6 +901,70 @@ class AVRAC1A(AVR):
         dae.f[host.Efd] = (dae.x[host.Vr] - host.KE * dae.x[host.Efd]) / host.TE
 
 
+class AVRCONST(AVR):
+    r"""Constant field voltage: no excitation dynamics, the zero-response limit
+    of any exciter (:math:`K_A \to 0` with the operating point held). The
+    excitation-system counterpart of the constant-power governor
+    :class:`~hermess.devices.governor.GOVCONST`.
+
+    Selected on a machine line with ``avr = "AVRCONST"``.
+
+    **Model.**
+
+    .. math::
+
+       0 = -E_{fd} + V_{ref}
+
+    :math:`V_{ref}` is solved by the initialization to the field voltage that
+    holds the power-flow operating point, and stays frozen afterwards. Used by
+    validation cases that deliberately exclude excitation dynamics, e.g. the
+    cross-tool machine benchmarks against ANDES, whose machines hold
+    :math:`v_f` constant when no exciter is attached.
+
+    **Symbols.**
+
+    .. csv-table::
+       :header: Code, Symbol, Meaning, Default
+       :widths: 14, 12, 58, 10
+
+       "``Efd``", ":math:`E_{fd}`", "field voltage (private algebraic) [p.u.]", ""
+       "``Vf_ref``", ":math:`V_{ref}`", "field-voltage setpoint (set by the initialization)", ""
+    """
+
+    def states(self) -> List[str]:
+        return []
+
+    def units(self) -> List[str]:
+        return []
+
+    def algebs(self) -> List[str]:
+        return ["Efd"]
+
+    def algebs_units(self) -> Dict[str, str]:
+        return {"Efd": "p.u."}
+
+    def algebs_x0(self) -> Dict[str, float]:
+        return {"Efd": 1.5}
+
+    def params(self) -> Dict[str, float]:
+        return {}
+
+    def x0(self) -> Dict[str, float]:
+        return {}
+
+    def descriptions(self) -> Dict[str, str]:
+        return {
+            "Efd": "internal field voltage (constant)",
+            "Vf_ref": "exciter set point voltage",
+        }
+
+    def setpoints(self) -> Dict[str, float]:
+        return {"Vf_ref": 1.5}
+
+    def fgcall(self, host, dae: Dae) -> None:
+        dae.g[host.Efd] = -dae.y[host.Efd] + host.Vf_ref
+
+
 AVR_REGISTRY: Dict[str, type] = {
     "IEEEDC1A": IEEEDC1A,
     "AVRKundur_Filter": AVRKundur_Filter,
@@ -910,4 +974,5 @@ AVR_REGISTRY: Dict[str, type] = {
     "SEXST": SEXST,
     "AVRST1A": AVRST1A,
     "AVRAC1A": AVRAC1A,
+    "AVRCONST": AVRCONST,
 }
