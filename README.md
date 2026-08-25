@@ -153,3 +153,8 @@ and the paper describing the underlying models:
 ## License
 
 This software is free software, released by ETH Zurich under the [GNU General Public License v3.0 or later (GPL-3.0-or-later)](https://www.gnu.org/licenses/gpl-3.0.html). See [`LICENSE.txt`](LICENSE.txt) for the full license text. It is distributed WITHOUT ANY WARRANTY; see the license for details.
+
+`hermess/tests/references/` additionally contains third-party benchmark data
+redistributed under its own license (BSD-3-Clause, from the
+PowerSimulationsDynamics.jl project); the license text and provenance live
+next to the data.
