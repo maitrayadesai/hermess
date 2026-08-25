@@ -75,7 +75,7 @@ class Element:
         Args:
         idx (str, optional): Unique identifier for the device. Generated if not provided.
         name (str, optional): Name of the device. Generated if not provided.
-        **kwargs: Custom parameters to overwrite defaults.
+        ``**kwargs``: Custom parameters to overwrite defaults.
         """
         # Generate unique identifiers if not provided
         idx = idx or f"{self._type}_{self.n + 1}"

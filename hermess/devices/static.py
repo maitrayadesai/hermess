@@ -20,7 +20,7 @@ from __future__ import annotations  # Postponed type evaluation
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from system import Dae
+    from hermess.system import Dae
 from hermess.devices.device import DeviceRect
 import numpy as np
 import casadi as ca

@@ -41,8 +41,6 @@ user-defined together.
 
 from __future__ import annotations
 
-from typing import Iterable
-
 # Device classes registered by users. ``hermess.utils.data_loader`` consults this
 # first, before scanning the modules of ``hermess.devices``, so a class defined in
 # a notebook is found by name like any shipped device.
@@ -152,7 +150,3 @@ def unregister(name: str, kind: str) -> None:
     if kind not in registries:
         raise KeyError(f"unknown kind {kind!r}; expected 'device' or one of {sorted(registries)}")
     registries[kind][1].pop(name, None)
-
-
-def _iter_kinds() -> Iterable[str]:
-    return list(_strategy_registries()) + ["device"]

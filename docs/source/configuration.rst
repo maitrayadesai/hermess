@@ -4,8 +4,10 @@ Configuration
 =============
 
 .. autoclass:: hermess.config.Config
+   :no-index:
 
 .. autofunction:: hermess.config.Config.updated()
+   :no-index:
 
 **Example:**
 

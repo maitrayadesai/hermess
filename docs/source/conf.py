@@ -18,7 +18,6 @@ html_theme = "sphinx_rtd_theme"
 
 # Optional: Configure theme options
 html_theme_options = {
-    "description": "HERMESS is an open-source power system dynamic simulator (simulation-only fork of PowerDynamicEstimator).",
     "collapse_navigation": False,  # Keep the navigation expanded
     "sticky_navigation": True,  # Make the sidebar navigation sticky
     "navigation_depth": 4,  # Depth of the navigation tree
@@ -49,6 +48,15 @@ autoapi_depth = 2  # Show modules and classes only, no deeper levels
 # The test suite, the system-file folders and the benchmarks are not part of the
 # public API; keeping them out leaves a reference to the modules a user calls.
 autoapi_ignore = ["*/tests/*", "*/systems/*", "*/benchmarks/*"]
+# Default autoapi options minus "private-members": underscore-prefixed helpers are
+# implementation detail and do not belong in the published reference.
+autoapi_options = [
+    "members",
+    "undoc-members",
+    "show-inheritance",
+    "show-module-summary",
+    "imported-members",
+]
 autoapi_keep_files = True  # Optional: keeps generated files in 'autoapi'
 
 # Optional: customize the output for the tree (e.g., you might want to adjust this)

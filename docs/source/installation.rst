@@ -3,69 +3,103 @@
 Installation
 ============
 
-Follow these steps to install and set up the ``hermess`` package.
-
 Prerequisites
 -------------
-Before proceeding, ensure you have the following installed:
 
-- Python 3.10 or later
+- Python 3.10 or later.
+- A C compiler is optional. When ``gcc`` is on the ``PATH`` the CasADi integrator
+  is JIT-compiled, which speeds up long runs; without it the simulator falls back
+  to the interpreted integrator automatically.
 
+Install from source
+-------------------
 
+Clone the repository and install the package in editable mode:
 
-Installation Steps
-------------------
+.. code-block:: bash
 
-1. Clone the repository:
+   git clone https://github.com/maitrayadesai/hermess
+   cd hermess
+   python -m venv venv
+   source venv/bin/activate        # Windows: venv\Scripts\activate
+   pip install -e .
 
-   .. code-block:: bash
+The dependencies (CasADi, NumPy, SciPy, pandas, matplotlib, pydantic, tabulate,
+tqdm) are declared in ``pyproject.toml`` and are installed with the package.
 
-      git clone https://github.com/maitrayadesai/hermess
-      cd hermess
+With uv
+^^^^^^^
 
-2. Install dependencies:
+If you use `uv <https://docs.astral.sh/uv/>`_, the pinned environment in
+``uv.lock`` is reproduced with:
 
-   .. code-block:: bash
+.. code-block:: bash
 
-      pip install -r requirements.txt
+   uv sync
+   uv run python -m hermess
 
+With conda
+^^^^^^^^^^
 
+.. code-block:: bash
 
-You are now ready to use the ``hermess`` package.
+   conda env create -f environment.yaml
+   conda activate hermess
 
+A ``requirements.txt`` with fully pinned versions is also provided, exported from
+``uv.lock``, for environments that need an exact reproduction of the tested
+dependency set.
 
-Verifying Installation
-----------------------
+Verifying the installation
+--------------------------
 
-To verify the installation:
+Run the shipped configuration:
 
-1. Run the main script to ensure everything is working:
+.. code-block:: bash
 
-   .. code-block:: bash
+   python -m hermess
 
-      python -m hermess
+This simulates the system selected in ``hermess/config.py`` and plots the bus
+voltages and the internal states. If the two figures below appear, the
+installation works.
 
+Alternatively, from Python:
 
+.. code-block:: python
 
-2. If default figures of the simulated dynamic and algebraic states are plotted, the installation was successful.
+   import hermess
 
+   hermess.list_systems()                       # the systems that ship with the package
+   dae = hermess.simulate("3_bus", T_end=5.0)   # run one and get the finished model back
+   print(dae.x_full.shape)
 
+The test suite is another check, and needs ``pytest``:
+
+.. code-block:: bash
+
+   pip install pytest
+   pytest -q
 
 .. figure:: _static/voltage.png
-   :alt: Example PDF Page 1
+   :alt: Simulated voltage magnitudes
    :width: 600px
 
    Figure 1: Simulated voltage magnitudes.
 
 .. figure:: _static/diffstates.png
-   :alt: Example PDF Page 2
+   :alt: Simulated internal differential states
    :width: 600px
 
    Figure 2: Simulated internal differential states.
 
-
 Troubleshooting
 ---------------
-- If you encounter issues during installation, verify that all prerequisites are installed.
-- If dependency conflicts occur, try updating your package manager or using a clean Python environment.
-- Ensure that you are in the correct directory when running the script.
+
+- **The plots do not appear.** The interactive backend is only selected when a
+  run asks for figures. In a headless environment (a server, CI) set
+  ``MPLBACKEND=Agg`` and use ``plot=False``, then plot from the returned object.
+- **A run fails during initialization.** The power flow has to converge before
+  the time-domain simulation starts. Check the ``BusInit`` entries of the system
+  file, in particular that exactly one bus is declared ``slack``.
+- **Dependency conflicts.** Install into a clean virtual environment rather than
+  the system Python.

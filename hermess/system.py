@@ -1899,7 +1899,7 @@ class Dae:
         configured Z, I, P shares so the load preserves its
         voltage-dependence shape:
 
-          * Z share contributes a linear admittance step (no 1/|V|² term),
+          * Z share contributes a linear admittance step (no ``1/|V|^2`` term),
           * I share contributes a rotated constant-current step,
           * P share contributes a constant-power step.
 
@@ -2239,11 +2239,22 @@ class DaeSim(Dae):
         super().__init__()
         self.int_scheme_sim = None
         self.int_scheme_sim_options: dict = {}
+        #: Eigenvalues of :attr:`A`, filled by :meth:`eigenvalue_analysis`.
         self.eigenvalues = None
-        self.A = None  # reduced state matrix at the operating point (eigenvalue_analysis)
+        #: Reduced state matrix at the operating point: the linearization
+        #: ``dx/dt = A dx`` after eliminating the algebraic variables. Rows and
+        #: columns follow :attr:`state_names`. Filled by
+        #: :meth:`eigenvalue_analysis`.
+        self.A = None
+        #: Participation factors of every mode, filled by
+        #: :meth:`eigenvalue_analysis`.
         self.participation_factors = None
+        #: Participation factors normalized to [0, 1] per mode.
         self.participation_factors_normalized = None
+        #: Names of the differential states, in the order used by :attr:`A`.
         self.state_names: list = []
+        #: One entry per mode (eigenvalue, frequency, damping, dominant states),
+        #: as used by :meth:`print_modal_report` and :meth:`participation_table`.
         self.modes: Optional[list] = None
         # Gated by config; when True the small-signal eigenvalue analysis is run
         # and its figures shown at the operating point before the simulation.
@@ -2844,6 +2855,20 @@ class DaeSim(Dae):
         self.i_full[3::4, start:end] = It_im_B
 
     def eigenvalue_analysis(self) -> None:
+        """Linearize the DAE at the operating point and analyze its modes.
+
+        Eliminates the algebraic variables to obtain the reduced state matrix
+        ``A`` (``dx/dt = A dx``), then computes its eigenvalues and the
+        participation factors of every mode. The results are stored on the
+        object rather than returned: :attr:`A`, :attr:`eigenvalues`,
+        :attr:`state_names`, :attr:`participation_factors`,
+        :attr:`participation_factors_normalized` and :attr:`modes`.
+
+        Run automatically before the simulation when
+        ``config.small_signal_analysis`` is set. See :meth:`print_modal_report`
+        and :meth:`participation_table` for the readable summaries, and
+        :meth:`plot_eigenvalues` for the s-plane scatter.
+        """
 
         # Helper for Reference frequency substitution
         W_sym = ca.vertcat(

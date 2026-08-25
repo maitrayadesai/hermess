@@ -118,6 +118,21 @@ class Config(BaseModel):
         :param print_power_flow: Print initial power flow to output.
         :type print_power_flow: bool
 
+        :param system_root: Directory holding the system folders. ``None`` uses the
+            systems shipped with the package (``hermess/systems``); point it at a
+            directory of your own to run a system you wrote.
+        :type system_root: Path or None
+        :param int_scheme_sim: Integration scheme. ``'idas'`` (default) and
+            ``'cvodes'`` are the SUNDIALS variable-step solvers and are the right
+            choice for stiff models; ``'collocation'`` and ``'rk'`` are fixed-step
+            schemes, faster on smooth problems but less robust.
+        :type int_scheme_sim: str
+        :param int_scheme_sim_options: Extra options passed to the CasADi
+            integrator, e.g. ``{'abstol': 1e-8, 'reltol': 1e-8}``.
+        :type int_scheme_sim_options: dict
+        :param log_level: Logging verbosity: ``'DEBUG'``, ``'INFO'``,
+            ``'WARNING'``, ``'ERROR'`` or ``'CRITICAL'``.
+        :type log_level: str
         :param small_signal_analysis: Run the small-signal eigenvalue/participation
             analysis at the operating point (before the simulation) and show the
             frequency-banded participation figures plus the modal report.

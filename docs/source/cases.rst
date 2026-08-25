@@ -3,58 +3,173 @@
 Test Cases
 ==========
 
+The systems that ship with the package live in
+`hermess/systems <https://github.com/maitrayadesai/hermess/tree/main/hermess/systems>`_.
+Each one is a folder holding a ``sim_param.txt`` (network, devices, initialization)
+and a ``sim_dist.txt`` (disturbances), described in :ref:`advanced_usage`.
 
-The existing power system test cases are stored in `./hermess/systems <https://github.com/maitrayadesai/hermess/tree/main/hermess/systems>`_
-subfolder. The list of current examples includes:
+The list is available at runtime, so it never goes out of date:
 
-- :ref:`IEEE39_bus`
-- :ref:`IEEE39_bus_ideal`
-- :ref:`IEEE39_bus_inverter`
+.. code-block:: python
+
+   import hermess
+
+   hermess.list_systems()
+   dae = hermess.simulate("IEEE39_bus", T_end=10.0)
+
+Small systems
+-------------
+
+.. _3_bus:
+
+``3_bus``
+^^^^^^^^^
+
+Three buses and three lines: a Sauer-Pai synchronous machine at bus 1, a
+grid-forming converter at bus 3 and a ZIP load at bus 2. The smallest system that
+still contains both a machine and a converter, which makes it the usual starting
+point and the one used by most of the test suite. Disturbance: a line opening.
+
+.. _3_bus_loadstep:
+
+``3_bus_loadstep``
+^^^^^^^^^^^^^^^^^^
+
+The same three-bus network with a single load step instead of the line opening.
+Used by the grid-forming control example in ``examples/neural_gfm_control``.
+
+.. _kundur_avr_newtest:
+
+``kundur_avr_newtest``
+^^^^^^^^^^^^^^^^^^^^^^
+
+The Kundur two-area system, twelve buses with four subtransient machines and
+three ZIP loads, exercising the automatic voltage regulators. Disturbance: a load
+step. The classic system for inter-area oscillation studies.
+
+.. _kundur_converter:
+
+``kundur_converter``
+^^^^^^^^^^^^^^^^^^^^
+
+The two-area system with two of the four machines replaced by grid-forming
+converters, for comparing converter-dominated against machine-dominated dynamics
+on an otherwise identical network. Disturbance: a load step.
+
+IEEE 39-bus systems
+-------------------
 
 .. _IEEE39_bus:
 
-IEEE39_bus
-----------
+``IEEE39_bus``
+^^^^^^^^^^^^^^
 
-The IEEE39 bus test case is shown in Figure 1. It is simulated in the time domain to study its
-electromechanical response to a sequence of disturbances.
+The standard IEEE 39-bus (New England) benchmark: 39 buses, 46 branches, ten
+subtransient synchronous machines and nineteen ZIP loads. It is simulated in the
+time domain to study the electromechanical response to a sequence of
+disturbances:
 
-Used dynamic models:
-    - Subtransient synchronous generators
-
-Simulated disturbances:
-    - Short circuit on branch 5-8 (t = 7.00 s)
-    - Short circuit cleared by opening the branch on both ends (t = 7.04 s)
-    - Load change at node 5 (t = 9.00 s)
-
+- short circuit on branch 5-8 (t = 7.00 s),
+- fault cleared by opening the branch at both ends (t = 7.04 s),
+- load change at bus 5 (t = 9.00 s).
 
 .. figure:: _static/39network.png
-   :alt: Example PDF Page 1
+   :alt: IEEE 39-bus network
    :width: 600px
 
-   Figure 1: IEEE_39bus.
-
-
-.. _IEEE39_bus_ideal:
-
-IEEE39_bus_ideal
-----------------
-
-This test case is very similar to the previous one and is intended mainly for functional testing,
-to verify that the simulator reproduces the expected response under idealized conditions.
-
-.. _examples_git: https://www.python.org
-
+   Figure 1: The IEEE 39-bus network.
 
 .. _IEEE39_bus_inverter:
 
-IEEE39_bus_inverter
-----------------
+``IEEE39_bus_inverter``
+^^^^^^^^^^^^^^^^^^^^^^^
 
-This test case represents a renewable-penetrated IEEE 39 bus test case. It comprises three grid-following converters and two grid-forming converters in addition to the synchronous machines.
+A converter-penetrated variant of the same network: five Sauer-Pai synchronous
+machines, two grid-forming and three grid-following converters, nineteen ZIP
+loads. Disturbance: a bus fault and its clearing.
 
 .. figure:: _static/39network_inv.jpg
-   :alt: Example PDF Page 2
+   :alt: IEEE 39-bus network with converters
    :width: 600px
 
-   Figure 1: IEEE_39bus with grid-forming and grid-following inverters.
+   Figure 2: The IEEE 39-bus network with grid-forming and grid-following converters.
+
+.. _IEEE39_bus_ideal:
+
+``IEEE39_bus_ideal``
+^^^^^^^^^^^^^^^^^^^^
+
+The 39-bus network with constant-power loads instead of ZIP loads and a longer
+disturbance sequence covering every supported event type (line fault, bus fault
+and clearing, line opening, load step). Inherited from the parent project, where
+it served as the idealized-measurement scenario, and kept as a functional test
+that the simulator reproduces the expected response.
+
+.. _IEEE39_bus_inverter_old:
+
+``IEEE39_bus_inverter_old``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+An earlier converter-penetrated variant, kept for comparison with results
+produced before the converter models were reworked. Prefer
+:ref:`IEEE39_bus_inverter` for new work.
+
+.. _SEA_14gen:
+
+The 14-generator South East Australian system
+---------------------------------------------
+
+A 59-bus, 76-branch, five-area, 50 Hz benchmark with fourteen aggregated power
+stations and five static var compensators, from M. Gibbard and D. Vowles,
+*Simplified 14-Generator Model of the South East Australian Power System*,
+University of Adelaide, revision 4, 2014. The parameter tables are transcribed
+into ``sea_data.py`` and ``sea_dynamics.py``; the report itself is not
+redistributed.
+
+The case folders are generated by ``build_sea_system.py`` and can be validated
+against the published load flow and rotor modes with ``validate_sea.py``:
+
+.. code-block:: bash
+
+   python hermess/systems/SEA_14gen/build_sea_system.py 1
+   python hermess/systems/SEA_14gen/validate_sea.py 1
+   python hermess/systems/SEA_14gen/build_sea_system.py 1 --no-pss
+
+``SEA_case1``
+^^^^^^^^^^^^^
+
+Operating case 1 of the benchmark: twelve round-rotor (``GENROU``) and two
+salient-pole (``GENSAL``) machines with ST1A and AC1A exciters and speed
+stabilizers, five SVCs and thirty-two ZIP loads. Disturbance: a bus fault and its
+clearing.
+
+``SEA_case1_nopss``
+^^^^^^^^^^^^^^^^^^^
+
+Operating case 1 with the power system stabilizers removed, which is how the
+benchmark exposes its poorly damped inter-area modes.
+
+``SEA_case1_conv``
+^^^^^^^^^^^^^^^^^^
+
+Operating case 1 with three of the stations replaced by converters, two
+grid-forming and one grid-following, keeping the SVCs and the load pattern.
+
+``SMIB_check``
+^^^^^^^^^^^^^^
+
+A single ``GENROU`` machine against an infinite bus, used to cross-check the
+machine implementation against the benchmark equations in isolation. No
+disturbance.
+
+.. note::
+
+   The folders for operating cases 2 to 6 (``SEA_case2`` ... ``SEA_case6`` and
+   their ``_nopss`` variants) are stale: they were produced by an earlier version
+   of ``build_sea_system.py`` that emitted machine classes named
+   ``SynchronousSEA5`` and ``SynchronousSEA6``, which are not part of the
+   package, so loading them raises an :class:`ImportError`. Regenerate the case
+   you need with the current script, which emits ``GENROU`` and ``GENSAL``::
+
+      python hermess/systems/SEA_14gen/build_sea_system.py 2
+      python hermess/systems/SEA_14gen/build_sea_system.py 2 --no-pss
