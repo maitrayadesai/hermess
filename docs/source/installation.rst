@@ -65,9 +65,11 @@ Run the shipped configuration:
 
    python -m hermess
 
-This simulates the system selected in ``hermess/config.py`` and plots the bus
-voltages and the internal states. If the two figures below appear, the
-installation works.
+This simulates the system selected in ``hermess/config.py`` -- as shipped, ten
+seconds of the IEEE 39-bus converter system (:ref:`IEEE39_bus_inverter`) with
+dynamic line models and a small-signal analysis at the operating point, so
+expect a runtime of a few minutes -- and plots the bus voltages and the
+internal states. If the two figures below appear, the installation works.
 
 Alternatively, from Python:
 
@@ -87,16 +89,18 @@ The test suite is another check, and needs ``pytest``:
    pytest -q
 
 .. figure:: _static/voltage.png
-   :alt: Simulated voltage magnitudes
-   :width: 600px
+   :alt: Simulated bus voltage magnitudes
+   :width: 620px
 
-   Figure 1: Simulated voltage magnitudes.
+   Figure 1: Simulated bus voltage magnitudes of the shipped IEEE 39-bus
+   converter scenario.
 
 .. figure:: _static/diffstates.png
-   :alt: Simulated internal differential states
-   :width: 600px
+   :alt: Simulated differential states of the synchronous machines
+   :width: 680px
 
-   Figure 2: Simulated internal differential states.
+   Figure 2: Simulated differential states of the synchronous machines in the
+   same run (one row per machine, one column per state).
 
 Troubleshooting
 ---------------

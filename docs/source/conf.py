@@ -71,14 +71,10 @@ language = "EN"
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_static_path = ["_static"]
-html_css_files = ["custom.css"]
 
 
 latex_elements = {
     "preamble": r"\usepackage{amsmath}",  # Add this line to include amsmath
-}
-html_context = {
-    "mathjax_path": "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js",
 }
 # Ensure UTF-8 encoding is used
 source_encoding = "utf-8"
