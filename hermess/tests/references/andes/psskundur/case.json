@@ -1,0 +1,57 @@
+{
+ "model": "PSSKundur",
+ "description": "Kundur speed-input stabilizer on GENROU + SEXST vs ANDES ST2CUT with T1 = 0 on SEXS; constant mechanical power.",
+ "initial_maps": {
+  "GENROU": {
+   "delta": "delta",
+   "omega": "omega",
+   "e_qprim": "e1q",
+   "e_dprim": "e1d",
+   "psi_kd": "e2d",
+   "psi_kq": "e2q",
+   "Pref": "tm"
+  },
+  "SEXS": {
+   "Efd": "LAW_y",
+   "Vf_ref": "vref"
+  },
+  "ST2CUT": {
+   "vw": "WO_x",
+   "vl1": "LL1_x",
+   "vl2": "LL2_x"
+  }
+ },
+ "extra_trajectories": {
+  "Efd": "efd",
+  "Vs": "vs"
+ },
+ "allow_extra_reference_eigenvalues": 10,
+ "event_times": [1.0],
+ "tolerances": {
+  "initial": 1e-05,
+  "eig_abs": 0.0005,
+  "eig_rel": 0.0001,
+  "traj": {
+   "omega": 1e-05,
+   "delta": 0.005,
+   "v": 0.0001,
+   "p": 0.0005,
+   "q": 0.0005,
+   "efd": 0.005,
+   "vs": 0.0001
+  }
+ },
+ "achieved_2026_08": {
+  "initial": 1.8e-07,
+  "eig_abs": 1.7e-05,
+  "traj": {
+   "omega": 2.7e-07,
+   "delta": 3.3e-05,
+   "v": 1.1e-05,
+   "p": 2.4e-05,
+   "q": 3.7e-05,
+   "efd": 2.1e-04,
+   "vs": 3.1e-06
+  }
+ }
+}

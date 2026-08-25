@@ -86,6 +86,33 @@ The GENROU pair with the ST1A static exciter (transducer,
 transient-gain-reduction lead-lag, regulator lag): the cross-tool validation
 case for AVRST1A (see :ref:`validation`). Disturbance: a line opening.
 
+.. _3bus_ieeedc1a:
+
+``3bus_ieeedc1a``
+^^^^^^^^^^^^^^^^^
+
+The GENROU pair with the IEEE DC1A rotating exciter (Sauer-Pai parameter
+set): the cross-tool validation case for IEEEDC1A (see :ref:`validation`).
+Disturbance: a line opening.
+
+.. _3bus_avrac1a:
+
+``3bus_avrac1a``
+^^^^^^^^^^^^^^^^
+
+The GENROU pair with the AC1A exciter in its small-signal form, at a
+high-gain fast-regulator parameter set: the cross-tool validation case for
+AVRAC1A (see :ref:`validation`). Disturbance: a line opening.
+
+.. _3bus_psskundur:
+
+``3bus_psskundur``
+^^^^^^^^^^^^^^^^^^
+
+The GENROU pair with the SEXST exciter and the Kundur speed-input stabilizer:
+the cross-tool validation case for PSSKundur (see :ref:`validation`).
+Disturbance: a line opening, whose rotor swings exercise the stabilizer path.
+
 .. _kundur:
 
 ``kundur``

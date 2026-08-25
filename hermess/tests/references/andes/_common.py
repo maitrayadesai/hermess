@@ -77,10 +77,13 @@ def build_system(
     governors: list[dict] | None = None,
     exciter_model: str | None = None,
     exciters: list[dict] | None = None,
+    pss_model: str | None = None,
+    psss: list[dict] | None = None,
 ):
     """Build the ANDES twin. ``machines`` are GENROU parameter dicts (idx, bus,
     gen and the electrical parameters); ``governors`` are TGOV1 dicts or None;
-    ``exciters`` are parameter dicts of ``exciter_model`` or None."""
+    ``exciters`` are parameter dicts of ``exciter_model`` or None; ``psss``
+    are parameter dicts of ``pss_model`` (attached to the exciters) or None."""
     import andes
 
     andes.config_logger(stream_level=30)
@@ -102,6 +105,8 @@ def build_system(
         ss.add("TGOV1", gov)
     for exc in exciters or []:
         ss.add(exciter_model, exc)
+    for pss in psss or []:
+        ss.add(pss_model, pss)
     ss.add("Toggle", dict(model="Line", dev=TRIPPED_LINE, t=T_EVENT))
     ss.setup()
 
@@ -126,12 +131,16 @@ def run_and_write(
     exciter_model: str | None = None,
     exciters: list[dict] | None = None,
     exciter_init_vars: tuple = (),
+    pss_model: str | None = None,
+    psss: list[dict] | None = None,
+    pss_init_vars: tuple = (),
     notes: list[str] | None = None,
 ) -> None:
     """Run power flow + EIG + TDS on the twin and write the reference files."""
     import andes
 
-    ss = build_system(machines, governors, exciter_model, exciters)
+    ss = build_system(machines, governors, exciter_model, exciters,
+                      pss_model, psss)
     if not ss.PFlow.run():
         raise RuntimeError("ANDES power flow did not converge")
 
@@ -167,6 +176,11 @@ def run_and_write(
         exc_dev = getattr(ss, exciter_model)
         initial[exciter_model] = {
             name: per_gen(getattr(exc_dev, name)) for name in exciter_init_vars
+        }
+    if psss:
+        pss_dev = getattr(ss, pss_model)
+        initial[pss_model] = {
+            name: per_gen(getattr(pss_dev, name)) for name in pss_init_vars
         }
 
     # Row 0 of the trajectory: the initial point (the ANDES store starts at the
@@ -214,6 +228,11 @@ def run_and_write(
         # The machine's field voltage, driven by the exciter (hermess: Efd).
         for name, arr in zip(gen_ids, interp(ss.GENROU.vf.a, y).T):
             columns[f"efd_{name}"] = arr
+    if psss:
+        # The stabilizing signal into the exciter (hermess: Vs).
+        pss_dev = getattr(ss, pss_model)
+        for name, arr in zip(gen_ids, interp(pss_dev.vsout.a, y).T):
+            columns[f"vs_{name}"] = arr
 
     header = ",".join(columns)
     data = np.column_stack(list(columns.values()))
@@ -240,6 +259,8 @@ def run_and_write(
             "governors": [dict(g) for g in governors] if governors else [],
             "exciter_model": exciter_model,
             "exciters": [dict(e) for e in exciters] if exciters else [],
+            "pss_model": pss_model,
+            "psss": [dict(p) for p in psss] if psss else [],
         },
         "event": {"type": "line trip", "line": TRIPPED_LINE, "t": T_EVENT},
         "integration": {

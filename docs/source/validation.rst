@@ -29,8 +29,10 @@ The reference data, the scripts that generated it, and the tolerances live in
 ``hermess/tests/references/`` and are asserted by
 ``hermess/tests/test_reference_traces.py``; the systems themselves ship as
 :ref:`3bus_genrou <3bus_genrou>`, :ref:`3bus_gensal <3bus_gensal>`,
-:ref:`3bus_tgov1 <3bus_tgov1>`, :ref:`3bus_sexst <3bus_sexst>` and
-:ref:`3bus_avrst1a <3bus_avrst1a>`. The table reports the worst error
+:ref:`3bus_tgov1 <3bus_tgov1>`, :ref:`3bus_sexst <3bus_sexst>`,
+:ref:`3bus_avrst1a <3bus_avrst1a>`, :ref:`3bus_ieeedc1a <3bus_ieeedc1a>`,
+:ref:`3bus_avrac1a <3bus_avrac1a>` and
+:ref:`3bus_psskundur <3bus_psskundur>`. The table reports the worst error
 actually achieved (ANDES 2.0.0, August 2026), not the test tolerance, which
 is set a factor 10 to 50 above it.
 
@@ -74,6 +76,24 @@ is set a factor 10 to 50 above it.
      - 1.8e-7
      - 3.7e-7
      - 4.9e-4
+   * - :class:`~hermess.devices.avr.IEEEDC1A`
+     - ANDES ``IEEET1`` (transducer removed)
+     - line trip, 10 s
+     - 1.8e-7
+     - 3.0e-7
+     - 4.6e-5
+   * - :class:`~hermess.devices.avr.AVRAC1A`
+     - ANDES ``IEEET1`` (transducer removed)
+     - line trip, 10 s
+     - 1.8e-7
+     - 1.1e-6
+     - 5.5e-4
+   * - :class:`~hermess.devices.pss.PSSKundur`
+     - ANDES ``ST2CUT`` (transducer lag removed)
+     - line trip, 10 s
+     - 1.8e-7
+     - 1.7e-5
+     - 2.1e-4
 
 Operating point and trajectory entries are the worst absolute error over all
 compared quantities in per unit (radians for angles); the eigenvalue entry is
@@ -114,6 +134,16 @@ reduced exactly to ours, and the reduction is documented in the case's
   AVRST1A chain (transducer, lead-lag, regulator lag); each side keeps one
   decoupled state, both placed at the same pole so their eigenvalues pair
   with each other.
+- The ANDES IEEET1 with its transducer removed (``TR = 0``, which ANDES
+  turns into an algebraic pass-through and excludes from its eigenvalue
+  analysis) is exactly the IEEEDC1A chain; its saturation is inert at the
+  defaults. The AVRAC1A, which in its small-signal form (no saturation,
+  ``KC = KD = 0``) coincides with that same chain, is validated against the
+  identical reduction at its own parameter regime.
+- The ANDES ST2CUT with its transducer lag removed (``T1 = 0``), the second
+  input channel silenced and the spare third lead-lag made unity is the
+  PSSKundur block for block and in the same order; the silenced and unity
+  blocks contribute unmatched reference modes at documented poles.
 
 Benchmark tables
 ----------------

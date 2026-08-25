@@ -1,0 +1,26 @@
+# Cross-tool validation case: AVRAC1A vs ANDES.
+#
+# The GENROU pair of the genrou case with the IEEE AC1A exciter in its
+# small-signal form (no saturation, armature reaction or rectifier
+# regulation: KC = KD = 0, unity lead-lag), the form used by the South East
+# Australian benchmark. Without those terms the AC1A chain coincides with the
+# DC1A structure, so the ANDES twin is the same IEEET1 reduction as in the
+# ieeedc1a case (TR = 0, saturation inert, limits open), at the AC1A
+# parameter set. State map: Vr = LA_y, Efd = INT_y, Vfb = KF/TF * WF_x.
+#
+# Machine parameters are on the system base (Sn = Sb = 100 MVA). Any edit
+# here must be mirrored in ../generate.py and the reference regenerated.
+
+GENROU, idx = "SG1", bus = "1", avr = "AVRAC1A", KA = 400, TA = 0.02, KE = 1.0, TE = 1.0, KF = 0.03, TF = 1.0, governor = "GOVCONST", Sn = 100, fn = 50, H = 6.5, D = 2, f = 0, R_s = 0.0025, x_a = 0.2, x_d = 1.8, x_q = 1.7, x_dprim = 0.3, x_qprim = 0.55, x_dsec = 0.25, x_qsec = 0.25, T_d0prim = 8.0, T_q0prim = 0.4, T_d0sec = 0.03, T_q0sec = 0.05
+
+GENROU, idx = "SG2", bus = "3", avr = "AVRAC1A", KA = 400, TA = 0.02, KE = 1.0, TE = 1.0, KF = 0.03, TF = 1.0, governor = "GOVCONST", Sn = 100, fn = 50, H = 6.5, D = 2, f = 0, R_s = 0.0025, x_a = 0.2, x_d = 1.8, x_q = 1.7, x_dprim = 0.3, x_qprim = 0.55, x_dsec = 0.25, x_qsec = 0.25, T_d0prim = 8.0, T_q0prim = 0.4, T_d0sec = 0.03, T_q0sec = 0.05
+
+Line, bus_i = "1", bus_j = "2", r = 0.01, x = 0.08, g = 0, b = 0.03, trafo = 1
+Line, bus_i = "2", bus_j = "3", r = 0.002, x = 0.1, g = 0, b = 0.05, trafo = 1
+Line, bus_i = "3", bus_j = "1", r = 0.006, x = 0.03, g = 0, b = 0.075, trafo = 1
+
+StaticZIP, bus = "2", z_share = 1.0
+
+BusInit, bus = "1", p = 0, v = 1.03, type = "slack"
+BusInit, bus = "3", p = -60, v = 1.02, type = "PV"
+BusInit, bus = "2", p = 150, q = 40, type = "PQ"

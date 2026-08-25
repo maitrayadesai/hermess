@@ -3,10 +3,13 @@ hermess
 +---gui
 +---systems
 |   +---3bus
+|   +---3bus_avrac1a
 |   +---3bus_avrst1a
 |   +---3bus_genrou
 |   +---3bus_gensal
+|   +---3bus_ieeedc1a
 |   +---3bus_loadstep
+|   +---3bus_psskundur
 |   +---3bus_sexst
 |   +---3bus_tgov1
 |   +---ieee39
@@ -54,11 +57,17 @@ hermess
 |   |   +---sp_ground
 |   +---references
 |   |   +---andes
+|   |   |   +---avrac1a
+|   |   |   |   +---system
 |   |   |   +---avrst1a
 |   |   |   |   +---system
 |   |   |   +---genrou
 |   |   |   |   +---system
 |   |   |   +---gensal
+|   |   |   |   +---system
+|   |   |   +---ieeedc1a
+|   |   |   |   +---system
+|   |   |   +---psskundur
 |   |   |   |   +---system
 |   |   |   +---sexst
 |   |   |   |   +---system

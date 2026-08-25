@@ -125,16 +125,24 @@ def test_initial_conditions_match_reference(case, reference_runs):
     errors = {}
     # initial_maps: {reference section: {hermess name: reference name}}; a
     # hermess name is a state (compared from xinit) or a setpoint solved by
-    # the initialization (compared from the device attribute).
+    # the initialization (compared from the device attribute). A mapping value
+    # may be {"ref": name, "scale": s} when the tools put a gain in different
+    # places (e.g. our Rf = KF/TF * their WF_x).
     for section, mapping in spec["initial_maps"].items():
         for ours, theirs in mapping.items():
-            ref = np.asarray(meta["initial"][section][theirs])
+            if isinstance(theirs, dict):
+                ref = np.asarray(meta["initial"][section][theirs["ref"]])
+                ref = ref * theirs["scale"]
+                label = f"{section}.{theirs['scale']:.4g}*{theirs['ref']}"
+            else:
+                ref = np.asarray(meta["initial"][section][theirs])
+                label = f"{section}.{theirs}"
             got = (
                 np.asarray(sg.xinit[ours])
                 if ours in sg.states
                 else np.asarray(getattr(sg, ours))
             )
-            errors[f"{ours} vs {section}.{theirs}"] = np.abs(got - ref).max()
+            errors[f"{ours} vs {label}"] = np.abs(got - ref).max()
     v0 = np.array([np.hypot(*sim.grid.yinit[str(b)]) for b in sim.grid.buses])
     errors["power-flow |V|"] = np.abs(v0 - np.asarray(meta["initial"]["bus_v"])).max()
 
@@ -157,9 +165,14 @@ def test_eigenvalues_match_reference(case, reference_runs):
         for _ in range(drop["count"]):
             mu = np.delete(mu, int(np.argmin(np.abs(mu - near))))
 
+    # Reductions can leave the reference with decoupled artifact modes that
+    # have no hermess counterpart (documented per case in generate.py); they
+    # stay unmatched below and only their count is pinned here.
+    extra = spec.get("allow_extra_reference_eigenvalues", 0)
     lam = np.asarray(sim.eigenvalues)
-    assert lam.shape == mu.shape, (
-        f"{case}: {lam.size} hermess eigenvalues vs {mu.size} reference ones"
+    assert lam.size + extra == mu.size, (
+        f"{case}: {lam.size} hermess eigenvalues vs {mu.size} reference ones "
+        f"(expected {extra} unmatched reference artifacts)"
     )
 
     # Greedy nearest-neighbour pairing; each reference eigenvalue used once.
@@ -215,11 +228,15 @@ def test_trajectories_match_reference(case, reference_runs):
         bus = str(sg.bus[k])
         check("p", f"p_{g}", sim.grid.sf[bus][0], csv[f"p_{g}"], True)
         check("q", f"q_{g}", sim.grid.sf[bus][1], csv[f"q_{g}"], True)
-    # extra_trajectories: {hermess state: reference column prefix} for the
-    # controller states a case additionally pins (governor, exciter).
+    # extra_trajectories: {hermess variable: reference column prefix} for the
+    # controller quantities a case additionally pins (governor and exciter
+    # states from xf; device-private algebraics such as the PSS output from
+    # yf_int, which skip the switching samples like every algebraic).
     for ours, col in spec.get("extra_trajectories", {}).items():
+        algebraic = ours not in sg.xf
+        source = sg.yf_int if algebraic else sg.xf
         for k, g in enumerate(gens):
-            check(col, f"{col}_{g}", sg.xf[ours][k], csv[f"{col}_{g}"], False)
+            check(col, f"{col}_{g}", source[ours][k], csv[f"{col}_{g}"], algebraic)
 
     failed = {k: v for k, v in errors.items() if v[0] > v[1]}
     achieved = ", ".join(f"{k} {e:.2e}" for k, (e, _) in errors.items())
