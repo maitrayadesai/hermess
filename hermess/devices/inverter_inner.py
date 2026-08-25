@@ -16,7 +16,7 @@
 # (https://doi.org/10.5905/ethz-1007-842); dynamic state estimation removed.
 # For inquiries, contact: mdesai@ethz.ch
 
-"""Inverter inner-control strategies (the cascaded voltage/current loops).
+r"""Inverter inner-control strategies (the cascaded voltage/current loops).
 
 The inner controller is the converter's fast actuator: it regulates the capacitor
 voltage to the reference ``Vcd`` from the outer voltage loop and produces the
@@ -28,6 +28,14 @@ It owns the four PI integrator states (``xi_d``/``xi_q`` voltage loop,
 ``gamma_d``/``gamma_q`` current loop) and the controller / virtual-impedance gains.
 It reads the filter capacitance/inductance (``host.Cf`` / ``host.Lf``) via the
 host for the cross-coupling decoupling terms.
+
+Notation (shared with the filter strategies): lower-case
+:math:`v_{fd}, v_{fq}, i_{fd}, i_{fq}, i_{td}, i_{tq}` are the capacitor
+voltage, converter-side filter current and terminal current in a dq frame;
+inside this module they are the converter-frame (internal) quantities.
+:math:`v_{swd}, v_{swq}` is the switching voltage the controller outputs,
+:math:`\omega_c` the converter frequency, and all quantities are per unit on
+the device base.
 """
 
 from __future__ import annotations
@@ -110,12 +118,77 @@ class InnerControl(ABC):
 
 
 class Cascaded(InnerControl):
-    """Cascaded voltage + current PI control with virtual impedance.
+    r"""Cascaded voltage and current PI control with virtual impedance
+    (the standard two-loop vector control of a voltage-forming converter;
+    cf. https://doi.org/10.1109/TPWRS.2021.3061434).
 
-    Voltage loop (xi): regulates the capacitor voltage to ``Vcd`` (minus the
-    virtual-impedance drop), producing the filter-current reference. Current loop
-    (gamma): regulates the filter current, producing the switching voltage. With
-    the cross-coupling decoupling and feed-forward terms.
+    Selected on a converter line with ``inner = "Cascaded"``.
+
+    **Model.** All quantities are in the converter (internal) dq frame, the
+    host's Park transform of the network-frame filter states by the frame
+    angle :math:`\delta_c`; :math:`\omega_c` is the converter frequency from
+    the angle source and :math:`V_{cd}` the d-axis voltage command from the
+    outer voltage controller (the q-command is implicitly zero). The voltage
+    references include the virtual-impedance drop over the terminal current:
+
+    .. math::
+
+       v_{fd}^{*} &= V_{cd} - R_v \, i_{td} + \omega_c L_v \, i_{tq} \\
+       v_{fq}^{*} &= - R_v \, i_{tq} - \omega_c L_v \, i_{td}
+
+    The voltage PI (with capacitor decoupling and terminal-current
+    feed-forward) produces the filter-current references:
+
+    .. math::
+
+       i_{fd}^{*} &= K_p^v \left( v_{fd}^{*} - v_{fd} \right) + K_i^v \, \xi_d
+                    - \omega_c c_f \, v_{fq} + K_{ff}^v \, i_{td} \\
+       i_{fq}^{*} &= K_p^v \left( v_{fq}^{*} - v_{fq} \right) + K_i^v \, \xi_q
+                    + \omega_c c_f \, v_{fd} + K_{ff}^v \, i_{tq}
+
+    and the current PI (with inductor decoupling and capacitor-voltage
+    feed-forward) the switching voltage:
+
+    .. math::
+
+       v_{swd} &= K_p^c \left( i_{fd}^{*} - i_{fd} \right) + K_i^c \, \gamma_d
+                  - \omega_c l_f \, i_{fq} + K_{ff}^c \, v_{fd} \\
+       v_{swq} &= K_p^c \left( i_{fq}^{*} - i_{fq} \right) + K_i^c \, \gamma_q
+                  + \omega_c l_f \, i_{fd} + K_{ff}^c \, v_{fq}
+
+    which is rotated back to the network frame by :math:`\delta_c` and
+    published on the host (read by the filter strategy). The four PI
+    integrators are the strategy's differential states:
+
+    .. math::
+
+       \dot{\xi}_d = v_{fd}^{*} - v_{fd}, \quad
+       \dot{\xi}_q = v_{fq}^{*} - v_{fq}, \quad
+       \dot{\gamma}_d = i_{fd}^{*} - i_{fd}, \quad
+       \dot{\gamma}_q = i_{fq}^{*} - i_{fq}
+
+    The decoupling terms read the filter parameters :math:`c_f` and
+    :math:`l_f` from the host, so this controller presupposes a
+    shunt-capacitor (LC/LCL) plant; the current references pass through the
+    host accessor ``host.current_ref``, the interception seam for a future
+    current limiter.
+
+    **Symbols.**
+
+    .. csv-table::
+       :header: Code, Symbol, Meaning, Default
+       :widths: 14, 12, 58, 10
+
+       "``Kpv``", ":math:`K_p^v`", "voltage-loop proportional gain", "0.59"
+       "``Kiv``", ":math:`K_i^v`", "voltage-loop integral gain", "736"
+       "``Kffv``", ":math:`K_{ff}^v`", "voltage-loop (terminal-current) feed-forward gain", "0"
+       "``Kpc``", ":math:`K_p^c`", "current-loop proportional gain", "1.27"
+       "``Kic``", ":math:`K_i^c`", "current-loop integral gain", "14.3"
+       "``Kffc``", ":math:`K_{ff}^c`", "current-loop (capacitor-voltage) feed-forward gain", "0"
+       "``Rv``", ":math:`R_v`", "virtual resistance [p.u.]", "0"
+       "``Lv``", ":math:`L_v`", "virtual inductance [p.u.]", "0.2"
+       "``xi_d`` / ``xi_q``", ":math:`\xi_d,\ \xi_q`", "voltage-loop integrator states [p.u.]", ""
+       "``gamma_d`` / ``gamma_q``", ":math:`\gamma_d,\ \gamma_q`", "current-loop integrator states [p.u.]", ""
     """
 
     def states(self) -> List[str]:

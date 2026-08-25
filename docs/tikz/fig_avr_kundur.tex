@@ -1,0 +1,25 @@
+\documentclass[tikz,border=6pt]{standalone}
+\input{style.tex}
+\begin{document}
+\begin{tikzpicture}
+  \node[block] (tr) {$\dfrac{1}{1 + sT_R}$};
+  \node[sum, right=16mm of tr] (s) {};
+  \node[lbl] at ($(s)+(-0.32,0.30)$) {$-$};
+  \node[lbl] at ($(s)+(-0.02,0.44)$) {$+$};
+  \node[lbl] at ($(s)+(-0.02,-0.44)$) {$+$};
+  \node[block, right=of s] (gain) {$K_A$};
+  \node[block, right=10mm of gain] (ll) {$\dfrac{1 + sT_A}{1 + sT_B}$};
+  \draw[sig] ($(tr.west)+(-1.0,0)$) node[above, lbl] {$V_t$} -- (tr);
+  \draw[sig] (tr) -- (s) node[midway, above, lbl] {$V_{tr}$};
+  \draw[sig] ($(s)+(0,1.2)$) node[above, lbl] {$V_{ref}$} -- (s);
+  \draw[sig] ($(s)+(0,-1.2)$) node[below, lbl] {$V_s$} -- (s);
+  \draw[sig] (s) -- (gain);
+  \draw[sig] (gain) -- (ll);
+  \draw[sig] (ll.east) -- ++(1.2,0) node[above, lbl] {$E_{fd}$};
+  \node[lbl, text=ethgrey, align=center] at ($(gain.south)+(0.4,-1.55)$)
+    {\footnotesize \textbf{AVRKundur}: $E_{fd}$ algebraic (lag state $V_l$ + feedthrough $T_A/T_B$)\quad
+     \textbf{\_ODE}: all states\\[1pt]
+     \footnotesize \textbf{\_Filter}: extra output lag $1/(1+sT_{fd})$\qquad
+     \textbf{\_NoTGR}: lead-lag removed, $E_{fd} = K_A(V_{ref}-V_{tr}+V_s)$};
+\end{tikzpicture}
+\end{document}

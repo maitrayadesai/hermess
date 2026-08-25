@@ -128,6 +128,35 @@ class Element:
 
 
 class BusInit(Element):
+    r"""Power-flow input data for one bus, used only by the initialization.
+
+    Selected in a system file by the class name in the first column, one line
+    per bus, e.g. ``BusInit, bus = "2", p = 100, q = 10, type = "PQ"``.
+
+    **Model.** There are no equations attached to this element; it feeds the
+    initial power flow that computes the operating point at t = 0 s. Each bus
+    is declared as one of three types: ``"PQ"`` fixes the injected powers
+    :math:`P` and :math:`Q`, ``"PV"`` fixes :math:`P` and the voltage
+    magnitude :math:`|\bar{v}|`, and ``"slack"`` fixes the voltage magnitude
+    and angle and balances the system; exactly one bus must be the slack.
+    Positive :math:`P` and :math:`Q` correspond to consumption, matching the
+    convention of the static loads. After the power flow, each device's
+    initialization overwrites its own setpoints so that the network starts in
+    steady state at exactly this operating point.
+
+    **Symbols.**
+
+    .. csv-table::
+       :header: Code, Symbol, Meaning, Default
+       :widths: 14, 12, 58, 10
+
+       "``bus``", "", "name of the bus", ""
+       "``p``", ":math:`P`", "injected active power [MW]; positive = consumption", "0"
+       "``q``", ":math:`Q`", "injected reactive power [MVAr]; positive = consumption", "0"
+       "``v``", ":math:`|\bar{v}|`", "voltage magnitude [p.u.] (used for PV and slack buses)", "1.0"
+       "``type``", "", "bus type: ``\"PQ\"``, ``\"PV\"`` or ``\"slack\"``", ""
+    """
+
     def __init__(self) -> None:
         super().__init__()
         self._type = "Bus_init_or_unknwon"  # Element type
@@ -141,6 +170,48 @@ class BusInit(Element):
 
 
 class Disturbance(Element):
+    r"""One scheduled disturbance event of the time-domain simulation.
+
+    Declared in the system's ``sim_dist.txt``, one line per event, e.g.
+    ``Disturbance, time = 7.0, type = "FAULT_LINE", bus_i = "5", bus_j = "8", y = 30``.
+
+    **Model.** No equations of its own: events are applied at their scheduled
+    times by ``hermess.system.DaeSim`` (``check_disturbance``), which modifies
+    the network or load data and restarts the integrator from the reached
+    state. Six event types are supported; each uses the subset of fields
+    listed for it:
+
+    * ``"FAULT_LINE"`` -- three-phase fault of admittance :math:`y` in the
+      middle of line ``bus_i``--``bus_j`` (the line's T model is converted to
+      an equivalent PI model with the fault shunt included);
+    * ``"CLEAR_FAULT_LINE"`` -- removes the fault on line ``bus_i``--``bus_j``;
+    * ``"FAULT_BUS"`` -- fault of admittance :math:`y` added to the shunt of
+      bus ``bus``;
+    * ``"CLEAR_FAULT_BUS"`` -- removes the fault at bus ``bus``;
+    * ``"OPEN_LINE"`` -- opens line ``bus_i``--``bus_j`` (a faulted line is
+      thereby neutralized);
+    * ``"LOAD"`` -- load step of :math:`\Delta P`, :math:`\Delta Q` added to
+      the consumption at bus ``bus``.
+
+    Events are sorted chronologically before the simulation
+    (:meth:`sort_chrono`).
+
+    **Symbols.**
+
+    .. csv-table::
+       :header: Code, Symbol, Meaning, Default
+       :widths: 14, 12, 58, 10
+
+       "``time``", ":math:`t`", "time of the event [s]", ""
+       "``type``", "", "event type, one of the six strings above", ""
+       "``bus_i``", "", "sending-end bus of the affected line", ""
+       "``bus_j``", "", "receiving-end bus of the affected line", ""
+       "``y``", ":math:`y`", "fault admittance [p.u.] (fault events)", "10"
+       "``bus``", "", "affected bus (bus-fault and load events)", ""
+       "``p_delta``", ":math:`\Delta P`", "active-power step [MW] (``\"LOAD\"``)", "0"
+       "``q_delta``", ":math:`\Delta Q`", "reactive-power step [MVAr] (``\"LOAD\"``)", "0"
+    """
+
     def __init__(self) -> None:
         super().__init__()
         self._type = "Disturbance"  # Element type
@@ -176,23 +247,72 @@ class Disturbance(Element):
 
 
 class Line(Element):
-    r"""
-    Parameters
-    ----------
-    r : ndarray[float]
-        Series resistance value in per unit (p.u.).
-    x : ndarray[float]
-        Series reactance value in per unit (p.u.).
-    g : ndarray[float]
-        Total shunt conductance value in per unit (p.u.).
-    b : ndarray[float]
-        Total shunt susceptance value in per unit (p.u.).
-    trafo : ndarray[float]
-        Off-nominal line transformer ratio.
-    bus_i : ndarray[str]
-        Name of the sending-end bus.
-    bus_j : ndarray[str]
-        Name of the receiving-end bus.
+    r"""Transmission line or transformer branch (PI model with off-nominal tap).
+
+    Selected in a system file by the class name in the first column, e.g.
+    ``Line, bus_i = "1", bus_j = "2", r = 0.01, x = 0.08, g = 0.001, b = 0.03,
+    trafo = 1``. All values are per unit on the system base, so a transformer
+    is represented by the off-nominal tap ratio :math:`\tau` (``trafo``) of its
+    branch rather than by a separate model.
+
+    **Quasi-static model** (``line_dyn = False``). The branch is a PI section:
+    series impedance :math:`z = r + jx` with series admittance
+    :math:`\bar{y}_s = 1/z`, total shunt :math:`g + jb` split half per end, and
+    the tap on the ``bus_i`` (from) side. The class only carries the
+    parameters; ``hermess.system.Grid.build_y_sym`` assembles the bus
+    admittance matrix from them, with :math:`z^{-1} = 1/(r^2 + x^2)` and
+    entries (real, imaginary):
+
+    .. math::
+
+       Y_{ij} = Y_{ji} &: \Bigl( -\frac{r z^{-1}}{\tau}, \; -\frac{x z^{-1}}{\tau} \Bigr) \\
+       Y_{ii} &: \Bigl( \frac{g/2 + r z^{-1}}{\tau^2}, \; \frac{-b/2 + x z^{-1}}{\tau^2} \Bigr) \\
+       Y_{jj} &: \Bigl( g/2 + r z^{-1}, \; -b/2 + x z^{-1} \Bigr)
+
+    The imaginary entries are stored in the sign convention of the rectangular
+    nodal current balance used throughout the code (the susceptance rows enter
+    with the sign shown, i.e. a stored pair :math:`(a, b)` corresponds to the
+    admittance :math:`a - jb` of the standard phasor convention). During a
+    middle-of-line fault the branch's :math:`r, x, g, b` are replaced by the
+    equivalent PI section of the faulted T model; an opened line is removed by
+    setting its series impedance effectively infinite.
+
+    **Dynamic (electromagnetic) model** (``line_dyn = True``). The series
+    branch keeps its own current states
+    :math:`\bar{i}_{ij} = i_{ij,re} + j \, i_{ij,im}` (in the line's reference
+    frame, with the nodal voltages transformed into that frame):
+
+    .. math::
+
+       \frac{d i_{ij,re}}{dt} &= \frac{\omega_b}{x}
+           \Bigl( \frac{v_{i,re}}{\tau} - v_{j,re} - r \, i_{ij,re} \Bigr)
+           + \omega_b \, \omega_{ref} \, i_{ij,im} \\
+       \frac{d i_{ij,im}}{dt} &= \frac{\omega_b}{x}
+           \Bigl( \frac{v_{i,im}}{\tau} - v_{j,im} - r \, i_{ij,im} \Bigr)
+           - \omega_b \, \omega_{ref} \, i_{ij,re}
+
+    with :math:`\omega_b = 2 \pi f_n` and :math:`\omega_{ref}` the line's
+    reference frequency (per the configured ``omega_mode``); here :math:`x`
+    and :math:`b` act as the inductance and capacitance, being numerically
+    equal at 1 p.u. frequency. The line switch of an opened line zeroes the
+    derivatives, and the branch currents are accumulated into the nodal
+    current balance transformed to the bus frame.
+
+    **Symbols.**
+
+    .. csv-table::
+       :header: Code, Symbol, Meaning, Default
+       :widths: 14, 12, 58, 10
+
+       "``r``", ":math:`r`", "series resistance [p.u.]", "0.001"
+       "``x``", ":math:`x`", "series reactance [p.u.]", "0.001"
+       "``g``", ":math:`g`", "total shunt conductance [p.u.], split half per end", "0"
+       "``b``", ":math:`b`", "total shunt susceptance [p.u.], split half per end", "0"
+       "``trafo``", ":math:`\tau`", "off-nominal tap ratio on the ``bus_i`` side (real)", "1"
+       "``bus_i``", "", "name of the sending-end (from) bus", ""
+       "``bus_j``", "", "name of the receiving-end (to) bus", ""
+       "``i_ijr``", ":math:`i_{ij,re}`", "series current, real part (state, ``line_dyn`` only) [p.u.]", ""
+       "``i_iji``", ":math:`i_{ij,im}`", "series current, imaginary part (state, ``line_dyn`` only) [p.u.]", ""
     """
 
     def __init__(self) -> None:

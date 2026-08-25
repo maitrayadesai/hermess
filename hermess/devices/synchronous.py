@@ -16,6 +16,35 @@
 # (https://doi.org/10.5905/ethz-1007-842); dynamic state estimation removed.
 # For inquiries, contact: mdesai@ethz.ch
 
+r"""Synchronous machine models.
+
+A machine is selected in a system file by its class name in the first column;
+its controllers are pluggable strategies chosen by keyword on the same line::
+
+   SynchronousSubtransientSP, idx = "SG1", bus = "1", Sn = 300, avr = "SEXST",
+       governor = "TGOV1", pss = "PSSKundur", shaft = "SingleMass", ...
+
+Every model documents its electromagnetic equations and a table mapping the
+code parameter names to the mathematical symbols used there. The rotor-motion
+(swing) equations belong to the shaft strategy (:mod:`hermess.devices.shaft`),
+and the exciter, governor and stabilizer equations to their strategy classes
+(:mod:`hermess.devices.avr`, :mod:`hermess.devices.governor`,
+:mod:`hermess.devices.pss`).
+
+Common conventions: quantities are in per unit on the machine base ``Sn``; the
+rotor speed :math:`\omega` is the absolute per-unit speed (1 at synchronism);
+:math:`\delta` is the rotor angle against the network reference frame. The
+machine dq frame is obtained from the network rectangular frame by
+
+.. math::
+
+   v_d = v_{re}\sin\delta - v_{im}\cos\delta, \qquad
+   v_q = v_{re}\cos\delta + v_{im}\sin\delta,
+
+currents entering the machine are rescaled by :math:`S_b/S_n` and the injection
+into the network current balance by :math:`S_n/S_b`.
+"""
+
 from __future__ import annotations  # Postponed type evaluation
 from typing import TYPE_CHECKING, Tuple
 
@@ -33,7 +62,48 @@ import numpy as np
 
 
 class Synchronous(DeviceRect):
-    """Metaclass for SG in rectangular coordinates with TGOV1 governor and pluggable AVR"""
+    r"""Base class of all synchronous machines: composition of an
+    electromagnetic model (the subclass) with pluggable shaft, governor, AVR
+    and PSS strategies, and the network coupling.
+
+    The subclass provides :meth:`electromagnetic` (stator currents, rotor-flux
+    dynamics, air-gap power :math:`P_e`); the base wires the shaft's swing
+    equations (reading the governor port :math:`p_m` and :math:`P_e`), the
+    controller couplings (:math:`E_{fd}` from the AVR, :math:`V_s` from the
+    PSS), and the current injection into the network balance,
+
+    .. math::
+
+       0 = \dots - \frac{S_n}{S_b}
+           \bigl( i_d \sin\delta + i_q \cos\delta \bigr), \qquad
+       0 = \dots - \frac{S_n}{S_b}
+           \bigl( -i_d \cos\delta + i_q \sin\delta \bigr)
+
+    in the real and imaginary network equations of the machine bus. Coupling
+    variables (``pm``, ``Efd``, ``Vs``) may be differential states or private
+    algebraics depending on the strategy; :meth:`var_sym` resolves them either
+    way.
+
+    **Symbols** (base-machine parameters shared by every model; the strategy
+    parameters are documented in the strategy classes):
+
+    .. csv-table::
+       :header: Code, Symbol, Meaning, Default
+       :widths: 14, 12, 58, 10
+
+       "``Sn``", ":math:`S_n`", "machine MVA rating (device base) [MVA]", "100"
+       "``Vn``", ":math:`V_n`", "rated voltage [kV]", "\-"
+       "``fn``", ":math:`f_n`", "rated frequency [Hz]", "50"
+       "``H``", ":math:`H`", "inertia constant [s]", "30"
+       "``D``", ":math:`D`", "rotor damping coefficient", "0"
+       "``f``", ":math:`f`", "rotor friction coefficient", "0.01"
+       "``R_s``", ":math:`R_s`", "stator resistance [p.u.]", "0"
+       "``x_d``", ":math:`x_d`", "d-axis synchronous reactance [p.u.]", "0.2"
+       "``x_q``", ":math:`x_q`", "q-axis synchronous reactance [p.u.]", "0.2"
+       "``x_l``", ":math:`x_l`", "leakage / stator-series reactance [p.u.]", "0.1"
+       "``delta``", ":math:`\delta`", "rotor angle (state) [rad]", ""
+       "``omega``", ":math:`\omega`", "absolute rotor speed (state) [p.u., 1 at synchronism]", ""
+    """
 
     def __init__(
         self,
@@ -349,45 +419,50 @@ class Synchronous(DeviceRect):
 
 
 class SynchronousTransient(Synchronous):
-    r"""
-    Transient two-axis SG with TGOV1 governor and IEEEDC1A AVR
+    r"""Two-axis (transient) synchronous machine
+(F. Milano, *Power System Modelling and Scripting*, 2010).
 
-    **Rotor Dynamics**
+    Selected in a system file by the class name in the first column::
 
+       SynchronousTransient, idx = "SG1", bus = "1", Sn = 300, avr = "SEXST", ...
 
-    .. math::
-
-        \dot{\delta} &= 2 \pi f_n \Delta \omega \\
-        \Delta \dot{\omega} &= \frac{1}{2 H} \left( P_m - E_d I_d - E_q I_q + (X_q' - X_d') I_d I_q - D \Delta \omega - f (\Delta \omega + 1) \right)
-
-    **Electromagnetic Equations**
-
+    **Model.** Stator currents from the algebraic stator relation (per machine)
 
     .. math::
 
-        \dot{E}_q &= \frac{1}{T_{d'}} \left( -E_q + E_f + (X_d - X_d') I_d \right)\\
-        \dot{E}_d &= \frac{1}{T_{q'}} \left( -E_d - (X_q - X_q') I_q \right)
+       \begin{bmatrix} R_s & -x'_q \\ x'_d & R_s \end{bmatrix}
+       \begin{bmatrix} i_d \\ i_q \end{bmatrix}
+       =
+       \begin{bmatrix} e'_d - v_d \\ e'_q - v_q \end{bmatrix},
 
-    **Excitation System Equations**
-
-
-    .. math::
-
-         \dot{E}_{\textup{fd}} &= \frac{1}{T_{E}} \left( -K_{E,i}E_{\textup{fd},i} + V_{R,i}\right)\\
-        \dot{R}_{f} &= \frac{1}{T_{F} } \left(- R_{f} + \frac{K_{F}}{T_{F}}E_{\textup{fd}} \right)\\
-        \dot{V}_{R} &= \frac{1}{T_{A}} \left(-V_{R} + K_{A}R_{f} - \frac{K_{A}K_{F}}{T_{F}}E_{\textup{fd}} + K_{A}(v_{\textup{ref}} - v_i) \right)
-
-    **Turbine-Governor System Equations**
-
+    transient EMF dynamics and air-gap power
 
     .. math::
 
-        \dot{p}_{\textup{m}} &= \frac{1}{T_{ch}} \left( p_{\textup{sv}}- p_{\textup{m}} \right)\\
-         \dot{p}_{sv} &= \frac{1}{T_{sv}} \left( - \frac{\Delta \omega}{R_d} - p_{\textup{sv}} + p_{\textup{ref}} \right)
+       T'_d \, \dot{e}'_q &= -e'_q + E_{fd} - (x_d - x'_d)\, i_d \\
+       T'_q \, \dot{e}'_d &= -e'_d + (x_q - x'_q)\, i_q \\
+       P_e &= e'_d i_d + e'_q i_q + (x'_q - x'_d)\, i_d i_q .
 
+    The rotor motion is written by the shaft strategy (default
+    :class:`~hermess.devices.shaft.SingleMass`,
+    :math:`\dot{\delta} = \omega_b(\omega - \omega_{ref})`,
+    :math:`2H\dot{\omega} = p_m - P_e - D(\omega - \omega_{ref}) - f\omega`
+    with :math:`\omega` the absolute per-unit speed); :math:`E_{fd}` comes from
+    the AVR strategy and :math:`p_m` from the governor strategy.
 
+    **Symbols** (model-specific; base-machine and strategy parameters are
+    documented in :class:`Synchronous` and the strategy classes):
 
+    .. csv-table::
+       :header: Code, Symbol, Meaning, Default
+       :widths: 14, 12, 58, 10
 
+       "``x_dprim``", ":math:`x'_d`", "d-axis transient reactance [p.u.]", "0.05"
+       "``x_qprim``", ":math:`x'_q`", "q-axis transient reactance [p.u.]", "0.1"
+       "``T_dprim``", ":math:`T'_d`", "d-axis transient time constant [s]", "8"
+       "``T_qprim``", ":math:`T'_q`", "q-axis transient time constant [s]", "0.8"
+       "``e_dprim``", ":math:`e'_d`", "d-axis EMF behind transient reactance (state) [p.u.]", ""
+       "``e_qprim``", ":math:`e'_q`", "q-axis EMF behind transient reactance (state) [p.u.]", ""
     """
 
     def __init__(self, avr=None, governor=None, pss=None, shaft=None) -> None:
@@ -502,44 +577,54 @@ class SynchronousTransient(Synchronous):
 
 
 class SynchronousSubtransient(Synchronous):
-    r"""Subtransient Anderson Fouad SG with TGOV1 governor and IEEEDC1A AVR
-    The subtransient behavior of the synchronous generator is described by the following differential equations:
+    r"""Subtransient (Anderson-Fouad) synchronous machine
+(F. Milano, *Power System Modelling and Scripting*, 2010).
 
+    Selected in a system file by the class name in the first column::
 
-    **Rotor Dynamics**
+       SynchronousSubtransient, idx = "SG1", bus = "1", Sn = 300, avr = "IEEEDC1A", ...
 
-
-    .. math::
-
-        \dot{\delta} &= 2 \pi f_n \Delta \omega \\
-        \Delta \dot{\omega} &= \frac{1}{2 H} \Big( P_m - E_{d}^{\prime\prime} I_d - E_{q}^{\prime\prime} I_q + (X_q^{\prime\prime} - X_d^{\prime\prime}) I_d I_q - D \Delta \omega - f (\Delta \omega + 1) \Big) \\
-
-    **Electromagnetic Equations**
-
+    **Model.** Stator currents from the algebraic stator relation with the
+    subtransient EMFs,
 
     .. math::
 
-        \dot{E}_q^{\prime} &= \frac{1}{T_{d}^{\prime}} \Big( -E_q + E_f + (X_d - X_d^{\prime}) I_d \Big) \\
-        \dot{E}_d^{\prime} &= \frac{1}{T_{q}^{\prime}} \Big( -E_d - (X_q - X_q^{\prime}) I_q \Big) \\
-        \dot{E}_{q}^{\prime\prime} &= \frac{1}{T_{d}^{\prime\prime}} \Big( E_q - E_{q}^{\prime\prime} + (X_d^{\prime} - X_d^{\prime\prime}) I_d \Big) \\
-        \dot{E}_{d}^{\prime\prime} &= \frac{1}{T_{q}^{\prime\prime}} \Big( E_d - E_{d}^{\prime\prime} - (X_q^{\prime} - X_q^{\prime\prime}) I_q \Big) \\
+       \begin{bmatrix} R_s & -x''_q \\ x''_d & R_s \end{bmatrix}
+       \begin{bmatrix} i_d \\ i_q \end{bmatrix}
+       =
+       \begin{bmatrix} e''_d - v_d \\ e''_q - v_q \end{bmatrix},
 
-    **Excitation System Equations**
-
-
-    .. math::
-
-         \dot{E}_{\textup{fd}} &= \frac{1}{T_{E}} \left( -K_{E,i}E_{\textup{fd},i} + V_{R,i}\right)\\
-        \dot{R}_{f} &= \frac{1}{T_{F} } \left(- R_{f} + \frac{K_{F}}{T_{F}}E_{\textup{fd}} \right)\\
-        \dot{V}_{R} &= \frac{1}{T_{A}} \left(-V_{R} + K_{A}R_{f} - \frac{K_{A}K_{F}}{T_{F}}E_{\textup{fd}} + K_{A}(v_{\textup{ref}} - v_i) \right)
-
-    **Turbine-Governor System Equations**
-
+    transient and subtransient EMF dynamics and air-gap power
 
     .. math::
 
-        \dot{p}_{\textup{m}} &= \frac{1}{T_{ch}} \left( p_{\textup{sv}}- p_{\textup{m}} \right)\\
-         \dot{p}_{sv} &= \frac{1}{T_{sv}} \left( - \frac{\Delta \omega}{R_d} - p_{\textup{sv}} + p_{\textup{ref}} \right)
+       T'_d \, \dot{e}'_q &= -e'_q + E_{fd} - (x_d - x'_d)\, i_d \\
+       T'_q \, \dot{e}'_d &= -e'_d + (x_q - x'_q)\, i_q \\
+       T''_d \, \dot{e}''_q &= e'_q - e''_q - (x'_d - x''_d)\, i_d \\
+       T''_q \, \dot{e}''_d &= e'_d - e''_d + (x'_q - x''_q)\, i_q \\
+       P_e &= e''_d i_d + e''_q i_q + (x''_q - x''_d)\, i_d i_q .
+
+    Rotor motion, exciter and governor as in :class:`SynchronousTransient`
+    (shaft, AVR and governor strategies).
+
+    **Symbols** (model-specific):
+
+    .. csv-table::
+       :header: Code, Symbol, Meaning, Default
+       :widths: 14, 12, 58, 10
+
+       "``x_dprim``", ":math:`x'_d`", "d-axis transient reactance [p.u.]", "0.05"
+       "``x_qprim``", ":math:`x'_q`", "q-axis transient reactance [p.u.]", "0.1"
+       "``T_dprim``", ":math:`T'_d`", "d-axis transient time constant [s]", "8"
+       "``T_qprim``", ":math:`T'_q`", "q-axis transient time constant [s]", "0.8"
+       "``x_dsec``", ":math:`x''_d`", "d-axis subtransient reactance [p.u.]", "0.01"
+       "``x_qsec``", ":math:`x''_q`", "q-axis subtransient reactance [p.u.]", "0.01"
+       "``T_dsec``", ":math:`T''_d`", "d-axis subtransient time constant [s]", "0.001"
+       "``T_qsec``", ":math:`T''_q`", "q-axis subtransient time constant [s]", "0.001"
+       "``e_dprim``", ":math:`e'_d`", "d-axis transient EMF (state) [p.u.]", ""
+       "``e_qprim``", ":math:`e'_q`", "q-axis transient EMF (state) [p.u.]", ""
+       "``e_dsec``", ":math:`e''_d`", "d-axis subtransient EMF (state) [p.u.]", ""
+       "``e_qsec``", ":math:`e''_q`", "q-axis subtransient EMF (state) [p.u.]", ""
     """
 
     def __init__(self, avr=None, governor=None, pss=None, shaft=None) -> None:
@@ -693,58 +778,72 @@ class SynchronousSubtransient(Synchronous):
 
 
 class SynchronousSubtransientSP(Synchronous):
-    r"""Subtransient Sauer and Pai SG model with stator dynamics
-    with TGOV1 governor and IEEEDC1A AVR
+    r"""Subtransient Sauer-Pai synchronous machine WITH stator (electromagnetic)
+    flux dynamics (P. W. Sauer and M. A. Pai, *Power System Dynamics and
+    Stability*, 1998). The stator transients make this the machine to pair with
+    dynamic line models (``line_dyn=True``).
 
+    Selected in a system file by the class name in the first column::
 
-    The model includes the following equations for rotor dynamics, stator dynamics, and the excitation system:
+       SynchronousSubtransientSP, idx = "SG1", bus = "1", Sn = 300, avr = "SEXST", ...
 
-
-
-    **Rotor Dynamics**
-
-
-    .. math::
-
-        \dot{\delta} &= 2 \pi f_n \Delta \omega \\
-        \Delta \dot{\omega} &= \frac{1}{2 H} \Big( P_m - (\psi_d I_q - \psi_q I_d) - D \Delta \omega - f (\Delta \omega + 1) \Big)
-
-    **Electromagnetic Equations**
-
-
-    The stator dynamics include the following equations for the flux linkages in the d and q axes:
+    **Model.** With the coupling coefficients
 
     .. math::
 
-        \dot{E}_d' &= \frac{1}{T_q'} \Big( -E_d' + (X_q - X_q') (i_q - g_{q2} \Psi_{q2} - (1 - g_{q1}) i_q - g_{q2} E_d') \Big) \\
-        \dot{E}_q' &= \frac{1}{T_d'} \Big( -E_q' - (X_d - X_d') (i_d - g_{d2} \Psi_{d2} - (1 - g_{d1}) i_d + g_{d2} E_q') + E_f \Big)\\
-        \dot{\Psi}_{d2} &= \frac{1}{T_{d2}} \Big( -\Psi_{d2} + E_q' - (X_d' - X_l) i_d \Big) \\
-        \dot{\Psi}_{q2} &= \frac{1}{T_{q2}} \Big( -\Psi_{q2} - E_d' - (X_q' - X_l) i_q \Big)
+       g_{d1} = \frac{x''_d - x_l}{x'_d - x_l}, \quad
+       g_{q1} = \frac{x''_q - x_l}{x'_q - x_l}, \quad
+       g_{d2} = \frac{1 - g_{d1}}{x'_d - x_l}, \quad
+       g_{q2} = \frac{1 - g_{q1}}{x'_q - x_l},
 
-
-
-    **Flux Linkage Dynamics**
-
-
-    The following equations describe the stator flux linkage dynamics in the d and q axes:
+    the stator currents are explicit in the flux states,
 
     .. math::
 
-        \dot{\Psi}_d &= 2 \pi f_n (R_s i_d + (1 + \Delta \omega) \Psi_q + v_d) \\
-        \dot{\Psi}_q &= 2 \pi f_n (R_s i_q - (1 + \Delta \omega) \Psi_d + v_q)
+       i_d &= \frac{1}{x''_d} \bigl( -\psi_d + g_{d1} e'_q + (1 - g_{d1}) \psi_{d2} \bigr) \\
+       i_q &= \frac{1}{x''_q} \bigl( -\psi_q - g_{q1} e'_d + (1 - g_{q1}) \psi_{q2} \bigr),
 
-    **Algebraic Equations**
-
-    The following algebraic equations govern the system:
+    the rotor-circuit and stator-flux dynamics are
 
     .. math::
 
-        i_d &= \frac{1}{x_d''} \Big( -\psi_d + g_{d1} e_q' + (1 - g_{d1}) \psi_{d2} \Big)\\
-        i_q &= \frac{1}{x_q''} \Big( -\psi_q - g_{q1} e_d' + (1 - g_{q1}) \psi_{q2} \Big)\\
-        g_{d1} &= \frac{x_d'' - x_l}{x_d' - x_l}\\
-        g_{q1} &= \frac{x_q'' - x_l}{x_q' - x_l}\\
-        g_{d2} &= \frac{1 - g_{d1}}{x_d' - x_l}\\
-        g_{q2} &= \frac{1 - g_{q1}}{x_q' - x_l}
+       T'_d \, \dot{e}'_q &= -e'_q - (x_d - x'_d) \bigl( g_{d1} i_d
+           - g_{d2} \psi_{d2} + g_{d2} e'_q \bigr) + E_{fd} \\
+       T'_q \, \dot{e}'_d &= -e'_d + (x_q - x'_q) \bigl( g_{q1} i_q
+           - g_{q2} \psi_{q2} - g_{q2} e'_d \bigr) \\
+       T''_d \, \dot{\psi}_{d2} &= -\psi_{d2} + e'_q - (x'_d - x_l)\, i_d \\
+       T''_q \, \dot{\psi}_{q2} &= -\psi_{q2} - e'_d - (x'_q - x_l)\, i_q \\
+       \dot{\psi}_d &= \omega_b \bigl( R_s i_d + \omega \psi_q + v_d \bigr) \\
+       \dot{\psi}_q &= \omega_b \bigl( R_s i_q - \omega \psi_d + v_q \bigr)
+
+    with :math:`\omega_b = 2\pi f_n`, :math:`\omega` the absolute per-unit
+    rotor speed, and air-gap power :math:`P_e = \psi_d i_q - \psi_q i_d`.
+    Rotor motion, exciter and governor come from the shaft, AVR and governor
+    strategies.
+
+    **Symbols** (model-specific; :math:`g_{d1}, g_{q1}, g_{d2}, g_{q2}` are
+    computed from the reactances, not inputs):
+
+    .. csv-table::
+       :header: Code, Symbol, Meaning, Default
+       :widths: 14, 12, 58, 10
+
+       "``x_l``", ":math:`x_l`", "leakage reactance [p.u.]", "0.1"
+       "``x_dprim``", ":math:`x'_d`", "d-axis transient reactance [p.u.]", "0.05"
+       "``x_qprim``", ":math:`x'_q`", "q-axis transient reactance [p.u.]", "0.1"
+       "``T_dprim``", ":math:`T'_d`", "d-axis transient time constant [s]", "8"
+       "``T_qprim``", ":math:`T'_q`", "q-axis transient time constant [s]", "0.8"
+       "``x_dsec``", ":math:`x''_d`", "d-axis subtransient reactance [p.u.]", "0.01"
+       "``x_qsec``", ":math:`x''_q`", "q-axis subtransient reactance [p.u.]", "0.01"
+       "``T_dsec``", ":math:`T''_d`", "d-axis subtransient time constant [s]", "0.001"
+       "``T_qsec``", ":math:`T''_q`", "q-axis subtransient time constant [s]", "0.001"
+       "``gd1`` ``gq1`` ``gd2`` ``gq2``", ":math:`g_{d1}, g_{q1}, g_{d2}, g_{q2}`", "coupling coefficients (derived)", ""
+       "``e_dprim``", ":math:`e'_d`", "d-axis transient EMF (state) [p.u.]", ""
+       "``e_qprim``", ":math:`e'_q`", "q-axis transient EMF (state) [p.u.]", ""
+       "``psid``", ":math:`\psi_d`", "d-axis stator flux (state) [p.u.]", ""
+       "``psiq``", ":math:`\psi_q`", "q-axis stator flux (state) [p.u.]", ""
+       "``psid2``", ":math:`\psi_{d2}`", "d-axis subtransient flux (state) [p.u.]", ""
+       "``psiq2``", ":math:`\psi_{q2}`", "q-axis subtransient flux (state) [p.u.]", ""
     """
 
     def __init__(self, avr=None, governor=None, pss=None, shaft=None) -> None:
@@ -974,57 +1073,56 @@ class SynchronousSubtransientSP(Synchronous):
 
 
 class SynchronousSubtransientSP6(Synchronous):
-    r"""Subtransient Sauer and Pai SG 6th order model with neglected stator dynamics
-    (stator modeled with algebraic equations) and included TGOV1 governor and
-    IEEEDC1A AVR
+    r"""Subtransient Sauer-Pai machine with NEGLECTED stator dynamics: the
+    sixth-order model, with the stator as algebraic equations
+    (P. W. Sauer and M. A. Pai, *Power System Dynamics and Stability*, 1998).
 
-    The model includes the following equations:
+    Selected in a system file by the class name in the first column::
 
+       SynchronousSubtransientSP6, idx = "SG1", bus = "1", Sn = 300, ...
 
-
-    **Rotor Dynamics**
-
-
-    .. math::
-
-        \dot{\delta} &= 2 \pi f_n \Delta \omega \\
-        \Delta \dot{\omega} &= \frac{1}{2 H} \Big( P_m - (\psi_d I_q - \psi_q I_d) - D \Delta \omega - f (\Delta \omega + 1) \Big)
-
-    **Electromagnetic Equations**
-
-
-    The stator dynamics include the following equations for the flux linkages in the d and q axes:
+    **Model.** The rotor-circuit dynamics and the coupling coefficients
+    :math:`g_{d1}, g_{q1}, g_{d2}, g_{q2}` are identical to
+    :class:`SynchronousSubtransientSP`; the four stator unknowns
+    :math:`(i_d, i_q, \psi_d, \psi_q)` are instead defined by the algebraic
+    stator block
 
     .. math::
 
-        \dot{E}_d' &= \frac{1}{T_q'} \Big( -E_d' + (X_q - X_q') (i_q - g_{q2} \Psi_{q2} - (1 - g_{q1}) i_q - g_{q2} E_d') \Big) \\
-        \dot{E}_q' &= \frac{1}{T_d'} \Big( -E_q' - (X_d - X_d') (i_d - g_{d2} \Psi_{d2} - (1 - g_{d1}) i_d + g_{d2} E_q') + E_f \Big)\\
-        \dot{\Psi}_{d2} &= \frac{1}{T_{d2}} \Big( -\Psi_{d2} + E_q' - (X_d' - X_l) i_d \Big) \\
-        \dot{\Psi}_{q2} &= \frac{1}{T_{q2}} \Big( -\Psi_{q2} - E_d' - (X_q' - X_l) i_q \Big)
+       0 &= -i_d + \frac{1}{x''_d} \bigl( -\psi_d + g_{d1} e'_q + (1 - g_{d1}) \psi_{d2} \bigr) \\
+       0 &= -i_q + \frac{1}{x''_q} \bigl( -\psi_q - g_{q1} e'_d + (1 - g_{q1}) \psi_{q2} \bigr) \\
+       0 &= R_s i_d + \omega \psi_q + v_d \\
+       0 &= R_s i_q - \omega \psi_d + v_q
 
+    which this class eliminates symbolically (a 4x4 linear solve per machine at
+    model-build time); the explicit-DAE variant
+    :class:`SynchronousSubtransientSP6DAE` hands the same block to the
+    integrator as private algebraic equations instead. :math:`\omega` is the
+    absolute per-unit speed, and the air-gap power is
+    :math:`P_e = \psi_d i_q - \psi_q i_d`. Rotor motion, exciter and governor
+    come from the shaft, AVR and governor strategies.
 
+    **Symbols** (model-specific; :math:`g_{d1}, g_{q1}, g_{d2}, g_{q2}` are
+    computed from the reactances, not inputs):
 
-    **Flux Linkage Dynamics**
+    .. csv-table::
+       :header: Code, Symbol, Meaning, Default
+       :widths: 14, 12, 58, 10
 
-
-    The following equations describe the stator flux linkage dynamics in the d and q axes:
-
-
-
-    **Algebraic Equations**
-
-    The following algebraic equations govern the system:
-
-    .. math::
-
-        0 &=-i_d +\frac{1}{x_d''} \Big( -\psi_d + g_{d1} e_q' + (1 - g_{d1}) \psi_{d2} \Big)\\
-        0&=-i_q +\frac{1}{x_q''} \Big( -\psi_q - g_{q1} e_d' + (1 - g_{q1}) \psi_{q2} \Big)\\
-        0&= R_s i_d + (1 + \Delta \omega) \Psi_q + v_d \\
-        0&= R_s i_q - (1 + \Delta \omega) \Psi_d + v_q \\
-        g_{d1} &= \frac{x_d'' - x_l}{x_d' - x_l}\\
-        g_{q1} &= \frac{x_q'' - x_l}{x_q' - x_l}\\
-        g_{d2} &= \frac{1 - g_{d1}}{x_d' - x_l}\\
-        g_{q2} &= \frac{1 - g_{q1}}{x_q' - x_l}
+       "``x_l``", ":math:`x_l`", "leakage reactance [p.u.]", "0.1"
+       "``x_dprim``", ":math:`x'_d`", "d-axis transient reactance [p.u.]", "0.05"
+       "``x_qprim``", ":math:`x'_q`", "q-axis transient reactance [p.u.]", "0.1"
+       "``T_dprim``", ":math:`T'_d`", "d-axis transient time constant [s]", "8"
+       "``T_qprim``", ":math:`T'_q`", "q-axis transient time constant [s]", "0.8"
+       "``x_dsec``", ":math:`x''_d`", "d-axis subtransient reactance [p.u.]", "0.01"
+       "``x_qsec``", ":math:`x''_q`", "q-axis subtransient reactance [p.u.]", "0.01"
+       "``T_dsec``", ":math:`T''_d`", "d-axis subtransient time constant [s]", "0.001"
+       "``T_qsec``", ":math:`T''_q`", "q-axis subtransient time constant [s]", "0.001"
+       "``gd1`` ``gq1`` ``gd2`` ``gq2``", ":math:`g_{d1}, g_{q1}, g_{d2}, g_{q2}`", "coupling coefficients (derived)", ""
+       "``e_dprim``", ":math:`e'_d`", "d-axis transient EMF (state) [p.u.]", ""
+       "``e_qprim``", ":math:`e'_q`", "q-axis transient EMF (state) [p.u.]", ""
+       "``psid2``", ":math:`\psi_{d2}`", "d-axis subtransient flux (state) [p.u.]", ""
+       "``psiq2``", ":math:`\psi_{q2}`", "q-axis subtransient flux (state) [p.u.]", ""
     """
 
     def __init__(self, avr=None, governor=None, pss=None, shaft=None) -> None:
@@ -1289,6 +1387,14 @@ class SynchronousSubtransientSP6DAE(SynchronousSubtransientSP6):
     is the exact solution of ``g = 0``; the DAE integrator converges to the same
     values via a numerical Newton solve per step instead of a closed-form
     expression built once.
+
+    Selected in a system file by the class name in the first column::
+
+       SynchronousSubtransientSP6DAE, idx = "SG1", bus = "1", ...
+
+    **Symbols.** As in :class:`SynchronousSubtransientSP6`, plus the private
+    algebraics ``id_alg`` (:math:`i_d`), ``iq_alg`` (:math:`i_q`),
+    ``psid_alg`` (:math:`\psi_d`) and ``psiq_alg`` (:math:`\psi_q`).
     """
 
     def __init__(self, avr=None, governor=None, pss=None, shaft=None) -> None:
@@ -1375,6 +1481,13 @@ class SynchronousSubtransientSP_DAE(SynchronousSubtransientSP):
     A parity vehicle for the private-algebraic mechanism: the parent model
     initialises robustly and the defining equations are linear with a trivially
     non-singular Jacobian (index-1).
+
+    Selected in a system file by the class name in the first column::
+
+       SynchronousSubtransientSP_DAE, idx = "SG1", bus = "1", ...
+
+    **Symbols.** As in :class:`SynchronousSubtransientSP`, plus the private
+    algebraics ``id_alg`` (:math:`i_d`) and ``iq_alg`` (:math:`i_q`).
     """
 
     def __init__(self, avr=None, governor=None, pss=None, shaft=None) -> None:
@@ -1469,7 +1582,33 @@ class GENROU(Synchronous):
     convention above, the q-axis steady state must reproduce ``v_d = X_q I_q``.
     It is independently cross-validated against the PSID GENROU reference
     equations. All reactances/time constants in per unit on the machine MVA
-    rating.
+    rating. Rotor motion, exciter and governor come from the shaft, AVR and
+    governor strategies; :math:`\omega` is the absolute per-unit speed.
+
+    Selected in a system file by the class name in the first column::
+
+       GENROU, idx = "BPS_2", bus = "201", avr = "AVRST1A", governor = "GOVCONST", pss = "PSSSEA", ...
+
+    **Symbols** (model-specific; base-machine and strategy parameters are
+    documented in :class:`Synchronous` and the strategy classes):
+
+    .. csv-table::
+       :header: Code, Symbol, Meaning, Default
+       :widths: 14, 12, 58, 10
+
+       "``x_a``", ":math:`X_a`", "stator leakage reactance [p.u.]", "0.15"
+       "``x_dprim``", ":math:`X'_d`", "d-axis transient reactance [p.u.]", "0.30"
+       "``x_qprim``", ":math:`X'_q`", "q-axis transient reactance [p.u.]", "0.50"
+       "``x_dsec``", ":math:`X''_d`", "d-axis subtransient reactance [p.u.]", "0.20"
+       "``x_qsec``", ":math:`X''_q`", "q-axis subtransient reactance [p.u.]", "0.20"
+       "``T_d0prim``", ":math:`T'_{d0}`", "d-axis transient open-circuit time constant [s]", "8"
+       "``T_q0prim``", ":math:`T'_{q0}`", "q-axis transient open-circuit time constant [s]", "1"
+       "``T_d0sec``", ":math:`T''_{d0}`", "d-axis subtransient open-circuit time constant [s]", "0.04"
+       "``T_q0sec``", ":math:`T''_{q0}`", "q-axis subtransient open-circuit time constant [s]", "0.10"
+       "``e_qprim``", ":math:`E'_q`", "q-axis transient EMF (state) [p.u.]", ""
+       "``psi_kd``", ":math:`\psi_{kd}`", "d-axis damper-winding flux linkage (state) [p.u.]", ""
+       "``e_dprim``", ":math:`E'_d`", "d-axis transient EMF (state) [p.u.]", ""
+       "``psi_kq``", ":math:`\psi_{kq}`", "q-axis damper-winding flux linkage (state) [p.u.]", ""
     """
 
     def __init__(self, avr=None, governor=None, pss=None, shaft=None) -> None:
@@ -1767,6 +1906,19 @@ class GENSAL(GENROU):
     give :math:`\psi''_q = (X_q - X''_q) I_q` so that ``v_d = X_q I_q``); it is
     cross-validated against the PSID GENSAL reference equations, which define
     their ``psi_q''`` state with the opposite sign.
+
+    Selected in a system file by the class name in the first column::
+
+       GENSAL, idx = "HPS_1", bus = "101", avr = "AVRST1A", governor = "GOVCONST", ...
+
+    **Symbols.** As in :class:`GENROU`, with the q-axis transient pair
+    replaced by:
+
+    .. csv-table::
+       :header: Code, Symbol, Meaning, Default
+       :widths: 14, 12, 58, 10
+
+       "``psi_qsec``", ":math:`\psi''_q`", "q-axis subtransient flux linkage (state) [p.u.]", ""
     """
 
     def __init__(self, avr=None, governor=None, pss=None, shaft=None) -> None:

@@ -16,6 +16,22 @@
 # (https://doi.org/10.5905/ethz-1007-842); dynamic state estimation removed.
 # For inquiries, contact: mdesai@ethz.ch
 
+r"""Rotor-shaft (swing dynamics) strategies for synchronous machines.
+
+A shaft is selected on the machine line of a system file, e.g.
+``shaft = "Shaft4Mass"``; the names accepted at any moment are returned by
+``hermess.registered("shaft")``. The shaft owns the rotor angle and speed
+states and writes the swing equations; a multi-mass (torsional) shaft adds
+further rotor masses while the generator mass keeps the canonical state names
+``delta`` / ``omega``.
+
+Common to all models: :math:`\omega_b = 2 \pi f_n` is the base angular
+frequency, :math:`\omega_{ref}` the per-machine reference frequency (1 p.u.),
+:math:`\omega` the absolute per-unit speed (1.0 at synchronism), :math:`p_m`
+the governor's mechanical power and :math:`P_e` the electromagnetic air-gap
+power.
+"""
+
 from __future__ import annotations
 from typing import TYPE_CHECKING, Dict, List, Tuple
 from abc import ABC, abstractmethod
@@ -108,16 +124,35 @@ class Shaft(ABC):
 
 
 class SingleMass(Shaft):
-    r"""Single rigid rotor mass -- the classic swing equation. Framework default.
+    r"""Single rigid rotor mass: the classic swing equation. The framework
+    default.
+
+    Selected on a machine line with ``shaft = "SingleMass"``.
+
+    **Model.**
 
     .. math::
 
-        \dot{\delta} &= 2 \pi f_n (\omega - \omega_{\text{ref}}) \\
-        \dot{\omega} &= \frac{1}{2H} \big( P_m - P_e
-                        - D (\omega - \omega_{\text{ref}}) - f\,\omega \big)
+       \dot{\delta} &= \omega_b \, (\omega - \omega_{ref}) \\
+       2 H \, \dot{\omega} &= p_m - P_e
+           - D \, (\omega - \omega_{ref}) - f \, \omega
 
-    Reuses the machine's own inertia/damping parameters (``host.H``, ``host.D``,
-    ``host.f``), so it declares no parameters of its own.
+    with :math:`\omega_b = 2 \pi f_n` the base angular frequency,
+    :math:`\omega_{ref}` the per-machine reference frequency (1 p.u.),
+    :math:`p_m` the governor's mechanical power and :math:`P_e` the
+    electromagnetic air-gap power. The shaft reuses the machine's own inertia
+    :math:`H`, damping :math:`D` and rotor friction :math:`f`, so it declares
+    no parameters of its own.
+
+    **Symbols.**
+
+    .. csv-table::
+       :header: Code, Symbol, Meaning, Default
+       :widths: 14, 12, 58, 10
+
+       "``delta``", ":math:`\delta`", "rotor angle wrt the synchronous frame (state) [rad]", ""
+       "``omega``", ":math:`\omega`", "absolute per-unit rotor speed, 1.0 at synchronism (state) [p.u.]", ""
+       "(machine)", ":math:`H, D, f`", "inertia [s], damping and rotor friction of the host machine", ""
     """
 
     def states(self) -> List[str]:
@@ -315,13 +350,45 @@ class MultiMassShaft(Shaft):
 
 
 class Shaft4Mass(MultiMassShaft):
-    """Four-mass turbine-generator shaft: HP -- IP -- LP -- GEN (linear chain).
+    r"""Four-mass torsional shaft: HP -- IP -- LP -- GEN in a linear chain.
 
-    GEN is the generator mass (carries the air-gap power Pe and the machine's own
-    H/D/f); HP, IP and LP are the turbine masses sharing the mechanical power Pm
-    through the fractions F_hp/F_ip/F_lp (default 0.3/0.3/0.4). Select with
-    ``shaft="Shaft4Mass"`` on the machine row; override any of the default
-    H_*/K_*/F_*/D_*/Dm_* parameters in the data file.
+    Selected on a machine line with ``shaft = "Shaft4Mass"``.
+
+    **Model.** Each mass :math:`i` carries an angle and an absolute per-unit
+    speed; adjacent masses are coupled by elastic shaft sections
+    (see :class:`MultiMassShaft` for the general form):
+
+    .. math::
+
+       \dot{\delta}_i &= \omega_b \, (\omega_i - \omega_{ref}) \\
+       2 H_i \, \dot{\omega}_i &= T_{m,i} - T_{e,i}
+           - \sum_{j \sim i} K_{ij} (\delta_i - \delta_j)
+           - D_i (\omega_i - \omega_{ref})
+           - \sum_{j \sim i} D_{m,ij} (\omega_i - \omega_j)
+
+    The turbine masses HP, IP and LP receive the fractions
+    :math:`F_{hp}, F_{ip}, F_{lp}` of the governor's mechanical power
+    (:math:`T_{m,i} = F_i \, p_m`, fractions summing to 1); the generator mass
+    alone carries the air-gap power (:math:`T_{e,gen} = P_e`), the machine's
+    own :math:`H, D` and the rotor friction :math:`f \omega`. The generator
+    mass keeps the canonical state names ``delta`` / ``omega``, so nothing
+    downstream changes with respect to :class:`SingleMass`.
+
+    **Symbols.**
+
+    .. csv-table::
+       :header: Code, Symbol, Meaning, Default
+       :widths: 18, 14, 54, 10
+
+       "``H_hp`` / ``H_ip`` / ``H_lp``", ":math:`H_i`", "turbine mass inertia constants [s]", "0.5 / 1 / 4"
+       "``D_hp`` / ``D_ip`` / ``D_lp``", ":math:`D_i`", "turbine mass self damping", "0"
+       "``K_hp_ip`` / ``K_ip_lp`` / ``K_lp_gen``", ":math:`K_{ij}`", "shaft section stiffness [p.u. torque/rad]", "30 / 40 / 60"
+       "``Dm_hp_ip`` / ``Dm_ip_lp`` / ``Dm_lp_gen``", ":math:`D_{m,ij}`", "shaft section mutual damping", "0"
+       "``F_hp`` / ``F_ip`` / ``F_lp``", ":math:`F_i`", "mechanical-power fractions (sum to 1)", "0.3 / 0.3 / 0.4"
+       "``delta`` / ``omega``", ":math:`\delta, \omega`", "generator-mass angle [rad] and absolute speed [p.u.] (states)", ""
+       "``delta_hp`` / ``omega_hp``", ":math:`\delta_{hp}, \omega_{hp}`", "HP mass angle and speed (states)", ""
+       "``delta_ip`` / ``omega_ip``", ":math:`\delta_{ip}, \omega_{ip}`", "IP mass angle and speed (states)", ""
+       "``delta_lp`` / ``omega_lp``", ":math:`\delta_{lp}, \omega_{lp}`", "LP mass angle and speed (states)", ""
     """
 
     _masses = ["hp", "ip", "lp", "gen"]
@@ -333,12 +400,43 @@ class Shaft4Mass(MultiMassShaft):
 
 
 class Shaft5Mass(MultiMassShaft):
-    """Five-mass turbine-generator shaft: HP -- IP -- LP -- GEN -- EXC (linear chain).
+    r"""Five-mass torsional shaft: HP -- IP -- LP -- GEN -- EXC in a linear
+    chain.
 
-    As :class:`Shaft4Mass` but with an additional exciter mass (EXC) on the far
-    side of the generator. EXC carries no mechanical and no electrical power -- it
-    is a passive inertia coupled through the GEN--EXC shaft section, relevant for
-    the higher torsional modes. Select with ``shaft="Shaft5Mass"``.
+    Selected on a machine line with ``shaft = "Shaft5Mass"``.
+
+    **Model.** As :class:`Shaft4Mass`, with an additional exciter mass EXC on
+    the far side of the generator; for each mass :math:`i` of the chain
+    (see :class:`MultiMassShaft` for the general form):
+
+    .. math::
+
+       \dot{\delta}_i &= \omega_b \, (\omega_i - \omega_{ref}) \\
+       2 H_i \, \dot{\omega}_i &= T_{m,i} - T_{e,i}
+           - \sum_{j \sim i} K_{ij} (\delta_i - \delta_j)
+           - D_i (\omega_i - \omega_{ref})
+           - \sum_{j \sim i} D_{m,ij} (\omega_i - \omega_j)
+
+    EXC carries no mechanical and no electrical power; it is a passive inertia
+    coupled through the GEN--EXC shaft section, relevant for the higher
+    torsional modes.
+
+    **Symbols.** As :class:`Shaft4Mass`, plus:
+
+    .. csv-table::
+       :header: Code, Symbol, Meaning, Default
+       :widths: 18, 14, 54, 10
+
+       "``H_hp`` / ``H_ip`` / ``H_lp`` / ``H_exc``", ":math:`H_i`", "non-generator mass inertia constants [s]", "0.5 / 1 / 4 / 0.1"
+       "``D_hp`` / ``D_ip`` / ``D_lp`` / ``D_exc``", ":math:`D_i`", "non-generator mass self damping", "0"
+       "``K_hp_ip`` / ``K_ip_lp`` / ``K_lp_gen`` / ``K_gen_exc``", ":math:`K_{ij}`", "shaft section stiffness [p.u. torque/rad]", "30 / 40 / 60 / 20"
+       "``Dm_hp_ip`` / ``Dm_ip_lp`` / ``Dm_lp_gen`` / ``Dm_gen_exc``", ":math:`D_{m,ij}`", "shaft section mutual damping", "0"
+       "``F_hp`` / ``F_ip`` / ``F_lp``", ":math:`F_i`", "mechanical-power fractions (sum to 1)", "0.3 / 0.3 / 0.4"
+       "``delta`` / ``omega``", ":math:`\delta, \omega`", "generator-mass angle [rad] and absolute speed [p.u.] (states)", ""
+       "``delta_hp`` / ``omega_hp``", ":math:`\delta_{hp}, \omega_{hp}`", "HP mass angle and speed (states)", ""
+       "``delta_ip`` / ``omega_ip``", ":math:`\delta_{ip}, \omega_{ip}`", "IP mass angle and speed (states)", ""
+       "``delta_lp`` / ``omega_lp``", ":math:`\delta_{lp}, \omega_{lp}`", "LP mass angle and speed (states)", ""
+       "``delta_exc`` / ``omega_exc``", ":math:`\delta_{exc}, \omega_{exc}`", "EXC mass angle and speed (states)", ""
     """
 
     _masses = ["hp", "ip", "lp", "gen", "exc"]

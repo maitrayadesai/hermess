@@ -1,0 +1,18 @@
+\documentclass[tikz,border=6pt]{standalone}
+\input{style.tex}
+\begin{document}
+\begin{tikzpicture}
+  \node[block] (gain) {$K_{stab}$};
+  \node[block, right=10mm of gain] (wo) {$\dfrac{sT_w}{1 + sT_w}$};
+  \node[block, right=10mm of wo] (ll1) {$\dfrac{1 + sT_1}{1 + sT_2}$};
+  \node[block, right=10mm of ll1] (ll2) {$\dfrac{1 + sT_3}{1 + sT_4}$};
+  \draw[sig] ($(gain.west)+(-1.2,0)$) node[above, lbl] {$\Delta\omega$} -- (gain);
+  \draw[sig] (gain) -- (wo) node[midway, above, lbl] {$u$};
+  \draw[sig] (wo) -- (ll1) node[midway, above, lbl] {$w$};
+  \draw[sig] (ll1) -- (ll2) node[midway, above, lbl] {$y_1$};
+  \draw[sig] (ll2.east) -- ++(1.2,0) node[above, lbl] {$V_s$};
+  \node[lbl, text=ethgrey, align=center] at ($(ll1.south)+(0.0,-0.75)$)
+    {\footnotesize \textbf{PSSKundur}: two lead-lag sections, unlimited output\\[1pt]
+     \footnotesize \textbf{PSSSEA}: four lead-lag slots + complex-zero quadratic section, output clipped at $\pm V_s^{max}$};
+\end{tikzpicture}
+\end{document}

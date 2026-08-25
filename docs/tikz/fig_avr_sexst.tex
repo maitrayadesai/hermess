@@ -1,0 +1,17 @@
+\documentclass[tikz,border=6pt]{standalone}
+\input{style.tex}
+\begin{document}
+\begin{tikzpicture}
+  \node[sum] (s) {};
+  \node[lbl] at ($(s)+(0.32,0.30)$) {$-$};
+  \node[lbl] at ($(s)+(-0.30,0.32)$) {$+$};
+  \node[lbl] at ($(s)+(-0.30,-0.32)$) {$+$};
+  \node[block, right=of s] (lag) {$\dfrac{K_A}{1 + sT_E}$};
+  \coordinate[left=11mm of s] (in);
+  \draw[sig] (in) node[above, lbl] {$V_{ref}$} -- (s);
+  \draw[sig] ($(s)+(0,1.1)$) node[above, lbl] {$V_t$} -- (s);
+  \draw[sig] ($(s)+(0,-1.1)$) node[below, lbl] {$V_s$} -- (s);
+  \draw[sig] (s) -- (lag);
+  \draw[sig] (lag.east) -- ++(1.1,0) node[above, lbl] {$E_{fd}$};
+\end{tikzpicture}
+\end{document}

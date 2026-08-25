@@ -16,7 +16,7 @@
 # (https://doi.org/10.5905/ethz-1007-842); dynamic state estimation removed.
 # For inquiries, contact: mdesai@ethz.ch
 
-"""Inverter output-filter (electrical-plant) strategies.
+r"""Inverter output-filter (electrical-plant) strategies.
 
 The filter owns the converter's network-interface states and writes their
 dynamics, driven by the switching voltage ``Vsw`` from the inner controller and
@@ -29,6 +29,14 @@ A filter exposes the terminal-current states (``itd_ext`` / ``itq_ext``, read by
 the host's network injection ``gcall``) and the capacitor-voltage / filter-current
 states that the control ladder reads through ``host.var_sym`` -- which lets a
 quasi-static realization (``LCL_static``) make them algebraic transparently.
+
+Notation (shared with the inner-control strategies):
+:math:`v_{fd}, v_{fq}` capacitor voltage, :math:`i_{fd}, i_{fq}`
+converter-side filter current, :math:`i_{td}, i_{tq}` terminal current, here
+in the network (external) dq frame; :math:`v_{swd}, v_{swq}` the switching
+voltage from the inner controller, :math:`\omega_b = 2 \pi f_n` the base
+speed, :math:`\omega_{ref}` the per-bus reference-frame frequency, and all
+quantities per unit on the device base.
 """
 
 from __future__ import annotations
@@ -129,13 +137,73 @@ class Filter(ABC):
 
 
 class LCL(Filter):
-    """Dynamic LCL output filter (the framework default), with all quantities as
-    differential states.
+    r"""Dynamic LCL output filter (the framework default): series
+    :math:`r_f`-:math:`l_f` converter branch, shunt capacitor :math:`c_f`,
+    series :math:`r_t`-:math:`l_t` grid branch, with all six electrical
+    quantities as differential states
+    (cf. https://doi.org/10.1109/TPWRS.2021.3061434).
 
-    Capacitor voltage (Vfd_ext/Vfq_ext), converter-side filter current
-    (ifd_ext/ifq_ext) and grid-side / terminal current (itd_ext/itq_ext), all in
-    the network (external) dq frame, with the classic series-Rf-Lf / shunt-Cf /
-    series-Rt-Lt topology.
+    Selected on a converter line with ``filter = "LCL"``.
+
+    **Model.** All quantities are in the network (external) dq frame, whose
+    axes coincide with the real/imaginary axes of the network phasors;
+    :math:`v_{n,re}, v_{n,im}` are the bus-voltage components,
+    :math:`\omega_b = 2 \pi f_n` the base speed, and :math:`\omega_{ref}` the
+    per-bus reference-frame frequency. The switching voltage
+    :math:`v_{swd}, v_{swq}` comes from the inner controller through the host.
+    This class writes all six ODEs; the host contributes the network current
+    injection built from :math:`i_{td}, i_{tq}` and the Park transforms the
+    control ladder reads.
+
+    Capacitor voltage:
+
+    .. math::
+
+       \dot{v}_{fd} &= \frac{\omega_b}{c_f} \left( i_{fd} - i_{td} \right)
+                       + \omega_{ref} \, \omega_b \, v_{fq} \\
+       \dot{v}_{fq} &= \frac{\omega_b}{c_f} \left( i_{fq} - i_{tq} \right)
+                       - \omega_{ref} \, \omega_b \, v_{fd}
+
+    Converter-side filter current:
+
+    .. math::
+
+       \dot{i}_{fd} &= \frac{\omega_b}{l_f} \left( v_{swd} - v_{fd} \right)
+                       - \frac{\omega_b r_f}{l_f} i_{fd}
+                       + \omega_{ref} \, \omega_b \, i_{fq} \\
+       \dot{i}_{fq} &= \frac{\omega_b}{l_f} \left( v_{swq} - v_{fq} \right)
+                       - \frac{\omega_b r_f}{l_f} i_{fq}
+                       - \omega_{ref} \, \omega_b \, i_{fd}
+
+    Terminal (grid-side) current:
+
+    .. math::
+
+       \dot{i}_{td} &= \frac{\omega_b}{l_t} \left( v_{fd} - v_{n,re} \right)
+                       - \frac{\omega_b r_t}{l_t} i_{td}
+                       + \omega_{ref} \, \omega_b \, i_{tq} \\
+       \dot{i}_{tq} &= \frac{\omega_b}{l_t} \left( v_{fq} - v_{n,im} \right)
+                       - \frac{\omega_b r_t}{l_t} i_{tq}
+                       - \omega_{ref} \, \omega_b \, i_{td}
+
+    All parameters are per unit on the device base; at nominal frequency the
+    per-unit inductances and capacitance equal the corresponding reactances
+    and susceptance.
+
+    **Symbols.**
+
+    .. csv-table::
+       :header: Code, Symbol, Meaning, Default
+       :widths: 14, 12, 58, 10
+
+       "``Rf``", ":math:`r_f`", "converter-branch (filter) resistance [p.u.]", "1e-4"
+       "``Lf``", ":math:`l_f`", "converter-branch (filter) inductance [p.u.]", "0.08"
+       "``Cf``", ":math:`c_f`", "shunt (filter) capacitance [p.u.]", "0.074"
+       "``Rt``", ":math:`r_t`", "grid-branch resistance (filter to terminal) [p.u.]", "0.01"
+       "``Lt``", ":math:`l_t`", "grid-branch inductance (filter to terminal) [p.u.]", "0.2"
+       "``Vfd_ext`` / ``Vfq_ext``", ":math:`v_{fd},\ v_{fq}`", "capacitor voltage, network dq frame (states) [p.u.]", ""
+       "``ifd_ext`` / ``ifq_ext``", ":math:`i_{fd},\ i_{fq}`", "converter-side filter current (states) [p.u.]", ""
+       "``itd_ext`` / ``itq_ext``", ":math:`i_{td},\ i_{tq}`", "terminal current into the grid (states) [p.u.]", ""
     """
 
     def states(self) -> List[str]:
@@ -302,16 +370,37 @@ class LCL(Filter):
 
 
 class LCL_static(LCL):
-    """Quasi-static LCL filter: same topology as :class:`LCL`, but the six filter
-    quantities are device-private algebraic variables instead of differential
-    states (the singular-perturbation reduction zeroing the fast LCL dynamics,
-    ``d/dt -> 0``). Appropriate when the network itself is quasi-static
-    (``line_dyn=False``); a dynamic filter on a static network is physically
-    incoherent (the host warns but allows it).
+    r"""Quasi-static LCL filter: same topology and parameters as :class:`LCL`,
+    but the six filter quantities are device-private algebraic variables
+    instead of differential states (the singular-perturbation reduction
+    zeroing the fast LCL dynamics, :math:`d/dt \to 0`). Appropriate when the
+    network itself is quasi-static (``line_dyn=False``); a dynamic filter on a
+    static network is physically incoherent (the host warns but allows it).
 
-    The ``2*pi*f`` (``omega_b``) factor common to every term of the dynamic ODE is
-    dropped on the ``0 = RHS`` algebraic constraint: it is mathematically
-    redundant and would inflate the finit Jacobian condition number.
+    Selected on a converter line with ``filter = "LCL_static"``.
+
+    **Model.** The :class:`LCL` equations with the derivatives zeroed. The
+    factor :math:`\omega_b` common to every term is dropped from each
+    constraint: it is mathematically redundant and would inflate the
+    initialization Jacobian's condition number.
+
+    .. math::
+
+       0 &= \frac{1}{c_f} \left( i_{fd} - i_{td} \right) + \omega_{ref} \, v_{fq} \\
+       0 &= \frac{1}{c_f} \left( i_{fq} - i_{tq} \right) - \omega_{ref} \, v_{fd} \\
+       0 &= \frac{1}{l_f} \left( v_{swd} - v_{fd} \right) - \frac{r_f}{l_f} i_{fd}
+            + \omega_{ref} \, i_{fq} \\
+       0 &= \frac{1}{l_f} \left( v_{swq} - v_{fq} \right) - \frac{r_f}{l_f} i_{fq}
+            - \omega_{ref} \, i_{fd} \\
+       0 &= \frac{1}{l_t} \left( v_{fd} - v_{n,re} \right) - \frac{r_t}{l_t} i_{td}
+            + \omega_{ref} \, i_{tq} \\
+       0 &= \frac{1}{l_t} \left( v_{fq} - v_{n,im} \right) - \frac{r_t}{l_t} i_{tq}
+            - \omega_{ref} \, i_{td}
+
+    **Symbols.** As for :class:`LCL` (parameters ``Rf``, ``Lf``, ``Cf``,
+    ``Rt``, ``Lt`` are inherited unchanged); the six quantities
+    ``Vfd_ext`` / ``Vfq_ext``, ``ifd_ext`` / ``ifq_ext``,
+    ``itd_ext`` / ``itq_ext`` are private algebraics here instead of states.
     """
 
     # finit_sequential is inherited from LCL: the steady-state solve is identical

@@ -22,6 +22,14 @@ Branches are declared with ``Line``. Parameters are in per unit on the system
 base, so transformers are represented by the off-nominal tap ratio ``trafo`` of
 the branch rather than by a separate model.
 
+.. figure:: /_static/schematics/line_pi.svg
+   :alt: PI model of a transmission line
+   :width: 560px
+
+   The quasi-static PI model with the off-nominal tap :math:`\tau` on the
+   ``bus_i`` side. With ``line_dyn=True`` the series branch additionally
+   carries the electromagnetic current dynamics.
+
 .. autoclass:: hermess.devices.device.Line
    :no-index:
 

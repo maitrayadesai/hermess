@@ -18,6 +18,11 @@
 
 """Inverter angle-source strategies (what makes a converter forming vs following).
 
+An angle source is selected on a converter line of a system file, e.g.
+``angle = "Droop"``; the names accepted at any moment are returned by
+``hermess.registered("angle")``. Every model below documents its equations and a
+table mapping the code parameter names to the mathematical symbols used there.
+
 The angle source produces the converter frequency ``omega_c`` and integrates the
 converter-frame angle ``delta_c``. It fuses the synchronous machine's governor and
 shaft roles (an inverter has no separable mechanical-power intermediate), so the
@@ -152,10 +157,37 @@ class _PowerDroopAngle(AngleSource):
 
 
 class DroopAngle(_PowerDroopAngle):
-    """Grid-forming droop: the converter sets its own frequency from the
-    active-power droop off nominal, ``omega_c = omega_net + Kp (Pref - Pc_tilde)``,
-    and exposes it as ``host.omega_c`` (read by the COI / single reference-frame
-    machinery in ``system.py``).
+    r"""Grid-forming droop angle source: the converter sets its own frequency
+    from the active-power droop off the nominal frequency.
+
+    Selected on a converter line with ``angle = "Droop"``.
+
+    **Model.**
+
+    .. math::
+
+       \omega_c &= \omega_{net} + R_c^{p} \left( p_c^{*} - \tilde{p}_c \right) \\
+       \dot{\delta}_c &= \omega_b \left( \omega_c - \omega_{ref} \right)
+
+    The filtered active power obeys the measurement filter
+    :math:`\dot{\tilde{p}}_c = \omega_f ( p_c - \tilde{p}_c )`, written by the
+    host converter (:math:`p_c` comes from the shared Park-transform loop in
+    ``Inverter.fgcall``). :math:`\omega_{ref}` is the reference frequency
+    selected by ``omega_mode`` and :math:`\omega_{net}` the nominal network
+    frequency (1 p.u.). The converter frequency is exposed as ``host.omega_c``
+    (read by the center-of-inertia / single reference-frame machinery in
+    ``system.py``).
+
+    **Symbols.**
+
+    .. csv-table::
+       :header: Code, Symbol, Meaning, Default
+       :widths: 14, 12, 58, 10
+
+       "``Kp``", ":math:`R_c^{p}`", "P-f droop coefficient", "0.02"
+       "``Pc_tilde``", ":math:`\tilde{p}_c`", "filtered active power (state) [p.u.]", ""
+       "``delta_c``", ":math:`\delta_c`", "converter-frame angle relative to the network (state) [rad]", ""
+       "``Pref``", ":math:`p_c^{*}`", "active-power setpoint (set to :math:`p_c` by the initialization)", ""
     """
 
     def fgcall(self, host, dae: Dae, omega_ref_vec, omega_b):
@@ -166,10 +198,35 @@ class DroopAngle(_PowerDroopAngle):
 
 
 class PLLAngle(_PowerDroopAngle):
-    """Grid-following: the converter frequency rides on the PLL's synchronizing
-    frequency (read host-mediated via ``host.pll_frequency``) plus the
-    active-power droop, ``omega_c = omega_pll + Kp (Pref - Pc_tilde)``. Pairs with
-    a PLL strategy (which owns ``omega_pll`` and the PLL states).
+    r"""Grid-following angle source: the converter frequency rides on the PLL's
+    synchronizing frequency plus the active-power droop. Pairs with a PLL
+    strategy (which owns :math:`\omega_{pll}` and the PLL states).
+
+    Selected on a converter line with ``angle = "PLL"``.
+
+    **Model.**
+
+    .. math::
+
+       \omega_c &= \omega_{pll} + R_c^{p} \left( p_c^{*} - \tilde{p}_c \right) \\
+       \dot{\delta}_c &= \omega_b \left( \omega_c - \omega_{ref} \right)
+
+    with :math:`\omega_{pll}` the synchronizing frequency estimated by the PLL
+    strategy (read host-mediated via ``host.pll_frequency``). The filtered
+    active power obeys :math:`\dot{\tilde{p}}_c = \omega_f ( p_c - \tilde{p}_c )`,
+    written by the host converter; :math:`\omega_{ref}` is the reference
+    frequency selected by ``omega_mode``.
+
+    **Symbols.**
+
+    .. csv-table::
+       :header: Code, Symbol, Meaning, Default
+       :widths: 14, 12, 58, 10
+
+       "``Kp``", ":math:`R_c^{p}`", "P-f droop coefficient", "0.02"
+       "``Pc_tilde``", ":math:`\tilde{p}_c`", "filtered active power (state) [p.u.]", ""
+       "``delta_c``", ":math:`\delta_c`", "converter-frame angle relative to the network (state) [rad]", ""
+       "``Pref``", ":math:`p_c^{*}`", "active-power setpoint (set to :math:`p_c` by the initialization)", ""
     """
 
     def fgcall(self, host, dae: Dae, omega_ref_vec, omega_b):

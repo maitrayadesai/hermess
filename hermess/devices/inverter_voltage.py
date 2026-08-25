@@ -18,6 +18,11 @@
 
 """Inverter outer voltage-control strategies (the reactive / voltage side).
 
+A voltage controller is selected on a converter line of a system file, e.g.
+``voltage = "QVDroop"``; the names accepted at any moment are returned by
+``hermess.registered("voltage")``. Every model below documents its equations and
+a table mapping the code parameter names to the mathematical symbols used there.
+
 The voltage controller is the AVR-analogue of the converter: it turns the
 reactive-power / voltage setpoints into the voltage-magnitude reference ``Vcd``
 that the inner control ladder regulates the capacitor voltage to. It owns the
@@ -103,10 +108,36 @@ class VoltageControl(ABC):
 
 
 class QVDroop(VoltageControl):
-    """Reactive-power / voltage droop: ``Vcd = Vref + Kq (Qref - Qc_tilde)``.
+    r"""Reactive-power / voltage droop: the voltage-magnitude command follows
+    the reactive-power deviation from its setpoint.
 
-    Owns the filtered reactive-power state ``Qc_tilde``, the droop gain ``Kq`` and
-    the ``Qref`` / ``Vref`` setpoints.
+    Selected on a converter line with ``voltage = "QVDroop"``.
+
+    **Model.** The command is algebraic (published on ``host.Vcd``, read by the
+    inner control ladder):
+
+    .. math::
+
+       v_{cd} = v_c^{*} + R_c^{q} \left( q_c^{*} - \tilde{q}_c \right)
+
+    The filtered reactive power obeys the measurement filter
+    :math:`\dot{\tilde{q}}_c = \omega_f ( q_c - \tilde{q}_c )`, written by the
+    host converter (:math:`q_c` comes from the shared Park-transform loop in
+    ``Inverter.fgcall``). The droop is static, so at initialization
+    :math:`q_c^{*}` and :math:`v_c^{*}` form a one-parameter gauge fixed by the
+    convention :math:`q_c^{*} = q_c` (zeroing the droop term), which gives
+    :math:`v_c^{*} = v_{cd}`.
+
+    **Symbols.**
+
+    .. csv-table::
+       :header: Code, Symbol, Meaning, Default
+       :widths: 14, 12, 58, 10
+
+       "``Kq``", ":math:`R_c^{q}`", "Q-V droop coefficient", "0.1"
+       "``Qc_tilde``", ":math:`\tilde{q}_c`", "filtered reactive power (state) [p.u.]", ""
+       "``Qref``", ":math:`q_c^{*}`", "reactive-power setpoint (set to :math:`q_c` by the initialization)", ""
+       "``Vref``", ":math:`v_c^{*}`", "voltage setpoint (set to :math:`v_{cd}` by the initialization)", ""
     """
 
     def states(self) -> List[str]:

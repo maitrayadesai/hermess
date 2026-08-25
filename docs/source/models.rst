@@ -37,6 +37,12 @@ The method that builds the differential and algebraic equations of a model is:
 .. autofunction:: hermess.devices.device.DeviceRect.fgcall()
    :no-index:
 
+.. figure:: /_static/schematics/sm_composition.svg
+   :alt: Synchronous machine composition
+   :width: 540px
+
+   How a machine is composed: the electromagnetic model exchanges :math:`P_e` and :math:`\delta,\omega` with the shaft, reads :math:`E_{fd}` from the AVR (which sums the PSS signal :math:`V_s`) and :math:`p_m` from the governor, and injects its current into the network.
+
 Synchronous machines
 --------------------
 
@@ -107,6 +113,12 @@ Converters
 
 .. _metaclass_converter:
 
+.. figure:: /_static/schematics/conv_structure.svg
+   :alt: Converter structure
+   :width: 560px
+
+   The converter as composed from its five pluggable blocks; the power path runs VSC → LCL filter → network, the control path from the measured powers and voltages back to the switching voltage :math:`v_{sw}^{*}`.
+
 Converter base class
 ^^^^^^^^^^^^^^^^^^^^
 
@@ -141,6 +153,12 @@ A grid-following converter, which synchronizes to the grid through a PLL [2]_.
 Static var compensator
 ----------------------
 
+.. figure:: /_static/schematics/svc.svg
+   :alt: SVC block diagram
+   :width: 470px
+
+   The SVC voltage regulator: integrator with reactive droop; the susceptance :math:`B` is injected as a shunt at the bus.
+
 .. autoclass:: hermess.devices.svc.SVC
    :no-index:
 
@@ -157,14 +175,44 @@ by :func:`hermess.registered`.
 Automatic voltage regulators (``avr = ...``)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+.. figure:: /_static/schematics/avr_sexst.svg
+   :alt: SEXST block diagram
+   :width: 380px
+
+   SEXST: first-order static exciter.
+
 .. autoclass:: hermess.devices.avr.SEXST
    :no-index:
+.. figure:: /_static/schematics/avr_ieeedc1a.svg
+   :alt: IEEE DC1A block diagram
+   :width: 480px
+
+   IEEE DC1A: regulator, rotating exciter and stabilizing rate feedback.
+
 .. autoclass:: hermess.devices.avr.IEEEDC1A
    :no-index:
+.. figure:: /_static/schematics/avr_st1a.svg
+   :alt: ST1A block diagram
+   :width: 560px
+
+   IEEE ST1A: transducer, two lead-lags and the regulator lag.
+
 .. autoclass:: hermess.devices.avr.AVRST1A
    :no-index:
+.. figure:: /_static/schematics/avr_ac1a.svg
+   :alt: AC1A block diagram
+   :width: 480px
+
+   IEEE AC1A: regulator, rotating exciter and washout rate feedback.
+
 .. autoclass:: hermess.devices.avr.AVRAC1A
    :no-index:
+.. figure:: /_static/schematics/avr_kundur.svg
+   :alt: Kundur AVR family block diagram
+   :width: 520px
+
+   The Kundur two-area AVR family: transducer, gain and transient-gain-reduction lead-lag, in four realizations.
+
 .. autoclass:: hermess.devices.avr.AVRKundur
    :no-index:
 .. autoclass:: hermess.devices.avr.AVRKundur_ODE
@@ -177,6 +225,12 @@ Automatic voltage regulators (``avr = ...``)
 Governors (``governor = ...``)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+.. figure:: /_static/schematics/gov_tgov1.svg
+   :alt: TGOV1 block diagram
+   :width: 470px
+
+   TGOV1: droop, servo and reheater lags (``GOVCONST`` holds :math:`p_m` constant; ``Droop`` keeps only the droop).
+
 .. autoclass:: hermess.devices.governor.GOVCONST
    :no-index:
 .. autoclass:: hermess.devices.governor.Droop
@@ -187,6 +241,12 @@ Governors (``governor = ...``)
 Power system stabilizers (``pss = ...``)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+.. figure:: /_static/schematics/pss.svg
+   :alt: PSS block diagram
+   :width: 520px
+
+   Speed-input stabilizer: gain, washout and lead-lag stages.
+
 .. autoclass:: hermess.devices.pss.PSSKundur
    :no-index:
 .. autoclass:: hermess.devices.pss.PSSSEA
@@ -194,6 +254,12 @@ Power system stabilizers (``pss = ...``)
 
 Shafts (``shaft = ...``)
 ^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. figure:: /_static/schematics/shaft_chain.svg
+   :alt: Multi-mass shaft
+   :width: 620px
+
+   The torsional shaft as a chain of rotor masses coupled by stiffness :math:`K_{ij}`; the single-mass default keeps only the GEN mass.
 
 .. autoclass:: hermess.devices.shaft.SingleMass
    :no-index:
@@ -204,6 +270,12 @@ Shafts (``shaft = ...``)
 
 Converter output filters (``filter = ...``)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. figure:: /_static/schematics/lcl.svg
+   :alt: LCL filter circuit
+   :width: 520px
+
+   The LCL output filter between the switching voltage and the bus.
 
 .. autoclass:: hermess.devices.inverter_filter.LCL
    :no-index:
@@ -232,6 +304,12 @@ Converter inner control (``inner = ...``)
 
 Phase-locked loops (``pll = ...``)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. figure:: /_static/schematics/pll_srf.svg
+   :alt: SRF-PLL block diagram
+   :width: 520px
+
+   Synchronous-reference-frame PLL: the q-component of the filter voltage is driven to zero, locking :math:`\delta_{pll}` to the filter-voltage phasor.
 
 .. autoclass:: hermess.devices.inverter_pll.SRF_PLL
    :no-index:

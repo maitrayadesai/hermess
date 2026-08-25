@@ -18,6 +18,11 @@
 
 """Inverter phase-locked-loop (frequency/phase estimator) strategies.
 
+A PLL is selected on a converter line of a system file, e.g.
+``pll = "SRF_PLL"``; the names accepted at any moment are returned by
+``hermess.registered("pll")``. Every model below documents its equations and a
+table mapping the code parameter names to the mathematical symbols used there.
+
 The PLL is a measurement strategy, separate from the angle source (the inverter
 analogue of the synchronous machine's PSS): it produces a signal (``omega_pll``)
 consumed by another strategy (the angle source), host-mediated via
@@ -100,11 +105,41 @@ class PLL(ABC):
 
 
 class SRF_PLL(PLL):
-    """Synchronous-reference-frame PLL: locks the PLL frame to the filter voltage
-    by driving its q-axis component to zero through a PI loop.
+    r"""Synchronous-reference-frame PLL: locks the PLL frame to the filter
+    voltage by driving its q-axis component to zero through a PI loop.
 
-    States: ``epsilon`` (PI integrator), ``delta_pll`` (PLL-frame angle relative to
-    the network).
+    Selected on a converter line with ``pll = "SRF_PLL"``.
+
+    **Model.** The filter voltage is rotated into the PLL frame,
+
+    .. math::
+
+       v_{fq,pll} = -v_{fd}^{ext} \sin\delta_{pll} + v_{fq}^{ext} \cos\delta_{pll},
+
+    and the PI loop drives it to zero:
+
+    .. math::
+
+       \omega_{pll} &= \omega_{net} + K_p^{pll} \, v_{fq,pll} + K_i^{pll} \, \epsilon \\
+       \dot{\epsilon} &= v_{fq,pll} \\
+       \dot{\delta}_{pll} &= \omega_b \left( \omega_{pll} - \omega_{ref} \right)
+
+    :math:`\omega_{pll}` is published on ``host.omega_pll`` (an algebraic
+    expression, not a registered variable) and read by the angle source via
+    ``host.pll_frequency(dae)``. At steady state the PLL is locked:
+    :math:`v_{fq,pll} = 0`, :math:`\epsilon = 0`, and :math:`\delta_{pll}` is
+    the filter-voltage angle.
+
+    **Symbols.**
+
+    .. csv-table::
+       :header: Code, Symbol, Meaning, Default
+       :widths: 14, 12, 58, 10
+
+       "``Kpll_p``", ":math:`K_p^{pll}`", "PLL proportional gain", "0.5"
+       "``Kpll_i``", ":math:`K_i^{pll}`", "PLL integral gain", "4.69"
+       "``epsilon``", ":math:`\epsilon`", "PLL integrator state [p.u.]", ""
+       "``delta_pll``", ":math:`\delta_{pll}`", "PLL-frame angle relative to the network (state) [rad]", ""
     """
 
     def states(self) -> List[str]:

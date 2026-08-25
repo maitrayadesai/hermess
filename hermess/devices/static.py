@@ -16,6 +16,23 @@
 # (https://doi.org/10.5905/ethz-1007-842); dynamic state estimation removed.
 # For inquiries, contact: mdesai@ethz.ch
 
+"""Static (state-free) load and source models.
+
+A static model is selected in a system file by its class name in the first
+column, e.g. ``StaticZIP, bus = "2", z_share = 1.0``. It contributes no
+differential states; it only adds its consumed current to the algebraic nodal
+current balance, in rectangular network coordinates
+:math:`\\bar{v} = v_{re} + j v_{im}`, :math:`\\bar{i} = i_{re} + j i_{im}`.
+Positive contributed current corresponds to consumption: the consumed complex
+power is :math:`S = \\bar{v} \\, \\bar{i}^{*}`, so positive :math:`P` and
+:math:`Q` mean active and reactive consumption.
+
+The power values given in the system file are treated as initial guesses: the
+initialization overwrites every setpoint below (marked "set by the
+initialization") with the value that reproduces the initial power flow of the
+``BusInit`` data, so the simulation starts in steady state at t = 0 s.
+"""
+
 from __future__ import annotations  # Postponed type evaluation
 from typing import TYPE_CHECKING
 
@@ -28,6 +45,41 @@ import logging
 
 
 class StaticLoadPower(DeviceRect):  # Not finished
+    r"""Constant-power (PQ) load.
+
+    Selected in a system file by the class name in the first column, e.g.
+    ``StaticLoadPower, bus = "2"``.
+
+    **Model.** The consumed current keeps :math:`P` and :math:`Q` constant
+    regardless of the bus voltage:
+
+    .. math::
+
+       i_{re} &= \frac{(P/S_b) \, v_{re} + (Q/S_b) \, v_{im}}{v_{re}^2 + v_{im}^2} \\
+       i_{im} &= \frac{(P/S_b) \, v_{im} - (Q/S_b) \, v_{re}}{v_{re}^2 + v_{im}^2}
+
+    so that :math:`\bar{v}\,\bar{i}^{*} = (P + jQ)/S_b` exactly.
+    Behaviorally this is :class:`StaticZIP` with ``p_share = 1``; unlike the
+    ZIP setpoints, :math:`P` and :math:`Q` are handled here in the units of the
+    system base ``Sb`` (MW / MVAr by default).
+
+    A constant-power load has no equilibrium below the nose of the network's
+    PV curve; if the initialization fails at a heavily loaded bus, use
+    :class:`StaticZIP` with an impedance share instead.
+
+    **Symbols.**
+
+    .. csv-table::
+       :header: Code, Symbol, Meaning, Default
+       :widths: 14, 12, 58, 10
+
+       "``p``", ":math:`P`", "consumed active power [MW] (set by the initialization)", "0"
+       "``q``", ":math:`Q`", "consumed reactive power [MVAr] (set by the initialization)", "0"
+       "``Sn``", ":math:`S_n`", "rated power [MVA]", "100"
+       "``Vn``", ":math:`V_n`", "rated voltage [kV]", "220"
+       "``fn``", ":math:`f_n`", "nominal frequency [Hz]", "50"
+    """
+
     def __init__(self) -> None:
         super().__init__()
         self._type = "Static_load_power"
@@ -65,6 +117,37 @@ class StaticLoadPower(DeviceRect):  # Not finished
 
 
 class StaticLoadImpedance(DeviceRect):
+    r"""Constant-impedance (constant-admittance) load.
+
+    Selected in a system file by the class name in the first column, e.g.
+    ``StaticLoadImpedance, bus = "2"``.
+
+    **Model.** The consumed current is proportional to the bus voltage through
+    the constant admittance :math:`g + jb`:
+
+    .. math::
+
+       i_{re} &= g \, v_{re} - b \, v_{im} \\
+       i_{im} &= b \, v_{re} + g \, v_{im}
+
+    The consumed power is :math:`S = |\bar{v}|^2 (g - jb)`: positive :math:`g`
+    consumes active power, and a load that consumes reactive power (inductive)
+    has *negative* :math:`b` in this convention. Behaviorally this is
+    :class:`StaticZIP` with ``z_share = 1``.
+
+    **Symbols.**
+
+    .. csv-table::
+       :header: Code, Symbol, Meaning, Default
+       :widths: 14, 12, 58, 10
+
+       "``g``", ":math:`g`", "conductance [p.u.] (set by the initialization)", "1"
+       "``b``", ":math:`b`", "susceptance [p.u.] (set by the initialization)", "1"
+       "``Sn``", ":math:`S_n`", "rated power [MVA]", "100"
+       "``Vn``", ":math:`V_n`", "rated voltage [kV]", "220"
+       "``fn``", ":math:`f_n`", "nominal frequency [Hz]", "50"
+    """
+
     def __init__(self) -> None:
         super().__init__()
         self._type = "Static_load_impedance"
@@ -101,24 +184,46 @@ class StaticLoadImpedance(DeviceRect):
 
 
 class StaticInfiniteBus(DeviceRect):
-    r"""
-    This model implements the infinite bus with current balance equations. Resistance
-    and reactance need to be set and the voltage values get calculated during
-    initialization.
+    r"""Infinite bus: an ideal voltage source behind a series impedance.
 
-    Attributes:
-        r (np.ndarray): Resistance value
-        x (np.ndarray): Reactance value
-        vre_int (np.ndarray): Internal voltage value
-        vim_int (np.ndarray): Internal voltage value
+    Selected in a system file by the class name in the first column, e.g.
+    ``StaticInfiniteBus, bus = "9"``. The internal voltage is computed by the
+    initialization; resistance and reactance are given in the system file.
+
+    **Model.** The current drawn from the bus (consumption convention, like the
+    loads) flows through the internal impedance :math:`r + jx` toward the
+    internal EMF :math:`\bar{v}^{int} = v_{re}^{int} + j v_{im}^{int}`:
 
     .. math::
-       :nowrap:
 
-       \begin{aligned}
-       i_{re} &= \frac{1}{r^2 + x^2} \left( (v_{re} - v_{re}^{\text{int}}) r + (v_{im} - v_{im}^{\text{int}}) x \right) \\
-       i_{im} &= \frac{1}{r^2 + x^2} \left( -\left(v_{re} - v_{re}^{\text{int}}\right) x + \left(v_{im} - v_{im}^{\text{int}}\right) r \right)
-       \end{aligned}
+       \bar{i} = \frac{\bar{v} - \bar{v}^{int}}{r + jx},
+
+    in rectangular components exactly as coded:
+
+    .. math::
+
+       i_{re} &= \frac{1}{r^2 + x^2}
+           \left( (v_{re} - v_{re}^{int})\, r + (v_{im} - v_{im}^{int})\, x \right) \\
+       i_{im} &= \frac{1}{r^2 + x^2}
+           \left( -(v_{re} - v_{re}^{int})\, x + (v_{im} - v_{im}^{int})\, r \right)
+
+    The bus therefore injects power into the network whenever
+    :math:`\bar{v}^{int}` leads :math:`\bar{v}`; the fixed internal voltage
+    makes it an ideal source of both voltage and frequency.
+
+    **Symbols.**
+
+    .. csv-table::
+       :header: Code, Symbol, Meaning, Default
+       :widths: 14, 12, 58, 10
+
+       "``r``", ":math:`r`", "internal resistance [p.u.]", "0.001"
+       "``x``", ":math:`x`", "internal reactance [p.u.]", "0.001"
+       "``vre_int``", ":math:`v_{re}^{int}`", "internal voltage, real part [p.u.] (set by the initialization)", "1"
+       "``vim_int``", ":math:`v_{im}^{int}`", "internal voltage, imaginary part [p.u.] (set by the initialization)", "0"
+       "``Sn``", ":math:`S_n`", "rated power [MVA]", "100"
+       "``Vn``", ":math:`V_n`", "rated voltage [kV]", "220"
+       "``fn``", ":math:`f_n`", "nominal frequency [Hz]", "50"
     """
 
     def __init__(self) -> None:
@@ -171,33 +276,70 @@ class StaticInfiniteBus(DeviceRect):
 
 
 class StaticZIP(DeviceRect):
-    r"""
-    ZIP static load. The shares of Z, I, and P (z_share, i_share, p_share) in the overall load need to be specified,
-    and then the inner  parameters of the load will be set during the initialization
-    to satisfy the initial power flow and the share of contributions of each load tape. The shares need to sum up to one for the
-    initialization to work perfectly. Positive reactive current i_q means consumption.
+    r"""ZIP load: constant-impedance (Z), constant-current (I) and
+    constant-power (P) branches in parallel, with independently chosen shares.
 
+    Selected in a system file by the class name in the first column, e.g.
+    ``StaticZIP, bus = "2", z_share = 0.4, i_share = 0.3, p_share = 0.3``. The
+    shares of each branch on the active-power side must sum to one; the
+    reactive-power side has its own shares (``*_share_q``) that default to the
+    active-power values when not given.
 
+    **Model.** The consumed current is the sum of the three branches, with
+    :math:`\theta = \operatorname{atan2}(v_{im}, v_{re})` the voltage angle:
 
     .. math::
-      :nowrap:
 
-      \begin{aligned}
-      i_{re} &= \left(\frac{{p}v_{re} + {q} v_{im}}{v_{re}^2 + v_{im}^2}\right) + (g v_{re} - b v_{im}) + (\cos{\theta} i_d + \sin{\theta} i_q)\\
-      i_{re} &=\left(\frac{{p}v_{im} - {q} v_{re}}{v_{re}^2 + v_{im}^2} \right)+ (b v_{re} + g v_{im}) + (\sin{\theta} i_q - \sin{\theta} i_d)
-      \end{aligned}
+       i_{re} &= \underbrace{\frac{p \, v_{re} + q \, v_{im}}{v_{re}^2 + v_{im}^2}}_{P}
+          \; + \; \underbrace{g \, v_{re} - b \, v_{im}}_{Z}
+          \; + \; \underbrace{\cos\theta \, i_d + \sin\theta \, i_q}_{I} \\
+       i_{im} &= \underbrace{\frac{p \, v_{im} - q \, v_{re}}{v_{re}^2 + v_{im}^2}}_{P}
+          \; + \; \underbrace{b \, v_{re} + g \, v_{im}}_{Z}
+          \; + \; \underbrace{\sin\theta \, i_d - \cos\theta \, i_q}_{I}
 
-    Attributes:
-        g (np.ndarray:  Conductance value
-        b (np.ndarray):  Susceptance value
-        p (np.ndarray):  Active power value
-        q (np.ndarray):  Reactive power value
-        id (np.ndarray):  Active current value
-        iq (np.ndarray):  Reactive current value
-        p_share (np.ndarray):  Share of power load (default: 0.0)
-        i_share (np.ndarray):  Share of current load (default: 0.0)
-        z_share (np.ndarray):  Share of impedance load (default: 1.0)
+    The consumed powers of the branches are :math:`S_P = p + jq` (constant),
+    :math:`S_Z = |\bar{v}|^2 (g - jb)` (quadratic in voltage), and
+    :math:`S_I = |\bar{v}| (i_d + j i_q)` (linear in voltage). Positive
+    :math:`q` and :math:`i_q` mean reactive consumption.
 
+    **Initialization.** The per-bus current demanded by the power flow is
+    decomposed into a P-only and a Q-only component,
+
+    .. math::
+
+       P_0 &= v_{re} i_{re}^{0} + v_{im} i_{im}^{0}, \qquad
+       Q_0 = v_{im} i_{re}^{0} - v_{re} i_{im}^{0}, \\
+       \bar{i}^{P} &= \frac{P_0}{|\bar{v}|^2} (v_{re} + j v_{im}), \qquad
+       \bar{i}^{Q} = \frac{Q_0}{|\bar{v}|^2} (v_{im} - j v_{re}),
+
+    and each branch's setpoint pair (:math:`(g, b)`, :math:`(i_d, i_q)` or
+    :math:`(p, q)`) is solved by Newton iteration so that the branch consumes
+    exactly its share-weighted portion
+    :math:`s^{P} \bar{i}^{P} + s^{Q} \bar{i}^{Q}` of that current. Shares that
+    do not sum to one per axis are reported as a warning: the load then
+    under- or over-delivers.
+
+    **Symbols.**
+
+    .. csv-table::
+       :header: Code, Symbol, Meaning, Default
+       :widths: 16, 12, 56, 10
+
+       "``z_share``", ":math:`s_Z^{P}`", "impedance share of the active-power demand", "1"
+       "``i_share``", ":math:`s_I^{P}`", "current share of the active-power demand", "0"
+       "``p_share``", ":math:`s_P^{P}`", "power share of the active-power demand", "0"
+       "``z_share_q``", ":math:`s_Z^{Q}`", "impedance share of the reactive-power demand (default: follows ``z_share``)", "NaN"
+       "``i_share_q``", ":math:`s_I^{Q}`", "current share of the reactive-power demand (default: follows ``i_share``)", "NaN"
+       "``p_share_q``", ":math:`s_P^{Q}`", "power share of the reactive-power demand (default: follows ``p_share``)", "NaN"
+       "``g``", ":math:`g`", "Z-branch conductance [p.u.] (set by the initialization)", "1"
+       "``b``", ":math:`b`", "Z-branch susceptance [p.u.] (set by the initialization)", "1"
+       "``id``", ":math:`i_d`", "I-branch active current [p.u.] (set by the initialization)", "1"
+       "``iq``", ":math:`i_q`", "I-branch reactive current [p.u.] (set by the initialization)", "1"
+       "``p``", ":math:`p`", "P-branch active power [p.u.] (set by the initialization)", "1"
+       "``q``", ":math:`q`", "P-branch reactive power [p.u.] (set by the initialization)", "1"
+       "``Sn``", ":math:`S_n`", "rated power [MVA]", "100"
+       "``Vn``", ":math:`V_n`", "rated voltage [kV]", "220"
+       "``fn``", ":math:`f_n`", "nominal frequency [Hz]", "50"
     """
 
     def __init__(self) -> None:

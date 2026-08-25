@@ -1,0 +1,24 @@
+\documentclass[tikz,border=6pt]{standalone}
+\input{style.tex}
+\begin{document}
+\begin{tikzpicture}
+  \node[sum] (s) {};
+  \node[lbl] at ($(s)+(-0.30,0.32)$) {$+$};
+  \node[lbl] at ($(s)+(0.02,0.42)$)  {$-$};
+  \node[lbl] at ($(s)+(0.30,-0.32)$) {$-$};
+  \node[block, right=of s, minimum width=16mm] (ka) {$\dfrac{K_A}{s}$};
+  \node[block, right=12mm of ka] (lag) {$\dfrac{2.5}{1 + sT_d}$};
+  \coordinate[left=12mm of s] (in);
+  \draw[sig] (in) node[above, lbl] {$V_{ref}$} -- (s);
+  \draw[sig] ($(s)+(0,1.15)$) node[above, lbl] {$V_t$} -- (s);
+  \draw[sig] (s) -- (ka);
+  \draw[sig] (ka) -- (lag) node[midway, above, lbl] {$x_B$};
+  \draw[sig] (lag.east) -- ++(1.3,0) node[above, lbl] {$B$};
+  % droop feedback
+  \node[block, below=10mm of ka, minimum width=26mm] (droop) {$K_d\,(B V_t - B_{ref})$};
+  \draw[sig] ($(lag.east)+(0.7,0)$) |- (droop.east);
+  \draw[sig] (droop.west) -| (s);
+  \node[lbl, text=ethgrey] at ($(droop.south)+(0.3,-0.5)$)
+    {\footnotesize shunt injection at the bus: $\bar{\imath} = \mathrm{j}B\,\bar v_n$ (load convention)};
+\end{tikzpicture}
+\end{document}

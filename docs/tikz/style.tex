@@ -1,0 +1,19 @@
+% Shared style for the HERMESS schematic figures (compiled by build.sh).
+% ETH palette; Latin Modern (the LaTeX default) to match the documentation.
+\usepackage{amsmath}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,calc,shapes.geometric,circuits.ee.IEC}
+\definecolor{ethblue}{HTML}{215CAF}
+\definecolor{ethpetrol}{HTML}{007894}
+\definecolor{ethgrey}{HTML}{6F6F6F}
+\tikzset{
+  block/.style      = {draw=ethblue, thick, fill=ethblue!8, minimum height=9mm,
+                       minimum width=16mm, inner sep=2.5pt, align=center},
+  sum/.style        = {draw=ethblue, thick, circle, fill=white, minimum size=4.5mm, inner sep=0pt},
+  sig/.style        = {-{Latex[length=2.4mm]}, thick},
+  wire/.style       = {thick},
+  node distance     = 9mm and 12mm,
+  every node/.style = {font=\small},
+  lbl/.style        = {font=\small, inner sep=1.5pt},
+  port/.style       = {font=\small\itshape, text=ethgrey},
+}

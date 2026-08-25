@@ -16,6 +16,19 @@
 # (https://doi.org/10.5905/ethz-1007-842); dynamic state estimation removed.
 # For inquiries, contact: mdesai@ethz.ch
 
+r"""Power-system-stabilizer strategies for synchronous machines.
+
+A PSS is selected on the machine line of a system file, e.g.
+``pss = "PSSKundur"``; the names accepted at any moment are returned by
+``hermess.registered("pss")``. There is no default PSS: a machine without one
+supplies no stabilizing signal to its AVR.
+
+Common to all models: the input is the speed deviation
+:math:`\Delta\omega = \omega - \omega_{net}` (:math:`\omega` the absolute
+per-unit rotor speed, :math:`\omega_{net} = 1` p.u.), and the output
+:math:`V_s` is summed into the AVR's voltage error at its summing junction.
+"""
+
 from __future__ import annotations
 from typing import TYPE_CHECKING, Dict, List
 from abc import ABC, abstractmethod
@@ -112,37 +125,48 @@ class PSS(ABC):
 
 class PSSKundur(PSS):
     r"""Single-input (speed) power system stabilizer: gain, washout, and two
-    lead-lag stages, as in Kundur (Power System Stability and Control, 1994).
+    lead-lag stages (Kundur, *Power System Stability and Control*, 1994).
 
-        Vs(s) = K_stab * [ s*Tw / (1 + s*Tw) ]            # washout (DC block)
-                       * [ (1 + s*T1) / (1 + s*T2) ]       # lead-lag 1
-                       * [ (1 + s*T3) / (1 + s*T4) ]       # lead-lag 2
-                       * domega                            # input: SPEED DEVIATION
+    Selected on a machine line with ``pss = "PSSKundur"``.
 
-    ``host.omega`` is the absolute per-unit rotor speed (= 1.0 at synchronism),
-    NOT the deviation. The PSS input is the deviation from nominal,
-    ``domega = omega - omega_net`` with ``omega_net = 1`` p.u. (``dae.omega_net``),
-    formed explicitly here rather than relying on the washout to subtract the DC
-    offset.
+    **Model.** Transfer function
+    :math:`V_s = K_{stab} \frac{s T_w}{1 + s T_w} \frac{1 + s T_1}{1 + s T_2}
+    \frac{1 + s T_3}{1 + s T_4} \, \Delta\omega` with
+    :math:`\Delta\omega = \omega - \omega_{net}`, realized as three lag-pole
+    states plus feedthrough:
 
-    The output 'Vs' is summed into the AVR voltage error. Each block contributes
-    one lag-pole state; the two lead-lags (and the washout's high-pass) give the
-    output a direct feedthrough on ``domega``, so 'Vs' is declared as a private
-    ALGEBRAIC variable (read by the AVR via ``Synchronous.pss_signal`` ->
-    ``var_sym('Vs')``).
+    .. math::
 
-    Realization (vw, vl1, vl2 are the three lag-pole states):
+       u &= K_{stab} \, \Delta\omega \\
+       T_w \, \dot{v}_w &= u - v_w, \qquad w = u - v_w \\
+       T_2 \, \dot{v}_{l1} &= w - v_{l1}, \qquad
+           y_1 = \Bigl(1 - \frac{T_1}{T_2}\Bigr) v_{l1} + \frac{T_1}{T_2} w \\
+       T_4 \, \dot{v}_{l2} &= y_1 - v_{l2}, \qquad
+           0 = -V_s + \Bigl(1 - \frac{T_3}{T_4}\Bigr) v_{l2} + \frac{T_3}{T_4} y_1
 
-        domega  = omega - omega_net             ; speed deviation (omega_net = 1 p.u.)
-        u       = K_stab * domega
-        vw_dot  = (u - vw) / Tw                 ; washout output  w  = u - vw
-        vl1_dot = (w - vl1) / T2                ; lead-lag 1 out  y1 = vl1(1-T1/T2) + (T1/T2) w
-        vl2_dot = (y1 - vl2) / T4
-        0       = -Vs + vl2(1-T3/T4) + (T3/T4) y1
+    The washout blocks DC, so at equilibrium
+    :math:`v_w = v_{l1} = v_{l2} = V_s = 0` and the PSS does not shift the
+    operating point. The output :math:`V_s` has direct feedthrough on
+    :math:`\Delta\omega` and is therefore a device-private algebraic variable,
+    summed into the AVR voltage error via ``Synchronous.pss_signal``. This
+    model has no output limit (compare :class:`PSSSEA`).
 
-    At equilibrium ``omega = omega_net`` so ``domega = 0`` and
-    ``vw = vl1 = vl2 = Vs = 0``: the washout blocks DC, hence the PSS does not
-    shift the operating point.
+    **Symbols.**
+
+    .. csv-table::
+       :header: Code, Symbol, Meaning, Default
+       :widths: 14, 12, 58, 10
+
+       "``K_stab``", ":math:`K_{stab}`", "stabilizer gain", "10"
+       "``Tw``", ":math:`T_w`", "washout time constant [s]", "10"
+       "``T1``", ":math:`T_1`", "lead-lag 1 lead time constant [s]", "0.05"
+       "``T2``", ":math:`T_2`", "lead-lag 1 lag time constant [s]", "0.02"
+       "``T3``", ":math:`T_3`", "lead-lag 2 lead time constant [s]", "0.05"
+       "``T4``", ":math:`T_4`", "lead-lag 2 lag time constant [s]", "0.02"
+       "``vw``", ":math:`v_w`", "washout low-pass state [p.u.]", ""
+       "``vl1``", ":math:`v_{l1}`", "lead-lag 1 lag state [p.u.]", ""
+       "``vl2``", ":math:`v_{l2}`", "lead-lag 2 lag state [p.u.]", ""
+       "``Vs``", ":math:`V_s`", "stabilizing signal to the AVR (private algebraic) [p.u.]", ""
     """
 
     def states(self) -> List[str]:
@@ -211,25 +235,65 @@ class PSSKundur(PSS):
 
 class PSSSEA(PSS):
     r"""Speed-input PSS of the 14-generator South East Australian benchmark
-    (Gibbard & Vowles 2014, Fig. 23 and eqs. (7)-(10)):
+    (Gibbard and Vowles 2014, Fig. 23 and eqs. (7)-(10)).
 
-        Vs = sgn·K · [s·Tw/(1+s·Tw)] · Π_{i=1..4} (1+s·Tz_i)/(1+s·Tp_i)
-                   · (1 + a·s + b·s²)/((1+s·Tp5)(1+s·Tp6)) · (ω − ω_net)
+    Selected on a machine line with ``pss = "PSSSEA"``.
 
-    with K = De·Kc (De = 20 pu damping gain on machine MVA base, Kc from
-    Tables 17-20). The four first-order sections cover the real zero/pole
-    chains of eqs. (7)-(9); the quadratic section carries the complex-zero
-    pair of eqs. (8) and (10). Unused first-order slots are made exactly
-    unity by setting Tz_i = Tp_i; an unused quadratic section is exactly
-    unity with a = Tp5+Tp6, b = Tp5·Tp6 (pole-zero cancellation). ``sgn``
-    is −1 for a hydro machine operating in pumping mode (HPS_1, Case 5).
+    **Model.** Transfer function
 
-    First-order sections are realized as lag state + feedthrough (Tp_i > 0
-    required); the quadratic section in controllable canonical form with
-    feedthrough c = b/(Tp5·Tp6):
+    .. math::
 
-        ẋ1 = x2 ,  Tp5·Tp6·ẋ2 = −x1 − (Tp5+Tp6)·x2 + u
-        y  = c·u + (1−c)·x1 + (a − c·(Tp5+Tp6))·x2
+       V_s = \mathrm{sgn} \cdot K_{stab} \cdot \frac{s T_w}{1 + s T_w}
+             \cdot \prod_{i=1}^{4} \frac{1 + s T_{z,i}}{1 + s T_{p,i}}
+             \cdot \frac{1 + a_q s + b_q s^2}{(1 + s T_{p5})(1 + s T_{p6})}
+             \cdot (\omega - \omega_{net})
+
+    with overall gain :math:`K_{stab} = D_e K_c` (:math:`D_e` = 20 p.u.
+    damping gain on machine MVA base, :math:`K_c` from Tables 17-20). The four
+    first-order sections cover the real zero/pole chains of eqs. (7)-(9); the
+    quadratic section carries the complex-zero pair of eqs. (8) and (10).
+    Unused first-order slots are exactly unity with
+    :math:`T_{z,i} = T_{p,i}`; an unused quadratic section is exactly unity
+    with :math:`a_q = T_{p5} + T_{p6}`, :math:`b_q = T_{p5} T_{p6}`.
+    :math:`\mathrm{sgn} = -1` for a hydro machine operating in pumping mode.
+
+    Realization: washout and first-order sections as lag state plus
+    feedthrough (as in :class:`PSSKundur`; :math:`T_{p,i} > 0` required); the
+    quadratic section in controllable canonical form with feedthrough
+    :math:`c = b_q/(T_{p5} T_{p6})`:
+
+    .. math::
+
+       \dot{v}_{q1} &= v_{q2}, \qquad
+       T_{p5} T_{p6} \, \dot{v}_{q2} = -v_{q1} - (T_{p5} + T_{p6}) v_{q2} + u \\
+       y &= c \, u + (1 - c) \, v_{q1} + \bigl(a_q - c \,(T_{p5} + T_{p6})\bigr) v_{q2}
+
+    The output is hard-clipped at the published limit
+    :math:`\pm V_s^{max}` (always active, not gated by ``incl_lim``); the
+    operating point sits at :math:`V_s = 0` with unit slope, so the
+    small-signal behavior is unchanged.
+
+    **Symbols.**
+
+    .. csv-table::
+       :header: Code, Symbol, Meaning, Default
+       :widths: 14, 12, 58, 10
+
+       "``K_stab``", ":math:`K_{stab}`", "overall gain (:math:`D_e K_c`, machine base)", "10"
+       "``Tw``", ":math:`T_w`", "washout time constant [s]", "7.5"
+       "``Tz1`` / ``Tp1``", ":math:`T_{z,1}, T_{p,1}`", "section 1 lead / lag time constants [s]", "1e-3"
+       "``Tz2`` / ``Tp2``", ":math:`T_{z,2}, T_{p,2}`", "section 2 lead / lag time constants [s]", "1e-3"
+       "``Tz3`` / ``Tp3``", ":math:`T_{z,3}, T_{p,3}`", "section 3 lead / lag time constants [s]", "1e-3"
+       "``Tz4`` / ``Tp4``", ":math:`T_{z,4}, T_{p,4}`", "section 4 lead / lag time constants [s]", "1e-3"
+       "``a_q``", ":math:`a_q`", "quadratic numerator s-coefficient", "2e-4"
+       "``b_q``", ":math:`b_q`", "quadratic numerator s^2-coefficient", "1e-8"
+       "``Tp5`` / ``Tp6``", ":math:`T_{p5}, T_{p6}`", "quadratic denominator time constants [s]", "1e-4"
+       "``sgn``", ":math:`\mathrm{sgn}`", "output sign (-1 when pumping)", "1"
+       "``Vs_max``", ":math:`V_s^{max}`", "output limit (hard clip, always active)", "0.1"
+       "``vw``", ":math:`v_w`", "washout low-pass state [p.u.]", ""
+       "``v1`` / ``v2`` / ``v3`` / ``v4``", ":math:`v_1 \dots v_4`", "first-order section lag states [p.u.]", ""
+       "``vq1`` / ``vq2``", ":math:`v_{q1}, v_{q2}`", "quadratic section states [p.u.]", ""
+       "``Vs``", ":math:`V_s`", "stabilizing signal to the AVR (private algebraic) [p.u.]", ""
     """
 
     def states(self) -> List[str]:

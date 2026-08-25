@@ -16,6 +16,21 @@
 # (https://doi.org/10.5905/ethz-1007-842); dynamic state estimation removed.
 # For inquiries, contact: mdesai@ethz.ch
 
+r"""Converter (inverter) models: grid-forming and grid-following.
+
+A converter is selected in a system file by its class name in the first
+column; its control blocks are pluggable strategies chosen by keyword on the
+same line::
+
+   GridForming, idx = "GFM1", bus = "3", Sn = 100, filter = "LCL_static", ...
+
+The five strategy axes are the output filter (``filter``), the angle source
+(``angle``), the voltage control (``voltage``), the inner control (``inner``)
+and the PLL (``pll``); their equations and parameter symbols are documented in
+their modules. All quantities are in per unit on the device base
+:math:`S_n`; :math:`\omega_b = 2\pi f_n` is the base angular frequency.
+"""
+
 from __future__ import annotations  # Postponed type evaluation
 from typing import TYPE_CHECKING
 
@@ -34,7 +49,48 @@ import numpy as np
 
 
 class Inverter(DeviceRect):
-    """Metaclass for inverters"""
+    r"""Base class of all converter models: composition of the pluggable
+    filter, angle-source, voltage-control, inner-control and PLL strategies
+    with the power measurement filter and the network coupling.
+
+    The strategy blocks and their equations are documented in their own
+    classes (:mod:`hermess.devices.inverter_filter`,
+    :mod:`~hermess.devices.inverter_angle`,
+    :mod:`~hermess.devices.inverter_voltage`,
+    :mod:`~hermess.devices.inverter_inner`,
+    :mod:`~hermess.devices.inverter_pll`); this base owns the instantaneous
+    terminal powers and their measurement filter,
+
+    .. math::
+
+       p_c &= v_{fd} i_{td} + v_{fq} i_{tq}, \qquad
+       q_c = -v_{fd} i_{tq} + v_{fq} i_{td} \\
+       \dot{\tilde{p}}_c &= \omega_f \, (p_c - \tilde{p}_c), \qquad
+       \dot{\tilde{q}}_c = \omega_f \, (q_c - \tilde{q}_c),
+
+    and the injection of the grid-side current :math:`i_t` (rotated by the
+    converter angle :math:`\delta_c` and rescaled by :math:`S_n/S_b`) into
+    the network current balance. All quantities are in per unit on the device
+    base :math:`S_n`, with :math:`\omega_b = 2\pi f_n`.
+
+    **Symbols** (owned by the base; strategy parameters are documented in the
+    strategy classes):
+
+    .. csv-table::
+       :header: Code, Symbol, Meaning, Default
+       :widths: 14, 12, 58, 10
+
+       "``Sn``", ":math:`S_n`", "converter MVA rating (device base) [MVA]", "100"
+       "``Vn``", ":math:`V_n`", "rated voltage [kV]", "\-"
+       "``fn``", ":math:`f_n`", "rated frequency [Hz]", "50"
+       "``omega_f``", ":math:`\omega_f`", "power measurement filter corner frequency [rad/s]", "2\ *pi*\ 5"
+       "``Pc_tilde``", ":math:`\tilde{p}_c`", "filtered active power (state) [p.u.]", ""
+       "``Qc_tilde``", ":math:`\tilde{q}_c`", "filtered reactive power (state) [p.u.]", ""
+       "``Pc`` / ``Qc``", ":math:`p_c, q_c`", "unfiltered terminal powers (published expressions)", ""
+       "``Pref``", ":math:`p_c^{*}`", "active-power setpoint (set by the initialization)", ""
+       "``Qref``", ":math:`q_c^{*}`", "reactive-power setpoint (set by the initialization)", ""
+       "``Vref``", ":math:`v_c^{*}`", "voltage setpoint (set by the initialization)", ""
+    """
 
     # Default init is the staged sequential solve (_finit_sequential). Set to
     # "joint" for the one-shot Newton+LM solve (_finit_joint) plus
@@ -476,10 +532,20 @@ class Inverter(DeviceRect):
 
 
 class GridFollowing(Inverter):
-    r"""Grid-Following Inverter (with Droop)
-    Based on the grid-following inverter model in https://doi.org/10.1109/TPWRS.2021.3061434
+    r"""Grid-following converter: the converter frame rides on a
+    synchronous-reference-frame PLL, so the converter behaves as a
+    current-injecting source synchronized to the grid
+    (model of https://doi.org/10.1109/TPWRS.2021.3061434).
 
-    The dynamic behavior of the grid-following converter is described by the following differential equations:
+    Selected in a system file by the class name in the first column::
+
+       GridFollowing, idx = "GFL1", bus = "5", Sn = 100, Kp = 0.01, ...
+
+    **Model.** The equations below are the assembled set for the default
+    strategy combination (dynamic ``LCL`` filter, ``PLL`` angle source,
+    ``SRF_PLL``); each block's own class documents its variants, and the
+    parameter symbols are listed in the strategy classes and
+    :class:`Inverter`.
 
     **Converter Voltage Dynamics**
 
@@ -593,9 +659,20 @@ class GridFollowing(Inverter):
 
 class GridForming(Inverter):
     # Droop-based voltage-source inverter
-    r"""Grid-Forming Inverter (Droop-Based)
-    Based on the grid-forming inverter model in https://doi.org/10.1109/TPWRS.2021.3061434
-    The dynamic behavior of the grid-forming converter is described by the following differential equations:
+    r"""Grid-forming converter: the droop angle source sets the converter
+    frequency from the filtered active power, so the converter behaves as a
+    voltage source behind its LCL filter
+    (model of https://doi.org/10.1109/TPWRS.2021.3061434).
+
+    Selected in a system file by the class name in the first column::
+
+       GridForming, idx = "GFM1", bus = "3", Sn = 100, Kp = 0.01, Kq = 0.1, ...
+
+    **Model.** The equations below are the assembled set for the default
+    strategy combination (dynamic ``LCL`` filter, ``Droop`` angle,
+    ``QVDroop`` voltage control, ``Cascaded`` inner control); each block's
+    own class documents its variants, and the parameter symbols are listed
+    in the strategy classes and :class:`Inverter`.
 
     **Converter Voltage Dynamics**
 

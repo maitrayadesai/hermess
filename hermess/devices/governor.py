@@ -16,6 +16,20 @@
 # (https://doi.org/10.5905/ethz-1007-842); dynamic state estimation removed.
 # For inquiries, contact: mdesai@ethz.ch
 
+r"""Turbine-governor strategies for synchronous machines.
+
+A governor is selected on the machine line of a system file, e.g.
+``governor = "TGOV1"``; the names accepted at any moment are returned by
+``hermess.registered("governor")``. Every model below documents its
+differential (and, where applicable, algebraic) equations and a table mapping
+the code parameter names to the mathematical symbols used in those equations.
+
+Common to all models: :math:`\omega` is the machine's absolute per-unit rotor
+speed (1.0 at synchronism), :math:`\omega_{net} = 1` p.u. the nominal speed,
+:math:`P_{ref}` the mechanical-power setpoint computed by the initialization,
+and :math:`p_m` the mechanical power consumed by the machine's swing equation.
+"""
+
 from __future__ import annotations
 from typing import TYPE_CHECKING, Dict, List
 from abc import ABC, abstractmethod
@@ -108,15 +122,38 @@ class Governor(ABC):
 
 
 class TGOV1(Governor):
-    """TGOV1 turbine-governor model as presented in Power System Dynamics and
-    Stability by P.W. Sauer and M.A. Pai, 2006. (page 100)
+    r"""TGOV1 steam turbine-governor: droop-controlled valve and steam-chest
+    lag (P. W. Sauer and M. A. Pai, *Power System Dynamics and Stability*,
+    p. 100). The framework default.
 
-    States: psv (steam valve position), pm (mechanical power). 'pm' is the
-    coupling output to the swing equation. This is the framework default.
+    Selected on a machine line with ``governor = "TGOV1"``.
 
-    The droop acts on the speed deviation ``omega - omega_net`` (omega_net = 1
-    p.u.); ``host.omega`` is the ABSOLUTE per-unit speed. ``Pref`` is the
-    mechanical-power setpoint, so ``psv = pm = Pref`` at steady state.
+    **Model.**
+
+    .. math::
+
+       T_{sv} \, \dot{p}_{sv} &= -p_{sv} + P_{ref}
+           - \frac{\omega - \omega_{net}}{R_d} \\
+       T_{ch} \, \dot{p}_m &= p_{sv} - p_m
+
+    with :math:`\omega` the absolute per-unit rotor speed and
+    :math:`\omega_{net} = 1` p.u., so that :math:`p_{sv} = p_m = P_{ref}` at
+    steady state. With ``incl_lim`` the valve equation is multiplied by the
+    anti-windup switch that freezes the valve at :math:`p_{sv}^{max,min}`.
+
+    **Symbols.**
+
+    .. csv-table::
+       :header: Code, Symbol, Meaning, Default
+       :widths: 14, 12, 58, 10
+
+       "``Rd``", ":math:`R_d`", "speed droop constant", "0.05"
+       "``Tch``", ":math:`T_{ch}`", "steam chest time constant [s]", "0.05"
+       "``Tsv``", ":math:`T_{sv}`", "steam valve time constant [s]", "1.5"
+       "``psv_max`` / ``psv_min``", ":math:`p_{sv}^{max,min}`", "valve limits (with ``incl_lim``)", "10 / -10"
+       "``psv``", ":math:`p_{sv}`", "steam valve position (state) [p.u.]", ""
+       "``pm``", ":math:`p_m`", "mechanical power (state) [p.u.]", ""
+       "``Pref``", ":math:`P_{ref}`", "mechanical-power setpoint (set by the initialization)", ""
     """
 
     def states(self) -> List[str]:
@@ -170,21 +207,33 @@ class TGOV1(Governor):
 
 
 class Droop(Governor):
-    r"""Pure speed-droop governor with the mechanical power 'pm' declared as a
-    device-private ALGEBRAIC variable.
+    r"""Pure speed-droop governor: primary frequency response with no turbine
+    lag dynamics, the :math:`T_{ch}, T_{sv} \to 0` limit of :class:`TGOV1`.
 
-    Primary frequency response without turbine lag dynamics: the mechanical power
-    follows the speed deviation instantaneously (omega is the ABSOLUTE per-unit
-    speed; the droop acts on omega - omega_net with omega_net = 1 p.u.),
+    Selected on a machine line with ``governor = "Droop"``.
 
-        0 = -pm + Pref - (omega - omega_net) / Rd     # pm algebraic (no states)
+    **Model.** The mechanical power follows the speed deviation
+    instantaneously and is therefore a device-private algebraic variable
+    (no states):
 
-    so at steady state pm = Pref. This is the ``Tch, Tsv -> 0`` (quasi-steady-state)
-    limit of :class:`TGOV1`: at ``Tsv -> 0`` the valve gives
-    ``psv = Pref - (omega-omega_net)/Rd`` and at ``Tch -> 0`` the chest gives
-    ``pm = psv``. 'pm' rides the device-private-algebraic mechanism and the swing
-    equation reads it through ``Synchronous.var_sym('pm')``, as for a state-valued
-    'pm'.
+    .. math::
+
+       0 = -p_m + P_{ref} - \frac{\omega - \omega_{net}}{R_d}
+
+    with :math:`\omega` the absolute per-unit rotor speed and
+    :math:`\omega_{net} = 1` p.u., so that :math:`p_m = P_{ref}` at steady
+    state. ``pm`` rides the device-private-algebraic mechanism and the swing
+    equation reads it through ``Synchronous.var_sym('pm')``.
+
+    **Symbols.**
+
+    .. csv-table::
+       :header: Code, Symbol, Meaning, Default
+       :widths: 14, 12, 58, 10
+
+       "``Rd``", ":math:`R_d`", "speed droop constant", "0.05"
+       "``pm``", ":math:`p_m`", "mechanical power (private algebraic) [p.u.]", ""
+       "``Pref``", ":math:`P_{ref}`", "mechanical-power setpoint (set by the initialization)", ""
     """
 
     def states(self) -> List[str]:
@@ -231,16 +280,30 @@ class Droop(Governor):
 
 
 class GOVCONST(Governor):
-    r"""Constant mechanical power (no turbine/governor dynamics).
+    r"""Constant mechanical power: no turbine or governor dynamics, the
+    zero-response limit of :class:`Droop` (:math:`R_d \to \infty`).
 
-    The mechanical power is pinned to the finit-solved setpoint,
+    Selected on a machine line with ``governor = "GOVCONST"``.
 
-        0 = -pm + Pref ,
+    **Model.**
 
-    i.e. the zero-response limit of :class:`Droop` (Rd → ∞). Used by models
-    that deliberately exclude prime-mover dynamics, such as the 14-generator
-    South East Australian benchmark (Gibbard & Vowles 2014), whose small- and
-    large-signal models have no turbine/governor representation.
+    .. math::
+
+       0 = -p_m + P_{ref}
+
+    Used by benchmarks that deliberately exclude prime-mover dynamics, such as
+    the 14-generator South East Australian system (Gibbard and Vowles 2014),
+    whose small- and large-signal models have no turbine or governor
+    representation.
+
+    **Symbols.**
+
+    .. csv-table::
+       :header: Code, Symbol, Meaning, Default
+       :widths: 14, 12, 58, 10
+
+       "``pm``", ":math:`p_m`", "mechanical power (private algebraic) [p.u.]", ""
+       "``Pref``", ":math:`P_{ref}`", "mechanical-power setpoint (set by the initialization)", ""
     """
 
     def states(self) -> List[str]:

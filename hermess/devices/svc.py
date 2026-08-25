@@ -41,6 +41,16 @@
 # voltage at the regulated bus. B carries limits (B_min/B_max from the SVC
 # Mvar range) enforced by the simulator's limiter loop when incl_lim=True.
 
+"""Static var compensator device model.
+
+Selected in a system file by its class name in the first column (see
+:class:`SVC`). Implements the SVC of the simplified 14-generator South East
+Australian benchmark (Gibbard and Vowles 2014, Appendix I.2.3, Fig. 22): a
+continuously controlled shunt susceptance regulated by an integrator voltage
+controller with a Q/V droop. The class documents its equations and a table
+mapping the code parameter names to the mathematical symbols used there.
+"""
+
 from __future__ import annotations
 from typing import TYPE_CHECKING
 
@@ -55,32 +65,67 @@ sqrt = np.sqrt
 
 
 class SVC(DeviceRect):
-    r"""Static Var Compensator: voltage-regulated shunt susceptance.
+    r"""Static var compensator: a voltage-regulated shunt susceptance
+    (Gibbard and Vowles 2014, Appendix I.2.3, Fig. 22, converted from the SVC
+    Mvar base to the system base).
 
-    Parameters
-    ----------
-    KA : float
-        Integrator gain of the voltage regulator [pu B (system base) / s / pu V].
-    Kd : float
-        Q/Vt droop gain [pu V / pu Q (system base)].
-    Td : float
-        Thyristor-control lag time constant [s].
-    B_min, B_max : float
-        Susceptance limits in pu on the system base (from the SVC Mvar range
-        at 1.0 pu voltage).
+    Selected in a system file by its class name in the first column, e.g.
+    ``SVC, idx = "ASVC_2", bus = "205", KA = 500, q = -68.3``.
 
-    Setpoints (closed-form finit)
-    -----------------------------
-    Vref : voltage reference of the regulator [pu].
-    Bref : initial Q/Vt operating point anchoring the droop [pu].
+    **Model.** Integrator voltage regulator with a droop on the deviation of
+    :math:`Q/V_t = B V_t` from its initial operating point, a thyristor-control
+    lag, and the shunt current injection (load convention):
 
-    Initialization is sequential (closed-form): SVC buses typically also carry
-    loads, and a joint Newton solve would attribute the whole bus current to this
-    device. The initial reactive output ``q`` [Mvar] is a device input (the
-    loadflow result at the SVC bus, e.g. Table 9 of the SEA benchmark), from which
-    B₀ = (q/Sb)/V₀², xB₀ = B₀/2.5, Vref = V₀ and Bref = B₀·V₀ follow directly.
-    Consistency with the actual power flow is verified by the standard
-    zero-residual initialization check.
+    .. math::
+
+       e &= V_{ref} - V_t - K_d \left( B V_t - B_{ref} \right) \\
+       \dot{x}_B &= K_A \, e \\
+       T_d \, \dot{B} &= 2.5 \, x_B - B \\
+       \bar{i} &= \mathrm{j} B \bar{v}_n
+       \quad\Longleftrightarrow\quad
+       i_{re} = -B v_{n,im}, \;\; i_{im} = B v_{n,re}
+
+    with :math:`V_t = |\bar{v}_n|` the bus-voltage magnitude and :math:`B` the
+    susceptance in p.u. on the system base (:math:`B > 0` injects
+    :math:`Q = B V_t^2`). The factor 2.5 is the fixed gain of the published
+    thyristor block. With ``incl_lim`` the limiter loop enforces
+    :math:`B^{min} \le B \le B^{max}`.
+
+    **Initialization** is sequential (closed form): the initial reactive output
+    ``q`` [Mvar] is a device input (the loadflow result at the SVC bus, e.g.
+    Table 9 of the SEA benchmark), from which
+
+    .. math::
+
+       B_0 = \frac{q / S_b}{V_0^2}, \qquad x_{B,0} = \frac{B_0}{2.5}, \qquad
+       V_{ref} = V_0, \qquad B_{ref} = B_0 V_0 .
+
+    SVC buses typically also carry loads, and a joint Newton solve would
+    attribute the whole bus current to this device; the SVC therefore removes
+    its share of the bus current from the initialization residual, so
+    co-located devices calibrate themselves from the remaining injection
+    (SVC entries must precede those devices in the system file). Consistency
+    with the power flow is verified by the zero-residual initialization check.
+
+    **Symbols.**
+
+    .. csv-table::
+       :header: Code, Symbol, Meaning, Default
+       :widths: 14, 12, 58, 10
+
+       "``KA``", ":math:`K_A`", "voltage-regulator integrator gain [p.u. B / s / p.u. V]", "500"
+       "``Kd``", ":math:`K_d`", "Q/V droop gain [p.u. V / p.u. Q]", "0.01"
+       "``Td``", ":math:`T_d`", "thyristor-control lag time constant [s]", "0.005"
+       "``B_min`` / ``B_max``", ":math:`B^{min,max}`", "susceptance limits, system base (with ``incl_lim``)", "-10 / 10"
+       "``q``", ":math:`q`", "initial reactive output from the loadflow [Mvar]", "0"
+       "``xB``", ":math:`x_B`", "regulator integrator state [p.u.]", ""
+       "``B``", ":math:`B`", "shunt susceptance (state) [p.u.]", ""
+       "``Vref``", ":math:`V_{ref}`", "voltage reference (set to :math:`V_0` by the initialization)", ""
+       "``Bref``", ":math:`B_{ref}`", "droop anchor (set to :math:`B_0 V_0` by the initialization)", ""
+       "``Sn``", ":math:`S_n`", "rated power (inherited device rating) [MVA]", "100"
+       "``Vn``", ":math:`V_n`", "rated voltage (inherited device rating) [kV]", "220"
+       "``fn``", ":math:`f_n`", "nominal frequency (inherited device rating) [Hz]", "50"
+       "``u``", ":math:`u`", "connection status (inherited device flag)", "True"
     """
 
     _init_method = "sequential"

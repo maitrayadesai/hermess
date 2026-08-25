@@ -16,6 +16,21 @@
 # (https://doi.org/10.5905/ethz-1007-842); dynamic state estimation removed.
 # For inquiries, contact: mdesai@ethz.ch
 
+"""Automatic voltage regulator (exciter) strategies for synchronous machines.
+
+An AVR is selected on the machine line of a system file, e.g.
+``avr = "SEXST"``; the names accepted at any moment are returned by
+``hermess.registered("avr")``. Every model below documents its differential
+(and, where applicable, algebraic) equations and a table mapping the code
+parameter names to the mathematical symbols used in those equations.
+
+Common to all models: :math:`V_t = |\bar{v}_n|` is the machine
+terminal-voltage magnitude, :math:`V_s` the power-system-stabilizer signal
+(0 when no PSS is attached), :math:`V_{ref}` the voltage setpoint computed by
+the initialization, and :math:`E_{fd}` the field voltage consumed by the
+machine's electromagnetic equations.
+"""
+
 from __future__ import annotations
 from typing import TYPE_CHECKING, Dict, List
 from abc import ABC, abstractmethod
@@ -104,10 +119,41 @@ class AVR(ABC):
 
 
 class IEEEDC1A(AVR):
-    """IEEEDC1A exciter and AVR model as presented in Power System Dynamics
-    and Stability by P.W. Sauer and M.A. Pai, 2006. (page 100)
+    r"""IEEE DC1A rotating exciter with stabilizing rate feedback
+    (P. W. Sauer and M. A. Pai, *Power System Dynamics and Stability*, p. 100).
 
-    States: Efd, Rf, Vr  (3 states)
+    Selected on a machine line with ``avr = "IEEEDC1A"``.
+
+    **Model.**
+
+    .. math::
+
+       T_E \, \dot{E}_{fd} &= -K_E \, E_{fd} + V_r \\
+       T_F \, \dot{R}_f &= -R_f + \frac{K_F}{T_F} E_{fd} \\
+       T_A \, \dot{V}_r &= -V_r + K_A \Bigl( R_f - \frac{K_F}{T_F} E_{fd}
+                            + V_{ref} - V_t + V_s \Bigr)
+
+    with :math:`V_t = |\bar{v}_n|` and :math:`V_s` the stabilizer signal. With
+    ``incl_lim`` the :math:`V_r` equation is multiplied by the anti-windup
+    switch that freezes the regulator at :math:`V_r^{max,min}`.
+
+    **Symbols.**
+
+    .. csv-table::
+       :header: Code, Symbol, Meaning, Default
+       :widths: 14, 12, 58, 10
+
+       "``KA``", ":math:`K_A`", "voltage regulator gain", "200"
+       "``TA``", ":math:`T_A`", "voltage regulator time constant [s]", "0.015"
+       "``KF``", ":math:`K_F`", "rate-feedback (stabilizer) gain", "1"
+       "``TF``", ":math:`T_F`", "rate-feedback time constant [s]", "0.1"
+       "``KE``", ":math:`K_E`", "exciter field constant (no saturation)", "1"
+       "``TE``", ":math:`T_E`", "exciter time constant [s]", "0.04"
+       "``Vr_max`` / ``Vr_min``", ":math:`V_r^{max,min}`", "regulator limits (with ``incl_lim``)", "5 / 0"
+       "``Efd``", ":math:`E_{fd}`", "field voltage (state) [p.u.]", ""
+       "``Rf``", ":math:`R_f`", "rate-feedback state [p.u.]", ""
+       "``Vr``", ":math:`V_r`", "pilot-exciter (regulator) voltage (state) [p.u.]", ""
+       "``Vf_ref``", ":math:`V_{ref}`", "voltage setpoint (set by the initialization)", ""
     """
 
     def states(self) -> List[str]:
@@ -176,8 +222,43 @@ class IEEEDC1A(AVR):
 
 
 class AVRKundur_Filter(AVR):
-    """AVR model used in Kundur's book (Power System Stability and Control, 1994)
-    for the 2-area system. A filter is added to the AVR output to prevent unrealistic fast dynamics and improve numerical stability.
+    r""":class:`AVRKundur` with an additional first-order filter on the exciter
+    output, which removes the algebraic feedthrough (all states differential)
+    and damps unrealistically fast dynamics.
+
+    Selected on a machine line with ``avr = "AVRKundur_Filter"``.
+
+    **Model.**
+
+    .. math::
+
+       T_R \, \dot{V}_{tr} &= -V_{tr} + V_t \\
+       T_B \, \dot{V}_l &= -V_l + K_A \, e \\
+       T_{fd} \, \dot{E}_{fd} &= -E_{fd} + V_l
+            + \frac{T_A}{T_B} \left( K_A \, e - V_l \right)
+
+    with the error :math:`e = V_{ref} - V_{tr} + V_s`,
+    :math:`V_t = |\bar{v}_n|`, and :math:`V_s` the stabilizer signal. The
+    first two lines are the transducer and the lag pole of the lead-lag; the
+    third passes the lead-lag output (lag state plus feedthrough
+    :math:`T_A/T_B`) through the output filter :math:`T_{fd}`.
+
+    **Symbols.**
+
+    .. csv-table::
+       :header: Code, Symbol, Meaning, Default
+       :widths: 14, 12, 58, 10
+
+       "``KA``", ":math:`K_A`", "voltage regulator gain", "200"
+       "``TA``", ":math:`T_A`", "lead time constant [s]", "1"
+       "``TB``", ":math:`T_B`", "lag time constant [s]", "10"
+       "``TR``", ":math:`T_R`", "transducer time constant [s]", "0.01"
+       "``Tfd``", ":math:`T_{fd}`", "exciter output filter time constant [s]", "0.01"
+       "``Efd_max`` / ``Efd_min``", ":math:`E_{fd}^{max,min}`", "field-voltage limits (with ``incl_lim``)", "5 / 0"
+       "``Efd``", ":math:`E_{fd}`", "field voltage (state) [p.u.]", ""
+       "``Vl``", ":math:`V_l`", "lag-pole state [p.u.]", ""
+       "``Vtr``", ":math:`V_{tr}`", "transducer state [p.u.]", ""
+       "``Vf_ref``", ":math:`V_{ref}`", "voltage setpoint (set by the initialization)", ""
     """
 
     def states(self) -> List[str]:
@@ -255,27 +336,46 @@ class AVRKundur_Filter(AVR):
 
 
 class AVRKundur(AVR):
-    r"""Kundur 2-area AVR as a transducer + lead-lag, with the field voltage
-    'Efd' declared as a device-private ALGEBRAIC variable.
+    r"""Kundur two-area AVR: transducer plus lead-lag (transient gain
+    reduction), with the field voltage as an algebraic output
+    (Kundur, *Power System Stability and Control*, 1994, two-area example).
 
-    The lead-lag
+    Selected on a machine line with ``avr = "AVRKundur"``.
 
-        Efd = KA * (1 + s*TA) / (1 + s*TB) * (Vf_ref - Vtr)
-
+    **Model.** The lead-lag
+    :math:`E_{fd} = K_A \frac{1 + s T_A}{1 + s T_B} (V_{ref} - V_{tr} + V_s)`
     is proper but not strictly proper, so its output has a direct feedthrough
-    and is genuinely algebraic. It is realized as one lag-pole state ``Vl`` plus
-    the algebraic output:
+    and is genuinely algebraic. It is realized as one lag-pole state
+    :math:`V_l` plus the algebraic output:
 
-        Vtr_dot = (1/TR) (-Vtr + |V|)                            # transducer
-        Vl_dot  = (1/TB) (-Vl + KA (Vf_ref - Vtr))               # lag pole state
-        0       = -Efd + Vl (1 - TA/TB) + (TA/TB) KA (Vf_ref - Vtr)   # Efd algebraic
+    .. math::
 
-    The third line is the lead feedthrough ``D = TA/TB``;
-    ``Vl(1-TA/TB) + (TA/TB)KA(Vf_ref-Vtr) = KA(1+sTA)/(1+sTB)(Vf_ref-Vtr)``.
+       T_R \, \dot{V}_{tr} &= -V_{tr} + V_t \\
+       T_B \, \dot{V}_l &= -V_l + K_A \left( V_{ref} - V_{tr} + V_s \right) \\
+       0 &= -E_{fd} + \Bigl(1 - \frac{T_A}{T_B}\Bigr) V_l
+            + \frac{T_A}{T_B} K_A \left( V_{ref} - V_{tr} + V_s \right)
 
-    'Efd' is exposed via :meth:`algebs` (not :meth:`states`) and rides the
-    device-private-algebraic mechanism; the host reads it through
+    with :math:`V_t = |\bar{v}_n|` and :math:`V_s` the stabilizer signal. The
+    third line is the lead feedthrough :math:`D = T_A/T_B`. ``Efd`` is exposed
+    via :meth:`algebs` (not :meth:`states`) and rides the
+    device-private-algebraic mechanism; the host machine reads it through
     ``Synchronous.var_sym('Efd')``.
+
+    **Symbols.**
+
+    .. csv-table::
+       :header: Code, Symbol, Meaning, Default
+       :widths: 14, 12, 58, 10
+
+       "``KA``", ":math:`K_A`", "voltage regulator gain", "200"
+       "``TA``", ":math:`T_A`", "lead time constant [s]", "1"
+       "``TB``", ":math:`T_B`", "lag time constant [s]", "10"
+       "``TR``", ":math:`T_R`", "transducer time constant [s]", "0.01"
+       "``Efd_max`` / ``Efd_min``", ":math:`E_{fd}^{max,min}`", "field-voltage limits (with ``incl_lim``)", "5 / 0"
+       "``Vl``", ":math:`V_l`", "lag-pole state [p.u.]", ""
+       "``Vtr``", ":math:`V_{tr}`", "transducer state [p.u.]", ""
+       "``Efd``", ":math:`E_{fd}`", "field voltage (private algebraic) [p.u.]", ""
+       "``Vf_ref``", ":math:`V_{ref}`", "voltage setpoint (set by the initialization)", ""
     """
 
     def states(self) -> List[str]:
@@ -346,21 +446,37 @@ class AVRKundur(AVR):
 
 
 class AVRKundur_NoTGR(AVR):
-    r"""AVRKundur with the transient gain reduction (the lead-lag
-    ``(1+sTA)/(1+sTB)``) removed: a plain high-gain static exciter with only a
-    terminal-voltage transducer.
+    r""":class:`AVRKundur` with the transient gain reduction removed: a plain
+    high-gain static exciter with only a terminal-voltage transducer.
 
-        Efd = KA * (Vf_ref - Vtr),   Vtr = Vt / (1 + s*TR)
+    Selected on a machine line with ``avr = "AVRKundur_NoTGR"``.
 
-    States: ``Vtr`` (transducer). ``Efd`` is the algebraic output
-    ``KA*(Vf_ref - Vtr)``, an instantaneous gain on the transduced error, so it
-    is declared as a private algebraic (read by the machine via
-    ``Synchronous.var_sym('Efd')``). Parameters: ``KA``, ``TR``.
+    **Model.**
 
-    With a high ``KA`` and no TGR this exciter reduces the damping of the
-    electromechanical modes, the classic setting in which a power system
-    stabilizer (PSS) is needed to restore damping. The PSS signal enters at the
-    summing junction via ``host.pss_signal(dae)`` (0 when no PSS is attached).
+    .. math::
+
+       T_R \, \dot{V}_{tr} &= -V_{tr} + V_t \\
+       0 &= -E_{fd} + K_A \left( V_{ref} - V_{tr} + V_s \right)
+
+    with :math:`V_t = |\bar{v}_n|` and :math:`V_s` the stabilizer signal.
+    :math:`E_{fd}` is an instantaneous gain on the transduced error, hence a
+    private algebraic (read by the machine via ``Synchronous.var_sym('Efd')``).
+    With a high :math:`K_A` and no transient gain reduction this exciter
+    reduces the damping of the electromechanical modes, the classic setting in
+    which a power system stabilizer is needed to restore damping.
+
+    **Symbols.**
+
+    .. csv-table::
+       :header: Code, Symbol, Meaning, Default
+       :widths: 14, 12, 58, 10
+
+       "``KA``", ":math:`K_A`", "voltage regulator gain", "200"
+       "``TR``", ":math:`T_R`", "transducer time constant [s]", "0.02"
+       "``Efd_max`` / ``Efd_min``", ":math:`E_{fd}^{max,min}`", "field-voltage limits (with ``incl_lim``)", "5 / 0"
+       "``Vtr``", ":math:`V_{tr}`", "transducer state [p.u.]", ""
+       "``Efd``", ":math:`E_{fd}`", "field voltage (private algebraic) [p.u.]", ""
+       "``Vf_ref``", ":math:`V_{ref}`", "voltage setpoint (set by the initialization)", ""
     """
 
     def states(self) -> List[str]:
@@ -418,15 +534,41 @@ class AVRKundur_NoTGR(AVR):
 
 
 class AVRKundur_ODE(AVR):
-    r"""AVR model used in Kundur's book (Power System Stability and Control, 1994)
-    for the 2-area system example with transient gain reduction.
+    r"""All-ODE realization of the Kundur two-area AVR (transducer plus
+    lead-lag with transient gain reduction), with the lead realized through the
+    derivative of the measurement so that :math:`E_{fd}` stays a differential
+    state.
 
-    All-ODE realization of the transducer + lead-lag controller: loop transfer
-    function ``KA (1+sTA)/(1+sTB)`` on the error ``e = Vf_ref - Vtr`` with DC gain
-    ``KA``, realizing the lead as a derivative of the measurement. States are
-    ``Efd, Vtr`` (``Efd`` is a differential state via the ``TB`` lag). The
-    setpoint-derivative term ``KA*TA*dVf_ref/dt`` is omitted; it is zero for a
-    constant ``Vf_ref``.
+    Selected on a machine line with ``avr = "AVRKundur_ODE"``.
+
+    **Model.**
+
+    .. math::
+
+       T_R \, \dot{V}_{tr} &= -V_{tr} + V_t \\
+       T_B \, \dot{E}_{fd} &= -E_{fd}
+          + K_A \left( V_{ref} - V_{tr} + V_s \right)
+          - K_A T_A \, \dot{V}_{tr}
+
+    with :math:`V_t = |\bar{v}_n|`, :math:`V_s` the stabilizer signal, and
+    :math:`\dot{V}_{tr} = (V_t - V_{tr})/T_R` substituted symbolically. The
+    setpoint-derivative term :math:`K_A T_A \dot{V}_{ref}` is omitted; it is
+    zero for a constant setpoint.
+
+    **Symbols.**
+
+    .. csv-table::
+       :header: Code, Symbol, Meaning, Default
+       :widths: 14, 12, 58, 10
+
+       "``KA``", ":math:`K_A`", "voltage regulator gain", "200"
+       "``TA``", ":math:`T_A`", "lead time constant [s]", "0.015"
+       "``TB``", ":math:`T_B`", "lag time constant [s]", "0.02"
+       "``TR``", ":math:`T_R`", "transducer time constant [s]", "0.01"
+       "``Efd_max`` / ``Efd_min``", ":math:`E_{fd}^{max,min}`", "field-voltage limits (with ``incl_lim``)", "5 / 0"
+       "``Efd``", ":math:`E_{fd}`", "field voltage (state) [p.u.]", ""
+       "``Vtr``", ":math:`V_{tr}`", "transducer state [p.u.]", ""
+       "``Vf_ref``", ":math:`V_{ref}`", "voltage setpoint (set by the initialization)", ""
     """
 
     def states(self) -> List[str]:
@@ -492,8 +634,30 @@ class AVRKundur_ODE(AVR):
 
 
 class SEXST(AVR):
-    """AVR model used in Kundur's book (Power System Stability and Control, 1994)
-    for the 2-area system example with transient gain reduction.
+    r"""Simplified static exciter: a single first-order lag on the voltage error.
+
+    Selected on a machine line with ``avr = "SEXST"``.
+
+    **Model.**
+
+    .. math::
+
+       T_E \, \dot{E}_{fd} = -E_{fd} + K_A \left( V_{ref} - V_t + V_s \right)
+
+    with :math:`V_t = |\bar{v}_n|` the terminal-voltage magnitude and
+    :math:`V_s` the stabilizer signal (0 when no PSS is attached).
+
+    **Symbols.**
+
+    .. csv-table::
+       :header: Code, Symbol, Meaning, Default
+       :widths: 14, 12, 58, 10
+
+       "``KA``", ":math:`K_A`", "voltage regulator gain", "200"
+       "``TE``", ":math:`T_E`", "exciter time constant [s]", "0.1"
+       "``Efd_max`` / ``Efd_min``", ":math:`E_{fd}^{max,min}`", "field-voltage limits (with ``incl_lim``)", "5 / 0"
+       "``Efd``", ":math:`E_{fd}`", "field voltage (state) [p.u.]", ""
+       "``Vf_ref``", ":math:`V_{ref}`", "voltage setpoint (set by the initialization)", ""
     """
 
     def states(self) -> List[str]:
@@ -545,21 +709,49 @@ class SEXST(AVR):
 
 
 class AVRST1A(AVR):
-    """IEEE Std 421.5 ST1A static exciter (small-signal form, no limits).
+    r"""IEEE Std 421.5 ST1A static exciter (small-signal form, no limits), as
+    used by the 14-generator South East Australian benchmark
+    (Gibbard and Vowles 2014, Fig. 20, Tables 16 and 26).
 
-    As used by the 14-generator South East Australian benchmark
-    (Gibbard & Vowles 2014, Fig. 20 / Tables 16 and 26):
+    Selected on a machine line with ``avr = "AVRST1A"``.
 
-        Vc   = Vt / (1 + s·Tr)                     (transducer)
-        y1   = (1 + s·TC)/(1 + s·TB)  · (Vf_ref − Vc + Vs)
-        y2   = (1 + s·TC1)/(1 + s·TB1) · y1        (second lead-lag)
-        Efd  = KA/(1 + s·TA) · y2
+    **Model.** Transducer, two lead-lags (each realized as a lag state plus
+    direct feedthrough), and the regulator lag:
 
-    Lead-lags are realized as a lag state plus direct feedthrough, so TB and
-    TB1 must be > 0; a unity block is obtained exactly with TC == TB (and the
-    SEA build uses a tiny equal pair when the data gives 0/0). Tr = 0 in the
-    data is approximated by a small transducer lag (1e-4 s, a parasitic pole
-    at 10⁴ rad/s, far above the rotor-mode range).
+    .. math::
+
+       T_r \, \dot{V}_{tr} &= V_t - V_{tr}, \qquad
+           e = V_{ref} - V_{tr} + V_s \\
+       T_B \, \dot{V}_{ll1} &= e - V_{ll1}, \qquad
+           y_1 = \Bigl(1 - \frac{T_C}{T_B}\Bigr) V_{ll1} + \frac{T_C}{T_B}\, e \\
+       T_{B1} \, \dot{V}_{ll2} &= y_1 - V_{ll2}, \qquad
+           y_2 = \Bigl(1 - \frac{T_{C1}}{T_{B1}}\Bigr) V_{ll2} + \frac{T_{C1}}{T_{B1}}\, y_1 \\
+       T_A \, \dot{E}_{fd} &= K_A \, y_2 - E_{fd}
+
+    with :math:`V_t = |\bar{v}_n|` and :math:`V_s` the stabilizer signal.
+    :math:`T_B` and :math:`T_{B1}` must be positive; a unity block is obtained
+    exactly with :math:`T_C = T_B`, and a transducer given as :math:`T_r = 0`
+    in the data is approximated by a small lag (:math:`10^{-4}` s, a parasitic
+    pole far above the rotor-mode range).
+
+    **Symbols.**
+
+    .. csv-table::
+       :header: Code, Symbol, Meaning, Default
+       :widths: 14, 12, 58, 10
+
+       "``KA``", ":math:`K_A`", "regulator gain", "300"
+       "``TA``", ":math:`T_A`", "regulator time constant [s]", "0.05"
+       "``Tr``", ":math:`T_r`", "voltage transducer time constant [s]", "1e-4"
+       "``TB``", ":math:`T_B`", "first lead-lag denominator time constant [s]", "1"
+       "``TC``", ":math:`T_C`", "first lead-lag numerator time constant [s]", "1"
+       "``TB1``", ":math:`T_{B1}`", "second lead-lag denominator time constant [s]", "1e-4"
+       "``TC1``", ":math:`T_{C1}`", "second lead-lag numerator time constant [s]", "1e-4"
+       "``Vtr``", ":math:`V_{tr}`", "transducer state [p.u.]", ""
+       "``Vll1``", ":math:`V_{ll1}`", "first lead-lag lag state [p.u.]", ""
+       "``Vll2``", ":math:`V_{ll2}`", "second lead-lag lag state [p.u.]", ""
+       "``Efd``", ":math:`E_{fd}`", "field voltage (state) [p.u.]", ""
+       "``Vf_ref``", ":math:`V_{ref}`", "voltage setpoint (set by the initialization)", ""
     """
 
     def states(self) -> List[str]:
@@ -619,18 +811,43 @@ class AVRST1A(AVR):
 
 
 class AVRAC1A(AVR):
-    """IEEE Std 421.5 AC1A exciter (small-signal form, no limits/saturation).
+    r"""IEEE Std 421.5 AC1A exciter (small-signal form, no limits or
+    saturation), as used by the 14-generator South East Australian benchmark
+    (Gibbard and Vowles 2014, Fig. 21, Tables 16 and 27). Exciter saturation,
+    armature reaction and rectifier regulation are neglected
+    (:math:`K_C = K_D = 0`), and the lead-lag is unity.
 
-    As used by the 14-generator South East Australian benchmark
-    (Gibbard & Vowles 2014, Fig. 21 / Tables 16 and 27); exciter saturation,
-    armature reaction and rectifier regulation are neglected (KC = KD = 0),
-    and the lead-lag is unity (TB = TC = 0 in the data):
+    Selected on a machine line with ``avr = "AVRAC1A"``.
 
-        Vf   = s·KF/(1 + s·TF) · Efd               (rate feedback)
-        Vr   = KA/(1 + s·TA) · (Vf_ref − Vt + Vs − Vf)
-        TE · dEfd/dt = Vr − KE·Efd                 (rotating exciter)
+    **Model.** Washout realization of the rate feedback
+    :math:`s K_F/(1 + s T_F)`, regulator lag, and rotating exciter:
 
-    The data has Tr = 0, so the terminal voltage is used unfiltered.
+    .. math::
+
+       V_f &= \frac{K_F}{T_F} E_{fd} - V_{fb}, \qquad
+           T_F \, \dot{V}_{fb} = V_f \\
+       T_A \, \dot{V}_r &= K_A \left( V_{ref} - V_t + V_s - V_f \right) - V_r \\
+       T_E \, \dot{E}_{fd} &= V_r - K_E \, E_{fd}
+
+    with :math:`V_t = |\bar{v}_n|` (unfiltered; the benchmark data has
+    :math:`T_r = 0`) and :math:`V_s` the stabilizer signal.
+
+    **Symbols.**
+
+    .. csv-table::
+       :header: Code, Symbol, Meaning, Default
+       :widths: 14, 12, 58, 10
+
+       "``KA``", ":math:`K_A`", "regulator gain", "400"
+       "``TA``", ":math:`T_A`", "regulator time constant [s]", "0.02"
+       "``KE``", ":math:`K_E`", "exciter constant", "1"
+       "``TE``", ":math:`T_E`", "exciter time constant [s]", "1"
+       "``KF``", ":math:`K_F`", "rate feedback gain", "0.03"
+       "``TF``", ":math:`T_F`", "rate feedback time constant [s]", "1"
+       "``Vr``", ":math:`V_r`", "regulator output (state) [p.u.]", ""
+       "``Efd``", ":math:`E_{fd}`", "field voltage (state) [p.u.]", ""
+       "``Vfb``", ":math:`V_{fb}`", "rate-feedback filter state [p.u.]", ""
+       "``Vf_ref``", ":math:`V_{ref}`", "voltage setpoint (set by the initialization)", ""
     """
 
     def states(self) -> List[str]:
