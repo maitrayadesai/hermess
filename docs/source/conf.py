@@ -46,6 +46,9 @@ autoapi_type = "python"
 autoapi_dirs = ["../../hermess"]
 # Hide methods, attributes, and functions by limiting the depth
 autoapi_depth = 2  # Show modules and classes only, no deeper levels
+# The test suite, the system-file folders and the benchmarks are not part of the
+# public API; keeping them out leaves a reference to the modules a user calls.
+autoapi_ignore = ["*/tests/*", "*/systems/*", "*/benchmarks/*"]
 autoapi_keep_files = True  # Optional: keeps generated files in 'autoapi'
 
 # Optional: customize the output for the tree (e.g., you might want to adjust this)

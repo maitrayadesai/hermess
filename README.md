@@ -4,6 +4,12 @@
 
 *Hybrid EMT/RMS Modern Electric power System Simulator*
 
+[![docs](https://img.shields.io/badge/docs-hermess-215CAF)](https://maitrayadesai.github.io/hermess/)
+[![tests](https://github.com/maitrayadesai/hermess/actions/workflows/ci.yml/badge.svg)](https://github.com/maitrayadesai/hermess/actions/workflows/ci.yml)
+[![license: GPL v3+](https://img.shields.io/badge/license-GPL--3.0--or--later-B7352D)](LICENSE.txt)
+
+**[Documentation](https://maitrayadesai.github.io/hermess/)**
+
 </div>
 
 ---
@@ -90,7 +96,7 @@ hermess.registered("angle")         # what can be selected today
 
 ## Examples
 
-You can check out the available examples in the `./examples` directory to get started.
+You can check out the available examples in the `./examples` directory to get started, and the [documentation](https://maitrayadesai.github.io/hermess/) for the full usage guide and API reference.
 
 ## Important Notes
 
