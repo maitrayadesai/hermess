@@ -1,0 +1,3 @@
+# Trip line 101-102 at t = 1 s: the BranchTrip("BUS 1-BUS 2") of the
+# reference run.
+Disturbance, time = 1.0, type = "OPEN_LINE", bus_i = "101", bus_j = "102"

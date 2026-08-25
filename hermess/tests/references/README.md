@@ -12,14 +12,20 @@ table is `docs/source/validation.rst`.
 
 ```
 references/
-└── andes/                     reference tool: ANDES (pip install andes, GPL)
-    ├── _common.py             shared builder for the ANDES twin systems
-    └── <case>/                one folder per validated model
-        ├── system/            the hermess system (sim_param.txt + sim_dist.txt)
-        ├── generate.py        the script that produced the reference
-        ├── reference.csv      trajectory on the comparison grid (committed)
-        ├── reference_meta.json  versions, initial states, eigenvalues (committed)
-        └── case.json          comparison spec: state maps and tolerances
+├── andes/                     reference tool: ANDES (pip install andes, GPL)
+│   ├── _common.py             shared builder for the ANDES twin systems
+│   └── <case>/                one folder per validated model
+│       ├── system/            the hermess system (sim_param.txt + sim_dist.txt)
+│       ├── generate.py        the script that produced the reference
+│       ├── reference.csv      trajectory on the comparison grid (committed)
+│       ├── reference_meta.json  versions, initial states, eigenvalues (committed)
+│       └── case.json          comparison spec: state maps and tolerances
+└── psse/                      reference tool: PSS/E (trajectories from the
+    ├── README.md              PSID benchmark set; provenance and the
+    └── <case>/                compatibility table live in its README)
+        ├── system/            the hermess transcription of the upstream case
+        ├── upstream/          verbatim PSID files: .raw, .dyr, CSV, LICENSE
+        └── case.json          comparison spec, tolerances, checksums
 ```
 
 Adding a model = adding a folder: the test module discovers every folder with

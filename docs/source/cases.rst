@@ -113,6 +113,18 @@ The GENROU pair with the SEXST exciter and the Kundur speed-input stabilizer:
 the cross-tool validation case for PSSKundur (see :ref:`validation`).
 Disturbance: a line opening, whose rotor swings exercise the stabilizer path.
 
+.. _3bus_genrou_psse:
+
+``3bus_genrou_psse``
+^^^^^^^^^^^^^^^^^^^^
+
+The three-bus PSS/E benchmark system (60 Hz): an infinite bus, one
+saturation-free GENROU, and a constant-impedance load, transcribed from the
+``ThreeBusMulti`` case of the PowerSimulationsDynamics.jl benchmark set. The
+cross-tool validation case against a PSS/E-produced trajectory (see
+:ref:`validation`); run it with ``fn=60`` and ``T_end=20``. Disturbance: a
+line opening.
+
 .. _kundur:
 
 ``kundur``

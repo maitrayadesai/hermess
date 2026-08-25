@@ -37,6 +37,13 @@ ANDES itself is NOT needed here: the tests read the committed CSV/JSON.
 Regeneration is a deliberate act (see ``references/README.md``). Every
 assertion message reports the achieved error next to the tolerance so a future
 tightening is informed by data.
+
+A second family under ``references/psse/`` compares against trajectories that
+PSS/E produced (the benchmark data of PowerSimulationsDynamics.jl, committed
+there with provenance; see ``references/psse/README.md``). Those references
+pin only the rotor-angle channel, so the PSS/E cases assert the initialized
+rotor angle and its trajectory; the PSS/E channel grid drifts slightly off
+the 5 ms step, so the reference is interpolated on its own time column.
 """
 
 import json
@@ -49,8 +56,46 @@ from hermess.config import config
 from hermess.run import run
 
 REFERENCE_ROOT = Path(__file__).parent / "references" / "andes"
+PSSE_ROOT = Path(__file__).parent / "references" / "psse"
 
 CASES = sorted(p.name for p in REFERENCE_ROOT.iterdir() if (p / "case.json").is_file())
+PSSE_CASES = sorted(
+    p.name for p in PSSE_ROOT.iterdir() if (p / "case.json").is_file()
+)
+
+# The shared run configuration of every reference case; a case.json may carry
+# a "config" dict of overrides (the PSS/E cases run at 60 Hz over 20 s).
+BASE_CONFIG = dict(
+    testsystemfile="system",
+    omega_mode="nom",
+    fn=50,
+    Sb=100,
+    ts=0.005,
+    T_start=0.0,
+    T_end=10.0,
+    int_scheme_sim="idas",
+    int_scheme_sim_options={
+        "abstol": 1e-9,
+        "reltol": 1e-9,
+        "max_num_steps": 100000,
+    },
+    plot=False,
+    plot_voltage=False,
+    plot_diff=False,
+    log_level="WARNING",
+    incl_lim=False,
+    line_dyn=False,
+    skip_disturance=False,
+    debug_check_init=False,
+    print_power_flow=False,
+    small_signal_analysis=True,
+    small_signal_figures=False,
+)
+
+
+def _run_hermess(case_dir: Path, overrides: dict):
+    cfg = config.updated(**{**BASE_CONFIG, **overrides, "system_root": case_dir})
+    return run(cfg)
 
 
 def _load_case(name: str):
@@ -69,35 +114,28 @@ def reference_runs():
     def _get(name: str):
         if name not in runs:
             case_dir, spec, meta, csv = _load_case(name)
-            cfg = config.updated(
-                testsystemfile="system",
-                system_root=case_dir,
-                omega_mode="nom",
-                fn=50,
-                Sb=100,
-                ts=0.005,
-                T_start=0.0,
-                T_end=10.0,
-                int_scheme_sim="idas",
-                int_scheme_sim_options={
-                    "abstol": 1e-9,
-                    "reltol": 1e-9,
-                    "max_num_steps": 100000,
-                },
-                plot=False,
-                plot_voltage=False,
-                plot_diff=False,
-                log_level="WARNING",
-                incl_lim=False,
-                line_dyn=False,
-                skip_disturance=False,
-                debug_check_init=False,
-                print_power_flow=False,
-                small_signal_analysis=True,
-                small_signal_figures=False,
-            )
-            sim = run(cfg)
+            sim = _run_hermess(case_dir, spec.get("config", {}))
             runs[name] = (sim, spec, meta, csv)
+        return runs[name]
+
+    return _get
+
+
+@pytest.fixture(scope="module")
+def psse_runs():
+    """Run each PSS/E-family hermess case once; both checks share the run."""
+    runs: dict = {}
+
+    def _get(name: str):
+        if name not in runs:
+            case_dir = PSSE_ROOT / name
+            spec = json.loads((case_dir / "case.json").read_text())
+            raw = np.loadtxt(case_dir / spec["reference_csv"], delimiter=",")
+            t_ref, delta_ref = raw[:, 0], raw[:, 1]
+            if spec.get("delta_unit") == "degrees":
+                delta_ref = np.deg2rad(delta_ref)
+            sim = _run_hermess(case_dir, spec.get("config", {}))
+            runs[name] = (sim, spec, t_ref, delta_ref)
         return runs[name]
 
     return _get
@@ -244,4 +282,31 @@ def test_trajectories_match_reference(case, reference_runs):
         f"{case}: trajectory differs from ANDES beyond tolerance: "
         + ", ".join(f"{k} {e:.3e} > {tol:.0e}" for k, (e, tol) in failed.items())
         + f"; all achieved errors: {achieved}"
+    )
+
+
+@pytest.mark.parametrize("case", PSSE_CASES)
+def test_psse_initial_rotor_angle_matches_reference(case, psse_runs):
+    sim, spec, _t_ref, delta_ref = psse_runs(case)
+    sg, _gens = _machine(sim)
+    tol = spec["tolerances"]["delta_init"]
+    err = abs(float(sg.xinit["delta"][0]) - float(delta_ref[0]))
+    assert err <= tol, (
+        f"psse/{case}: initialized rotor angle differs from PSS/E by "
+        f"{err:.3e} rad (tolerance {tol:.0e})"
+    )
+
+
+@pytest.mark.parametrize("case", PSSE_CASES)
+def test_psse_rotor_angle_trajectory_matches_reference(case, psse_runs):
+    sim, spec, t_ref, delta_ref = psse_runs(case)
+    sg, _gens = _machine(sim)
+    tol = spec["tolerances"]["delta_traj"]
+    t_h = np.arange(sim.nts) * 0.005
+    ref = np.interp(t_h, t_ref, delta_ref)
+    err = np.abs(sg.xf["delta"][0] - ref).max()
+    assert err <= tol, (
+        f"psse/{case}: rotor-angle trajectory differs from PSS/E by "
+        f"{err:.3e} rad inf-norm (tolerance {tol:.0e}); for scale, the "
+        f"upstream project's own acceptance against this data is 1e-1 rad"
     )

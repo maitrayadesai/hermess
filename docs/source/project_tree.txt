@@ -6,6 +6,7 @@ hermess
 |   +---3bus_avrac1a
 |   +---3bus_avrst1a
 |   +---3bus_genrou
+|   +---3bus_genrou_psse
 |   +---3bus_gensal
 |   +---3bus_ieeedc1a
 |   +---3bus_loadstep
@@ -73,4 +74,8 @@ hermess
 |   |   |   |   +---system
 |   |   |   +---tgov1
 |   |   |   |   +---system
+|   |   +---psse
+|   |   |   +---genrou
+|   |   |   |   +---system
+|   |   |   |   +---upstream
 +---utils

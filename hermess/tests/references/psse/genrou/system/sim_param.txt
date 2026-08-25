@@ -1,0 +1,29 @@
+# Cross-tool validation case: GENROU vs PSS/E (reference trajectory from the
+# PowerSimulationsDynamics.jl benchmark set).
+#
+# hermess transcription of ../upstream/ThreeBusMulti.raw and
+# ThreeBus_GENROU_NO_SAT.dyr: 60 Hz, Sb = 100 MVA, three identical lines,
+# the machine under test at bus 102 (GENROU, saturation-free variant,
+# D = 0.05 from the dyr), a 250 MW / 30 Mvar load at bus 103 that PSS/E
+# converts to constant admittance (conl 100%/100%, see ../README.md), and
+# the PSS/E source at bus 101 (GENCLS with H = 0 behind ZX = 1e-5), which
+# maps onto StaticInfiniteBus with the same series reactance. Excitation and
+# turbine dynamics are absent in the reference (constant Efd and tm):
+# AVRCONST / GOVCONST.
+#
+# Machine parameters are on the system base (Sn = Sb = 100 MVA, the raw
+# MBASE). Any edit here breaks the correspondence with the upstream files.
+
+GENROU, idx = "SG1", bus = "102", avr = "AVRCONST", governor = "GOVCONST", Sn = 100, fn = 60, H = 6.175, D = 0.05, f = 0, R_s = 0, x_a = 0.2, x_d = 1.8, x_q = 1.7, x_dprim = 0.3, x_qprim = 0.55, x_dsec = 0.25, x_qsec = 0.25, T_d0prim = 8.0, T_q0prim = 0.4, T_d0sec = 0.03, T_q0sec = 0.05
+
+StaticInfiniteBus, bus = "101", r = 0, x = 0.00001
+
+Line, bus_i = "101", bus_j = "102", r = 0.01, x = 0.12, g = 0, b = 0, trafo = 1
+Line, bus_i = "101", bus_j = "103", r = 0.01, x = 0.12, g = 0, b = 0, trafo = 1
+Line, bus_i = "102", bus_j = "103", r = 0.01, x = 0.12, g = 0, b = 0, trafo = 1
+
+StaticZIP, bus = "103", z_share = 1.0
+
+BusInit, bus = "101", p = 0, v = 1.05, type = "slack"
+BusInit, bus = "102", p = -100, v = 1.02, type = "PV"
+BusInit, bus = "103", p = 250, q = 30, type = "PQ"

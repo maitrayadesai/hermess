@@ -1,0 +1,29 @@
+{
+ "model": "GENROU",
+ "description": "Round-rotor GENROU vs a PSS/E trajectory (PSID benchmark data): ThreeBusMulti, trip of line 101-102 at t = 1 s, 20 s; constant field voltage and mechanical power, no saturation.",
+ "config": {
+  "fn": 60,
+  "T_end": 20.0
+ },
+ "reference_csv": "upstream/TEST_GENROU_NO_SAT.csv",
+ "delta_unit": "degrees",
+ "tolerances": {
+  "delta_init": 1e-06,
+  "delta_traj": 0.005
+ },
+ "achieved_2026_08": {
+  "delta_init": 2.5e-08,
+  "delta_traj": 8.4e-04
+ },
+ "upstream": {
+  "repository": "https://github.com/Sienna-Platform/PowerSimulationsDynamics.jl",
+  "commit": "dfb56d80b7a019b2d287f1da4d65157d6de134fa",
+  "path": "test/benchmarks/psse/GENROU",
+  "license": "BSD-3-Clause (upstream/LICENSE)",
+  "sha256": {
+   "upstream/TEST_GENROU_NO_SAT.csv": "c4d02c708d134a830b3588d8127bb3ede1450c025222e7e2bb4a50e1eecae8b0",
+   "upstream/ThreeBusMulti.raw": "b9080b60ac803b9860e514ea5a5f04c6ffbd72af532d8a6e940a706f1dc4f8d8",
+   "upstream/ThreeBus_GENROU_NO_SAT.dyr": "8ca818f7a61c5fa1dd4e39472809daf52d07c0314f8c3690c02daffa7dbf836e"
+  }
+ }
+}
