@@ -100,8 +100,8 @@ loads. Disturbance: a bus fault and its clearing.
 ^^^^^^^^^^^^^^^^^^^^
 
 The 39-bus network with constant-power loads instead of ZIP loads and a longer
-disturbance sequence covering every supported event type (line fault, bus fault
-and clearing, line opening, load step). Inherited from the parent project, where
+disturbance sequence: a line fault followed by the line opening, a bus fault and
+its clearing, and a load step. Inherited from the parent project, where
 it served as the idealized-measurement scenario, and kept as a functional test
 that the simulator reproduces the expected response.
 

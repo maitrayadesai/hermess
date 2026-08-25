@@ -64,6 +64,66 @@ def class_to_instance_name(
     return instance_name
 
 
+def _strategy_instances(
+    avr_type=None,
+    governor_type=None,
+    pss_type=None,
+    shaft_type=None,
+    filter_type=None,
+    angle_type=None,
+    voltage_type=None,
+    inner_type=None,
+    pll_type=None,
+) -> dict:
+    """Instantiate the strategies selected on a system-file line.
+
+    Returns constructor keyword arguments ({"avr": <AVR instance>, ...}) for the
+    strategy keywords that were given; the others are omitted, so device classes
+    without that strategy axis are unaffected. Names resolve through the same
+    registries that :func:`hermess.register` extends, so user-registered
+    strategies are found here like shipped ones.
+    """
+    kwargs = {}
+    if avr_type is not None:
+        from hermess.devices.avr import AVR_REGISTRY
+
+        kwargs["avr"] = AVR_REGISTRY[avr_type]()
+    if governor_type is not None:
+        from hermess.devices.governor import GOVERNOR_REGISTRY
+
+        kwargs["governor"] = GOVERNOR_REGISTRY[governor_type]()
+    if pss_type is not None:
+        from hermess.devices.pss import PSS_REGISTRY
+
+        kwargs["pss"] = PSS_REGISTRY[pss_type]()
+    if shaft_type is not None:
+        from hermess.devices.shaft import SHAFT_REGISTRY
+
+        kwargs["shaft"] = SHAFT_REGISTRY[shaft_type]()
+    # Inverter strategy selectors (ignored by other device types).
+    if filter_type is not None:
+        from hermess.devices.inverter_filter import FILTER_REGISTRY
+
+        kwargs["filter"] = FILTER_REGISTRY[filter_type]()
+    if angle_type is not None:
+        from hermess.devices.inverter_angle import ANGLE_REGISTRY
+
+        kwargs["angle"] = ANGLE_REGISTRY[angle_type]()
+    if voltage_type is not None:
+        from hermess.devices.inverter_voltage import VOLTAGE_REGISTRY
+
+        kwargs["voltage"] = VOLTAGE_REGISTRY[voltage_type]()
+    if inner_type is not None:
+        from hermess.devices.inverter_inner import INNER_REGISTRY
+
+        kwargs["inner"] = INNER_REGISTRY[inner_type]()
+    if pll_type is not None:
+        from hermess.devices.inverter_pll import PLL_REGISTRY
+
+        kwargs["pll"] = PLL_REGISTRY[pll_type]()
+    return kwargs
+
+
 def create_device_instance(
     class_name,
     instance_name,
@@ -96,7 +156,19 @@ def create_device_instance(
     from hermess.registry import DEVICE_REGISTRY
 
     if class_name in DEVICE_REGISTRY:
-        instance = DEVICE_REGISTRY[class_name]()
+        instance = DEVICE_REGISTRY[class_name](
+            **_strategy_instances(
+                avr_type,
+                governor_type,
+                pss_type,
+                shaft_type,
+                filter_type,
+                angle_type,
+                voltage_type,
+                inner_type,
+                pll_type,
+            )
+        )
         setattr(system, instance_name, instance)
         logging.info(f"Created {instance_name} of registered class {class_name}().")
         exec(f"system.device_list_{typ}.append(system.{instance_name})")
@@ -124,56 +196,17 @@ def create_device_instance(
                     # Pass any specified strategies to the constructor;
                     # synchronous-machine and inverter strategies are ignored by
                     # other device types.
-                    cls_kwargs = {}
-                    if avr_type is not None:
-                        from hermess.devices.avr import AVR_REGISTRY
-
-                        cls_kwargs["avr"] = AVR_REGISTRY[avr_type]()
-                    if governor_type is not None:
-                        from hermess.devices.governor import (
-                            GOVERNOR_REGISTRY,
-                        )
-
-                        cls_kwargs["governor"] = GOVERNOR_REGISTRY[governor_type]()
-                    if pss_type is not None:
-                        from hermess.devices.pss import PSS_REGISTRY
-
-                        cls_kwargs["pss"] = PSS_REGISTRY[pss_type]()
-                    if shaft_type is not None:
-                        from hermess.devices.shaft import SHAFT_REGISTRY
-
-                        cls_kwargs["shaft"] = SHAFT_REGISTRY[shaft_type]()
-                    # Inverter strategy selectors (ignored by other devices).
-                    if filter_type is not None:
-                        from hermess.devices.inverter_filter import (
-                            FILTER_REGISTRY,
-                        )
-
-                        cls_kwargs["filter"] = FILTER_REGISTRY[filter_type]()
-                    if angle_type is not None:
-                        from hermess.devices.inverter_angle import (
-                            ANGLE_REGISTRY,
-                        )
-
-                        cls_kwargs["angle"] = ANGLE_REGISTRY[angle_type]()
-                    if voltage_type is not None:
-                        from hermess.devices.inverter_voltage import (
-                            VOLTAGE_REGISTRY,
-                        )
-
-                        cls_kwargs["voltage"] = VOLTAGE_REGISTRY[voltage_type]()
-                    if inner_type is not None:
-                        from hermess.devices.inverter_inner import (
-                            INNER_REGISTRY,
-                        )
-
-                        cls_kwargs["inner"] = INNER_REGISTRY[inner_type]()
-                    if pll_type is not None:
-                        from hermess.devices.inverter_pll import (
-                            PLL_REGISTRY,
-                        )
-
-                        cls_kwargs["pll"] = PLL_REGISTRY[pll_type]()
+                    cls_kwargs = _strategy_instances(
+                        avr_type,
+                        governor_type,
+                        pss_type,
+                        shaft_type,
+                        filter_type,
+                        angle_type,
+                        voltage_type,
+                        inner_type,
+                        pll_type,
+                    )
                     instance = cls(**cls_kwargs)
                     setattr(system, instance_name, instance)
                     logging.info(f"Created {instance_name} of class {class_name}().")

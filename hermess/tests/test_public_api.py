@@ -172,6 +172,54 @@ def test_register_accepts_a_device_class():
         assert "_MyLoad" not in DEVICE_REGISTRY
 
 
+def test_registered_device_receives_the_strategy_keywords(tmp_path):
+    """The loader's registry path must pass strategy selections to the
+    constructor exactly like the package-scan path (regression: it used to
+    instantiate registered devices with no kwargs, silently dropping them)."""
+    from hermess.devices.inverter import GridForming
+
+    class _MyGFM(GridForming):
+        """A user-written converter (here: the shipped one under another name)."""
+
+    register(_MyGFM)
+    register(_AliasDroop, "MyDroop")
+    try:
+        src = FIXTURE_ROOT / "3_bus"
+        case = tmp_path / "case"
+        case.mkdir()
+        lines = []
+        for line in (src / "sim_param.txt").read_text().splitlines():
+            if line.startswith("GridForming"):
+                line = "_MyGFM" + line[len("GridForming"):]
+                line = line.rstrip().rstrip(",") + ', angle = "MyDroop"'
+            lines.append(line)
+        (case / "sim_param.txt").write_text("\n".join(lines) + "\n")
+        (case / "sim_dist.txt").write_text((src / "sim_dist.txt").read_text())
+
+        cfg = config.updated(testsystemfile="case",
+                             **{**_COMMON, "system_root": tmp_path, "T_end": 0.5})
+        dae = run(cfg)
+        gfm = next(d for d in dae.device_list if type(d).__name__ == "_MyGFM")
+        assert isinstance(gfm._angle, _AliasDroop)
+    finally:
+        unregister("_MyGFM", "device")
+        unregister("MyDroop", "angle")
+
+
+def test_system_root_expands_the_user_home(tmp_path, monkeypatch):
+    """The documented ``system_root="~/my_systems"`` form must work."""
+    import shutil
+
+    monkeypatch.setenv("HOME", str(tmp_path))
+    shutil.copytree(FIXTURE_ROOT / "3_bus", tmp_path / "mysys" / "3_bus")
+
+    assert hermess.list_systems("~/mysys") == ["3_bus"]
+    dae = hermess.simulate("3_bus", system_root="~/mysys",
+                           **{k: v for k, v in _COMMON.items() if k != "system_root"},
+                           )
+    assert dae.x_full.shape[1] > 0
+
+
 def test_register_rejects_an_unrelated_class():
     with pytest.raises(TypeError):
         register(dict)

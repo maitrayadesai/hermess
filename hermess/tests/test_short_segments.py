@@ -92,3 +92,28 @@ def test_empty_output_grid_raises_instead_of_crashing():
     dae.tf = np.array([])
     with pytest.raises(ValueError, match="Empty integrator output grid"):
         dae.fgcall()
+
+
+def test_simultaneous_disturbances_are_both_applied(tmp_path):
+    """Two load steps scheduled at the same instant must have the same effect as
+    one step of their combined size (neither skipped nor double-applied)."""
+    src = FIXTURE_ROOT / "3_bus_loadstep"
+
+    def _run_case(dist_text, name):
+        case = tmp_path / name
+        case.mkdir()
+        (case / "sim_param.txt").write_text((src / "sim_param.txt").read_text())
+        (case / "sim_dist.txt").write_text(dist_text)
+        cfg = config.updated(**{**_COMMON, "testsystemfile": case.name,
+                                "system_root": tmp_path, "T_end": 1.5})
+        return run(cfg)
+
+    step10 = 'Disturbance, time = 1.0, type = "LOAD", bus = "2", p_delta = 10, q_delta = 0\n'
+    step20 = 'Disturbance, time = 1.0, type = "LOAD", bus = "2", p_delta = 20, q_delta = 0\n'
+    two = _run_case(step10 + step10, "two")
+    one = _run_case(step20, "one")
+    assert two.time_steps[-1] == pytest.approx(1.5, abs=_COMMON["ts"])
+    # atol floors the comparison for states that are physically zero and only
+    # carry floating-point dust (observed at ~1e-25), where rtol is meaningless.
+    np.testing.assert_allclose(two.y_full[:, -1], one.y_full[:, -1], rtol=1e-8, atol=1e-12)
+    np.testing.assert_allclose(two.x_full[:, -1], one.x_full[:, -1], rtol=1e-8, atol=1e-12)

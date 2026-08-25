@@ -48,7 +48,7 @@ SYSTEMS_DIR = Path(__file__).parent / "systems"
 def list_systems(root: "str | Path | None" = None) -> list:
     """Names of the ready-made systems, usable as the first argument of
     :func:`simulate` (or as ``testsystemfile`` in a :class:`~hermess.config.Config`)."""
-    root = Path(root) if root is not None else SYSTEMS_DIR
+    root = Path(root).expanduser() if root is not None else SYSTEMS_DIR
     return sorted(str(p.parent.relative_to(root)) for p in root.rglob("sim_param.txt"))
 
 
@@ -81,7 +81,7 @@ def simulate(system: str, system_root: "str | Path | None" = None, **overrides: 
 
     settings = dict(
         testsystemfile=system,
-        system_root=Path(system_root) if system_root is not None else None,
+        system_root=Path(system_root).expanduser() if system_root is not None else None,
         plot=False,
         plot_voltage=False,
         plot_diff=False,
