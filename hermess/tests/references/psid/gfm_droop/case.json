@@ -1,0 +1,43 @@
+{
+ "model": "GridForming",
+ "description": "Droop grid-forming converter (D'Arco set) vs PSID with kad = 0 and shared power-filter frequency; impedance-load step.",
+ "device_class": "GridForming",
+ "config": {
+  "T_end": 8.0
+ },
+ "state_columns": {
+  "delta_c": "theta",
+  "Pc_tilde": "pm",
+  "Qc_tilde": "qm",
+  "Vfd_ext": "vr_filter",
+  "Vfq_ext": "vi_filter",
+  "ifd_ext": "ir_cnv",
+  "ifq_ext": "ii_cnv",
+  "itd_ext": "ir_filter",
+  "itq_ext": "ii_filter",
+  "xi_d": "xi_d",
+  "xi_q": "xi_q",
+  "gamma_d": "gamma_d",
+  "gamma_q": "gamma_q"
+ },
+ "voltage_columns": {
+  "1": "v_101",
+  "2": "v_102",
+  "3": "v_103"
+ },
+ "allow_extra_reference_eigenvalues": 2,
+ "event_times": [1.0],
+ "tolerances": {
+  "initial": 1e-05,
+  "eig_abs": 0.0001,
+  "eig_rel": 0.0001,
+  "traj_default": 0.0002,
+  "traj": {}
+ },
+ "achieved_2026_08": {
+  "initial": 3e-06,
+  "eig_abs": 1.7e-06,
+  "traj_worst": 2.0e-05,
+  "traj_worst_column": "ii_filter"
+ }
+}

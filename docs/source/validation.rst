@@ -181,6 +181,78 @@ deliberately omits today (machine saturation, the TGOV1 lead-lag, exciter
 input lags); ``hermess/tests/references/psse/README.md`` records, per case,
 exactly which feature would unlock it.
 
+Against PowerSimulationsDynamics.jl
+-----------------------------------
+
+The third reference family compares against `PowerSimulationsDynamics.jl
+<https://github.com/Sienna-Platform/PowerSimulationsDynamics.jl>`_ (PSID),
+the Julia simulator whose converter carries the same six-state LCL filter as
+ours and which is itself benchmarked against PSCAD. These references are
+generated locally by running PSID from a pinned Julia environment; each case
+folder in ``hermess/tests/references/psid/`` carries the ``generate.jl`` that
+produced it. This family covers the part of the model space where hermess
+claims to be interesting and a reader has the least reason to trust it: the
+grid-forming converter, the Sauer-Pai machine, the multi-mass torsional
+shaft, and the dynamic network.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 16 26 16 11 11 11
+
+   * - Model
+     - Compared against
+     - Disturbance
+     - Operating point
+     - Eigenvalues
+     - Trajectory
+   * - :class:`~hermess.devices.inverter.GridForming`
+     - PSID droop + VoltageModeControl + LCL (``kad = 0``)
+     - load step, 8 s
+     - 3e-6
+     - 1.7e-6
+     - 2.0e-5
+   * - :class:`~hermess.devices.synchronous.SynchronousSubtransientSP`
+     - PSID ``SauerPaiMachine``
+     - load step, 8 s
+     - 2.8e-7
+     - 8.1e-7
+     - 7.8e-5
+   * - :class:`~hermess.devices.shaft.Shaft5Mass`
+     - PSID ``FiveMassShaft``
+     - load step, 8 s
+     - 2.8e-7
+     - 8.9e-7
+     - 1.6e-4
+   * - dynamic lines (``line_dyn``)
+     - PSID ``DynamicBranch`` network
+     - load step, 8 s
+     - 1.0e-7
+     - 1.6e-7
+     - 2.5e-5
+
+All thirteen states of the grid-forming converter (filter, droop, and every
+PI integrator) compare directly: the two tools' internal dq frames turn out
+to coincide, so this is a state-by-state identity, not a terminal-quantity
+match. The dynamic-lines case pins the network itself: every line current
+and every bus voltage is a differential state on both sides. The reductions
+are documented in the case folders: PSID's active damping off (``kad = 0``,
+two inert reference states), one shared power-filter frequency, PSID's
+five-mass shaft as our ``F_hp = 1``, and constant-frame rotation
+(``ConstantFrequency``) matching ``omega_mode = "nom"``.
+
+Two exclusions are documented rather than approximated
+(``hermess/tests/references/psid/README.md``): PSID's four PSCAD-benchmarked
+trajectories all embed features hermess deliberately omits (a VSM angle
+source, active damping, a PI-outer grid-following chain, Marconato
+machines), and hermess ``GridFollowing`` (a PLL-anchored droop with a
+voltage-mode cascade) has no PSID counterpart at all. One measurement
+finding from building this family: the PowerSystems.jl PSS/E parser ignores
+the frequency in the raw header and defaults to 60 Hz, which barely moved
+the trajectories of a mildly disturbed machine while shifting every
+oscillatory eigenvalue by the base-frequency ratio — caught by the
+eigenvalue level of the comparison, and the reason the suite checks spectra
+rather than trajectories alone.
+
 Benchmark tables
 ----------------
 

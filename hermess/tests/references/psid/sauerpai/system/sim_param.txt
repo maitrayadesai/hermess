@@ -1,0 +1,27 @@
+# Cross-tool validation case: SynchronousSubtransientSP (Sauer-Pai) vs PSID.
+#
+# Three-bus triangle: ideal source at bus 1 (PSID: Source behind X_th = 1e-4),
+# the six-state Sauer-Pai machine under test at bus 2, constant-impedance
+# load at bus 3. The PSID twin (../generate.jl) uses SauerPaiMachine +
+# SingleMass + AVRFixed + TGFixed, which is equation-identical to this model
+# with AVRCONST / GOVCONST: same rotor and stator-flux ODEs, same derived
+# gamma coefficients, same dq transform and injection. D = 0 because the two
+# single-mass swing equations differ only in the damping term (PSID divides
+# it by omega); f = 0 matches the absent friction term in PSID.
+#
+# Parameters are on the system base (Sn = Sb = 100 MVA). Any edit here must
+# be mirrored in ../generate.jl and the reference regenerated.
+
+SynchronousSubtransientSP, idx = "SP1", bus = "2", avr = "AVRCONST", governor = "GOVCONST", Sn = 100, fn = 50, H = 6.5, D = 0, f = 0, R_s = 0.0025, x_d = 1.8, x_q = 1.7, x_dprim = 0.3, x_qprim = 0.55, x_dsec = 0.25, x_qsec = 0.25, x_l = 0.2, T_dprim = 8.0, T_qprim = 0.4, T_dsec = 0.03, T_qsec = 0.05
+
+StaticInfiniteBus, bus = "1", r = 0, x = 0.0001
+
+Line, bus_i = "1", bus_j = "2", r = 0.01, x = 0.08, g = 0, b = 0, trafo = 1
+Line, bus_i = "2", bus_j = "3", r = 0.002, x = 0.1, g = 0, b = 0, trafo = 1
+Line, bus_i = "3", bus_j = "1", r = 0.006, x = 0.03, g = 0, b = 0, trafo = 1
+
+StaticZIP, bus = "3", z_share = 1.0
+
+BusInit, bus = "1", p = 0, v = 1.02, type = "slack"
+BusInit, bus = "2", p = -50, v = 1.01, type = "PV"
+BusInit, bus = "3", p = 80, q = 10, type = "PQ"

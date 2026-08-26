@@ -1,0 +1,101 @@
+{
+ "description": "Droop grid-forming inverter (D'Arco set, kad = 0) on the three-bus system, +20 MW / +5 Mvar impedance-load step at bus 103 at t = 1 s; vs hermess GridForming.",
+ "eigenvalues": [
+  [
+   -1771.4313436227517,
+   -5361.91827226265
+  ],
+  [
+   -1771.4313436227517,
+   5361.91827226265
+  ],
+  [
+   -1623.5202492993728,
+   -5140.570945041859
+  ],
+  [
+   -1623.5202492993728,
+   5140.570945041859
+  ],
+  [
+   -1575.0607008915417,
+   -264.2635988042601
+  ],
+  [
+   -1575.0607008915417,
+   264.2635988042601
+  ],
+  [
+   -50.0,
+   0.0
+  ],
+  [
+   -50.0,
+   0.0
+  ],
+  [
+   -44.88346740426362,
+   0.0
+  ],
+  [
+   -34.170187456841326,
+   -219.41653283628702
+  ],
+  [
+   -34.170187456841326,
+   219.41653283628702
+  ],
+  [
+   -16.17103914538066,
+   -28.508464725586403
+  ],
+  [
+   -16.17103914538066,
+   28.508464725586403
+  ],
+  [
+   -11.422901410038909,
+   0.0
+  ],
+  [
+   -11.306525008155118,
+   0.0
+  ]
+ ],
+ "extra": {},
+ "initial": {
+  "gamma_d": 0.06858295242305582,
+  "gamma_q": -0.0072568296062032476,
+  "ii_cnv": 0.2576978366350753,
+  "ii_filter": 0.18534699745462663,
+  "ir_cnv": 0.4834102455300258,
+  "ir_filter": 0.4920616838661556,
+  "pm": 0.5027647821017547,
+  "qm": -0.12368877689053583,
+  "theta": 0.22503361321537657,
+  "v_101": 1.02,
+  "v_102": 1.0099999999999998,
+  "v_103": 1.0128472789456997,
+  "vi_filter": 0.11691132886613992,
+  "vr_filter": 0.9777140429793081,
+  "xi_d": 0.000707898514581616,
+  "xi_q": 9.629830945324614e-5
+ },
+ "integration": {
+  "abstol": 1.0e-6,
+  "dtmax": 0.005,
+  "reltol": 1.0e-6,
+  "saveat": 0.005,
+  "solver": "Sundials IDA"
+ },
+ "notes": [
+  "hermess state map (direct, same frames): delta_c=theta, Pc_tilde=pm, Qc_tilde=qm, Vfd_ext=vr_filter, Vfq_ext=vi_filter, ifd_ext=ir_cnv, ifq_ext=ii_cnv, itd_ext=ir_filter, itq_ext=ii_filter, xi_d/xi_q/gamma_d/gamma_q identical.",
+  "kad = 0 leaves the two active-damping states inert: two reference eigenvalues at exactly -ωad = -50 with no hermess counterpart."
+ ],
+ "tool": "PowerSimulationsDynamics.jl",
+ "versions": {
+  "PowerSimulationsDynamics": "0.16.2",
+  "PowerSystems": "5.12.3",
+  "julia": "1.12.6"
+ }
+}

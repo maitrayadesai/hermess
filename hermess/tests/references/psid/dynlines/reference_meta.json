@@ -1,0 +1,118 @@
+{
+ "description": "Dynamic network (all lines as DynamicBranch, bus voltages as capacitor states) around the Sauer-Pai machine, +20 MW / +5 Mvar impedance-load step at bus 103 at t = 1 s; vs hermess line_dyn = True.",
+ "eigenvalues": [
+  [
+   -2903.8914885503373,
+   -10171.663986119935
+  ],
+  [
+   -2903.8914885503373,
+   10171.663986119935
+  ],
+  [
+   -2578.6557589481345,
+   -10075.185170981218
+  ],
+  [
+   -2578.6557589481345,
+   10075.185170981218
+  ],
+  [
+   -398.2523109460118,
+   -7485.258583540574
+  ],
+  [
+   -398.2523109460118,
+   7485.258583540574
+  ],
+  [
+   -311.96133433994703,
+   -6894.986922197202
+  ],
+  [
+   -311.96133433994703,
+   6894.986922197202
+  ],
+  [
+   -42.751570563926855,
+   0.0
+  ],
+  [
+   -39.28848942389848,
+   0.0
+  ],
+  [
+   -27.696699329339044,
+   -314.1214521089405
+  ],
+  [
+   -27.696699329339044,
+   314.1214521089405
+  ],
+  [
+   -7.050143709923942,
+   -313.9821953224463
+  ],
+  [
+   -7.050143709923942,
+   313.9821953224463
+  ],
+  [
+   -5.973406987253181,
+   0.0
+  ],
+  [
+   -0.901393650119783,
+   -7.457469208585428
+  ],
+  [
+   -0.901393650119783,
+   7.457469208585428
+  ],
+  [
+   -0.10499180034976476,
+   0.0
+  ],
+  [
+   -0.0013178526561986037,
+   -8.975947700746688e7
+  ],
+  [
+   -0.0013178526561986037,
+   8.975947700746688e7
+  ]
+ ],
+ "extra": {
+  "all_lines_dynamic": true
+ },
+ "initial": {
+  "delta": 0.9550063117127956,
+  "ed_p": 0.5516285139930809,
+  "eq_p": 0.6767187997503008,
+  "omega": 1.0,
+  "psid": 0.598031561810082,
+  "psid_pp": 0.6504897204368945,
+  "psiq": -0.8154508467723804,
+  "psiq_pp": -0.7195154530344533,
+  "v_101": 1.0199999998808413,
+  "v_102": 1.0099999823676136,
+  "v_103": 1.0137889192934175
+ },
+ "integration": {
+  "abstol": 1.0e-6,
+  "dtmax": 0.005,
+  "reltol": 1.0e-6,
+  "saveat": 0.005,
+  "solver": "Sundials IDA"
+ },
+ "notes": [
+  "hermess runs this system with line_dyn = True; machine state map as in the sauerpai case; the bus-voltage magnitudes are dynamic states on both sides.",
+  "Exactness box: unity taps, g = 0, b > 0 on every line, omega_mode = nom; PSID rotates the dynamic network at the constant nominal frequency, as hermess does."
+ ],
+ "tool": "PowerSimulationsDynamics.jl",
+ "versions": {
+  "PowerSimulationsDynamics": "0.16.2",
+  "PowerSystems": "5.12.3",
+  "julia": "1.12.6"
+ }
+}

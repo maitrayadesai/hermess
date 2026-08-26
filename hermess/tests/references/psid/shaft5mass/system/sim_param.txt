@@ -1,0 +1,28 @@
+# Cross-tool validation case: Shaft5Mass vs PSID.
+#
+# The Sauer-Pai machine of the sauerpai case with the five-mass torsional
+# shaft HP-IP-LP-GEN-EXC (the Sauer-Pai torsional data set used by the PSID
+# test suite). The PSID FiveMassShaft applies the whole mechanical torque to
+# the HP mass, which is this shaft with F_hp = 1, F_ip = F_lp = 0; every
+# other term (inertias, self and mutual dampings, stiffnesses, the uniform
+# reference-frame subtraction) maps one to one. f = 0 matches the absent
+# rotor-friction term in PSID; parameter naming: PSID K_hp/K_ip/K_lp/K_ex
+# name the section after its left mass = our K_hp_ip/K_ip_lp/K_lp_gen/
+# K_gen_exc, and PSID D_12/D_23/D_34/D_45 = our Dm_*.
+#
+# Parameters are on the system base (Sn = Sb = 100 MVA). Any edit here must
+# be mirrored in ../generate.jl and the reference regenerated.
+
+SynchronousSubtransientSP, idx = "SP1", bus = "2", avr = "AVRCONST", governor = "GOVCONST", shaft = "Shaft5Mass", H = 3.01, H_hp = 0.3348, H_ip = 0.7306, H_lp = 0.8154, H_exc = 0.0452, D = 0, D_hp = 0.518, D_ip = 0.224, D_lp = 0.224, D_exc = 0.145, Dm_hp_ip = 0.0518, Dm_ip_lp = 0.0224, Dm_lp_gen = 0.0224, Dm_gen_exc = 0.0145, K_hp_ip = 33.07, K_ip_lp = 28.59, K_lp_gen = 44.68, K_gen_exc = 21.984, F_hp = 1, F_ip = 0, F_lp = 0, Sn = 100, fn = 50, f = 0, R_s = 0.0025, x_d = 1.8, x_q = 1.7, x_dprim = 0.3, x_qprim = 0.55, x_dsec = 0.25, x_qsec = 0.25, x_l = 0.2, T_dprim = 8.0, T_qprim = 0.4, T_dsec = 0.03, T_qsec = 0.05
+
+StaticInfiniteBus, bus = "1", r = 0, x = 0.0001
+
+Line, bus_i = "1", bus_j = "2", r = 0.01, x = 0.08, g = 0, b = 0, trafo = 1
+Line, bus_i = "2", bus_j = "3", r = 0.002, x = 0.1, g = 0, b = 0, trafo = 1
+Line, bus_i = "3", bus_j = "1", r = 0.006, x = 0.03, g = 0, b = 0, trafo = 1
+
+StaticZIP, bus = "3", z_share = 1.0
+
+BusInit, bus = "1", p = 0, v = 1.02, type = "slack"
+BusInit, bus = "2", p = -50, v = 1.01, type = "PV"
+BusInit, bus = "3", p = 80, q = 10, type = "PQ"

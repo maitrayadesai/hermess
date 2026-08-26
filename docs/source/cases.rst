@@ -125,6 +125,46 @@ cross-tool validation case against a PSS/E-produced trajectory (see
 :ref:`validation`); run it with ``fn=60`` and ``T_end=20``. Disturbance: a
 line opening.
 
+.. _3bus_gfm_psid:
+
+``3bus_gfm_psid``
+^^^^^^^^^^^^^^^^^
+
+Ideal source, droop grid-forming converter (D'Arco parameter set) and
+constant-impedance load: the cross-tool validation case for GridForming
+against PowerSimulationsDynamics.jl (see :ref:`validation`). Disturbance: a
+load step.
+
+.. _3bus_sauerpai_psid:
+
+``3bus_sauerpai_psid``
+^^^^^^^^^^^^^^^^^^^^^^
+
+Ideal source, the six-state Sauer-Pai machine with constant excitation and
+mechanical power, and a constant-impedance load: the cross-tool validation
+case for SynchronousSubtransientSP against PSID (see :ref:`validation`).
+Disturbance: a load step.
+
+.. _3bus_shaft5mass_psid:
+
+``3bus_shaft5mass_psid``
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+The Sauer-Pai machine on the five-mass torsional shaft HP-IP-LP-GEN-EXC
+(Sauer-Pai torsional data): the cross-tool validation case for Shaft5Mass
+against PSID (see :ref:`validation`). Disturbance: a load step, whose
+electrical-torque step rings the torsional modes.
+
+.. _3bus_dynlines_psid:
+
+``3bus_dynlines_psid``
+^^^^^^^^^^^^^^^^^^^^^^
+
+The Sauer-Pai system with the network itself dynamic (run it with
+``line_dyn=True``): every line current and bus voltage is a differential
+state. The cross-tool validation case for the dynamic network against PSID
+(see :ref:`validation`). Disturbance: a load step.
+
 .. _kundur:
 
 ``kundur``

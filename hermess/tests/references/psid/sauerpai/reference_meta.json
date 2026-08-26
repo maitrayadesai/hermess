@@ -1,0 +1,68 @@
+{
+ "description": "Sauer-Pai six-state machine on the three-bus system, +20 MW / +5 Mvar impedance-load step at bus 103 at t = 1 s; constant field voltage and mechanical torque; vs hermess SynchronousSubtransientSP.",
+ "eigenvalues": [
+  [
+   -42.69433945656543,
+   0.0
+  ],
+  [
+   -39.35031728089933,
+   0.0
+  ],
+  [
+   -12.056854720866145,
+   -375.9344228909627
+  ],
+  [
+   -12.056854720866145,
+   375.9344228909627
+  ],
+  [
+   -5.782666368341723,
+   0.0
+  ],
+  [
+   -1.0004037082177741,
+   -7.36537843896053
+  ],
+  [
+   -1.0004037082177741,
+   7.36537843896053
+  ],
+  [
+   -0.12968354490442122,
+   0.0
+  ]
+ ],
+ "extra": {},
+ "initial": {
+  "delta": 0.8867590474230191,
+  "ed_p": 0.522785650827235,
+  "eq_p": 0.7314676899009396,
+  "omega": 1.0,
+  "psid": 0.6521969892566702,
+  "psid_pp": 0.7050441230195165,
+  "psiq": -0.7728135707880869,
+  "psiq_pp": -0.681894327165959,
+  "v_101": 1.02,
+  "v_102": 1.0099999999999998,
+  "v_103": 1.0128472789456997
+ },
+ "integration": {
+  "abstol": 1.0e-6,
+  "dtmax": 0.005,
+  "reltol": 1.0e-6,
+  "saveat": 0.005,
+  "solver": "Sundials IDA"
+ },
+ "notes": [
+  "hermess state map: delta=δ, omega=ω, e_qprim=eq_p, e_dprim=ed_p, psid=ψd, psiq=ψq, psid2=ψd_pp, psiq2=ψq_pp.",
+  "AVRFixed and TGFixed hold Efd and τm at their initialized values (= hermess AVRCONST / GOVCONST)."
+ ],
+ "tool": "PowerSimulationsDynamics.jl",
+ "versions": {
+  "PowerSimulationsDynamics": "0.16.2",
+  "PowerSystems": "5.12.3",
+  "julia": "1.12.6"
+ }
+}

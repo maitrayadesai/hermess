@@ -1,0 +1,31 @@
+# Cross-tool validation case: GridForming (droop) vs PSID.
+#
+# Three-bus triangle: ideal source at bus 1 (PSID: Source behind X_th = 1e-4,
+# here StaticInfiniteBus), the droop grid-forming converter under test at
+# bus 2, constant-impedance load at bus 3. The PSID twin (../generate.jl)
+# uses the same D'Arco component set with its active damping disabled
+# (kad = 0; hermess carries none) and one shared power-measurement filter
+# frequency (PSID ωz = ωf = omega_f = 2π·5 rad/s). Every other block maps
+# one to one: ActivePowerDroop = Droop angle source (Rp = Kp),
+# ReactivePowerDroop = QVDroop (kq = Kq), VoltageModeControl = Cascaded
+# (kpv/kiv/kpc/kic/rv/lv; PSID kffi = our Kffv, PSID kffv = our Kffc),
+# LCLFilter = LCL (lf/rf/cf = Lf/Rf/Cf, lg/rg = Lt/Rt), and the internal
+# dq frames coincide (delta_c = θ_oc, so even the PI integrator states
+# compare directly).
+#
+# Parameters are on the system base (Sn = Sb = 100 MVA). Any edit here must
+# be mirrored in ../generate.jl and the reference regenerated.
+
+GridForming, idx = "GFM1", bus = "2", Sn = 100, Kp = 0.05, Kq = 0.2, omega_f = 31.41592653589793, Vref = 1.01, Rf = 0.003, Lf = 0.08, Cf = 0.074, Kpv = 0.59, Kiv = 736, Kffv = 0, Kpc = 1.27, Kic = 14.3, Kffc = 0, Rv = 0, Lv = 0.2, Lt = 0.2, Rt = 0.01
+
+StaticInfiniteBus, bus = "1", r = 0, x = 0.0001
+
+Line, bus_i = "1", bus_j = "2", r = 0.01, x = 0.08, g = 0, b = 0, trafo = 1
+Line, bus_i = "2", bus_j = "3", r = 0.002, x = 0.1, g = 0, b = 0, trafo = 1
+Line, bus_i = "3", bus_j = "1", r = 0.006, x = 0.03, g = 0, b = 0, trafo = 1
+
+StaticZIP, bus = "3", z_share = 1.0
+
+BusInit, bus = "1", p = 0, v = 1.02, type = "slack"
+BusInit, bus = "2", p = -50, v = 1.01, type = "PV"
+BusInit, bus = "3", p = 80, q = 10, type = "PQ"

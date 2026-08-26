@@ -1,0 +1,29 @@
+# Cross-tool validation case: dynamic lines vs PSID.
+#
+# The Sauer-Pai machine of the sauerpai case, but with the network itself
+# dynamic: every line carries series-current states and every bus voltage is
+# a capacitor state (hermess line_dyn = True, PSID all_lines_dynamic). The
+# two formulations integrate the same ODEs inside a documented box: plain
+# pi-lines with unity taps, g = 0, charging b > 0 on every line (each bus
+# needs a nonzero capacitance), the nominal reference frame, and the same
+# split of b/2 per line end. Neither tool supports tripping a dynamic line,
+# so the disturbance is the load step.
+#
+# This is the demo-workspace copy; the validated snapshot and the PSID twin
+# (generate.jl) live in hermess/tests/references/psid/. Parameters are on
+# the system base (Sn = Sb = 100 MVA).
+
+
+SynchronousSubtransientSP, idx = "SP1", bus = "2", avr = "AVRCONST", governor = "GOVCONST", Sn = 100, fn = 50, H = 6.5, D = 0, f = 0, R_s = 0.0025, x_d = 1.8, x_q = 1.7, x_dprim = 0.3, x_qprim = 0.55, x_dsec = 0.25, x_qsec = 0.25, x_l = 0.2, T_dprim = 8.0, T_qprim = 0.4, T_dsec = 0.03, T_qsec = 0.05
+
+StaticInfiniteBus, bus = "1", r = 0, x = 0.0001
+
+Line, bus_i = "1", bus_j = "2", r = 0.01, x = 0.08, g = 0, b = 0.04, trafo = 1
+Line, bus_i = "2", bus_j = "3", r = 0.002, x = 0.1, g = 0, b = 0.05, trafo = 1
+Line, bus_i = "3", bus_j = "1", r = 0.006, x = 0.03, g = 0, b = 0.03, trafo = 1
+
+StaticZIP, bus = "3", z_share = 1.0
+
+BusInit, bus = "1", p = 0, v = 1.02, type = "slack"
+BusInit, bus = "2", p = -50, v = 1.01, type = "PV"
+BusInit, bus = "3", p = 80, q = 10, type = "PQ"

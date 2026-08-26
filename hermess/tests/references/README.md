@@ -20,12 +20,21 @@ references/
 │       ├── reference.csv      trajectory on the comparison grid (committed)
 │       ├── reference_meta.json  versions, initial states, eigenvalues (committed)
 │       └── case.json          comparison spec: state maps and tolerances
-└── psse/                      reference tool: PSS/E (trajectories from the
-    ├── README.md              PSID benchmark set; provenance and the
-    └── <case>/                compatibility table live in its README)
-        ├── system/            the hermess transcription of the upstream case
-        ├── upstream/          verbatim PSID files: .raw, .dyr, CSV, LICENSE
-        └── case.json          comparison spec, tolerances, checksums
+├── psse/                      reference tool: PSS/E (trajectories from the
+│   ├── README.md              PSID benchmark set; provenance and the
+│   └── <case>/                compatibility table live in its README)
+│       ├── system/            the hermess transcription of the upstream case
+│       ├── upstream/          verbatim PSID files: .raw, .dyr, CSV, LICENSE
+│       └── case.json          comparison spec, tolerances, checksums
+└── psid/                      reference tool: PowerSimulationsDynamics.jl
+    ├── README.md              (Julia, run locally; converters, Sauer-Pai,
+    ├── _generate/             shafts, dynamic lines) — pinned Julia env
+    └── <case>/                (Project.toml + Manifest.toml)
+        ├── system/            the hermess system
+        ├── generate.jl        the script that produced the reference
+        ├── *.raw              the network the PSID twin parses
+        ├── reference.csv      + reference_meta.json (committed)
+        └── case.json          comparison spec and tolerances
 ```
 
 Adding a model = adding a folder: the test module discovers every folder with

@@ -44,6 +44,12 @@ there with provenance; see ``references/psse/README.md``). Those references
 pin only the rotor-angle channel, so the PSS/E cases assert the initialized
 rotor angle and its trajectory; the PSS/E channel grid drifts slightly off
 the 5 ms step, so the reference is interpolated on its own time column.
+
+A third family under ``references/psid/`` compares against
+PowerSimulationsDynamics.jl (Julia) run locally, the counterpart with the
+matching six-state LCL converter, Sauer-Pai machine and multi-mass shaft;
+each case carries the generate.jl that produced it and asserts the same
+three levels as the ANDES family (see ``references/psid/README.md``).
 """
 
 import json
@@ -57,10 +63,14 @@ from hermess.run import run
 
 REFERENCE_ROOT = Path(__file__).parent / "references" / "andes"
 PSSE_ROOT = Path(__file__).parent / "references" / "psse"
+PSID_ROOT = Path(__file__).parent / "references" / "psid"
 
 CASES = sorted(p.name for p in REFERENCE_ROOT.iterdir() if (p / "case.json").is_file())
 PSSE_CASES = sorted(
     p.name for p in PSSE_ROOT.iterdir() if (p / "case.json").is_file()
+)
+PSID_CASES = sorted(
+    p.name for p in PSID_ROOT.iterdir() if (p / "case.json").is_file()
 )
 
 # The shared run configuration of every reference case; a case.json may carry
@@ -280,6 +290,108 @@ def test_trajectories_match_reference(case, reference_runs):
     achieved = ", ".join(f"{k} {e:.2e}" for k, (e, _) in errors.items())
     assert not failed, (
         f"{case}: trajectory differs from ANDES beyond tolerance: "
+        + ", ".join(f"{k} {e:.3e} > {tol:.0e}" for k, (e, tol) in failed.items())
+        + f"; all achieved errors: {achieved}"
+    )
+
+
+@pytest.fixture(scope="module")
+def psid_runs():
+    """Run each PSID-family hermess case once; all three checks share the run."""
+    runs: dict = {}
+
+    def _get(name: str):
+        if name not in runs:
+            case_dir = PSID_ROOT / name
+            spec = json.loads((case_dir / "case.json").read_text())
+            meta = json.loads((case_dir / "reference_meta.json").read_text())
+            csv = np.genfromtxt(case_dir / "reference.csv", delimiter=",", names=True)
+            sim = _run_hermess(case_dir, spec.get("config", {}))
+            runs[name] = (sim, spec, meta, csv)
+        return runs[name]
+
+    return _get
+
+
+def _psid_device(sim, spec):
+    return [
+        d for d in sim.device_list if type(d).__name__ == spec["device_class"]
+    ][0]
+
+
+@pytest.mark.parametrize("case", PSID_CASES)
+def test_psid_initial_conditions_match_reference(case, psid_runs):
+    sim, spec, meta, _csv = psid_runs(case)
+    dev = _psid_device(sim, spec)
+    tol = spec["tolerances"]["initial"]
+    # The t = 0 trajectory sample is the initialized state on both sides.
+    errors = {
+        ours: abs(float(dev.xf[ours][0, 0]) - float(meta["initial"][col]))
+        for ours, col in spec["state_columns"].items()
+    }
+    worst = max(errors.values())
+    assert worst <= tol, (
+        f"psid/{case}: initialized states differ from PSID by {worst:.3e} "
+        f"(tolerance {tol:.0e}); per state: "
+        + ", ".join(f"{k} {v:.2e}" for k, v in errors.items())
+    )
+
+
+@pytest.mark.parametrize("case", PSID_CASES)
+def test_psid_eigenvalues_match_reference(case, psid_runs):
+    sim, spec, meta, _csv = psid_runs(case)
+    mu = np.array([complex(re, im) for re, im in meta["eigenvalues"]])
+    extra = spec.get("allow_extra_reference_eigenvalues", 0)
+    lam = np.asarray(sim.eigenvalues)
+    assert lam.size + extra == mu.size, (
+        f"psid/{case}: {lam.size} hermess eigenvalues vs {mu.size} reference "
+        f"ones (expected {extra} unmatched reference artifacts)"
+    )
+    abs_tol = spec["tolerances"]["eig_abs"]
+    rel_tol = spec["tolerances"]["eig_rel"]
+    used = np.zeros(mu.size, dtype=bool)
+    worst = (0.0, 0j)
+    for lv in lam:
+        d = np.abs(mu - lv)
+        d[used] = np.inf
+        k = int(np.argmin(d))
+        used[k] = True
+        scaled = d[k] / (1.0 + np.abs(mu[k]) * rel_tol / abs_tol)
+        if scaled > worst[0]:
+            worst = (scaled, mu[k])
+    assert worst[0] <= abs_tol, (
+        f"psid/{case}: eigenvalue nearest to reference {worst[1]:.4f} differs "
+        f"by {worst[0]:.3e} (tolerance {abs_tol:.0e} + {rel_tol:.0e}*|mu|)"
+    )
+
+
+@pytest.mark.parametrize("case", PSID_CASES)
+def test_psid_trajectories_match_reference(case, psid_runs):
+    sim, spec, meta, csv = psid_runs(case)
+    dev = _psid_device(sim, spec)
+    tols = spec["tolerances"]["traj"]
+    default_tol = spec["tolerances"]["traj_default"]
+
+    nts = min(len(csv["t"]), sim.nts)
+    t = np.arange(nts) * 0.005
+    assert np.allclose(csv["t"][:nts], t)
+    keep = np.ones(nts, dtype=bool)
+    for ev in spec["event_times"]:
+        keep &= np.abs(t - ev) > 0.0075
+
+    errors: dict[str, tuple[float, float]] = {}
+    for ours, col in spec["state_columns"].items():
+        err = np.abs(dev.xf[ours][0, :nts] - csv[col][:nts]).max()
+        errors[col] = (err, tols.get(col, default_tol))
+    for bus, col in spec["voltage_columns"].items():
+        vh = np.hypot(*sim.grid.yf[bus])[:nts]
+        err = np.abs(vh - csv[col][:nts])[keep].max()
+        errors[col] = (err, tols.get(col, default_tol))
+
+    failed = {k: v for k, v in errors.items() if v[0] > v[1]}
+    achieved = ", ".join(f"{k} {e:.2e}" for k, (e, _) in errors.items())
+    assert not failed, (
+        f"psid/{case}: trajectory differs from PSID beyond tolerance: "
         + ", ".join(f"{k} {e:.3e} > {tol:.0e}" for k, (e, tol) in failed.items())
         + f"; all achieved errors: {achieved}"
     )

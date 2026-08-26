@@ -5,13 +5,17 @@ hermess
 |   +---3bus
 |   +---3bus_avrac1a
 |   +---3bus_avrst1a
+|   +---3bus_dynlines_psid
 |   +---3bus_genrou
 |   +---3bus_genrou_psse
 |   +---3bus_gensal
+|   +---3bus_gfm_psid
 |   +---3bus_ieeedc1a
 |   +---3bus_loadstep
 |   +---3bus_psskundur
+|   +---3bus_sauerpai_psid
 |   +---3bus_sexst
+|   +---3bus_shaft5mass_psid
 |   +---3bus_tgov1
 |   +---ieee39
 |   +---ieee39_conv
@@ -73,6 +77,16 @@ hermess
 |   |   |   +---sexst
 |   |   |   |   +---system
 |   |   |   +---tgov1
+|   |   |   |   +---system
+|   |   +---psid
+|   |   |   +---_generate
+|   |   |   +---dynlines
+|   |   |   |   +---system
+|   |   |   +---gfm_droop
+|   |   |   |   +---system
+|   |   |   +---sauerpai
+|   |   |   |   +---system
+|   |   |   +---shaft5mass
 |   |   |   |   +---system
 |   |   +---psse
 |   |   |   +---genrou

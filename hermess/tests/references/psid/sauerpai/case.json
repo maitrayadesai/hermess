@@ -1,0 +1,40 @@
+{
+ "model": "SynchronousSubtransientSP",
+ "description": "Six-state Sauer-Pai machine vs PSID SauerPaiMachine; constant field voltage and mechanical torque; impedance-load step.",
+ "device_class": "SynchronousSubtransientSP",
+ "config": {
+  "T_end": 8.0
+ },
+ "state_columns": {
+  "delta": "delta",
+  "omega": "omega",
+  "e_qprim": "eq_p",
+  "e_dprim": "ed_p",
+  "psid": "psid",
+  "psiq": "psiq",
+  "psid2": "psid_pp",
+  "psiq2": "psiq_pp"
+ },
+ "voltage_columns": {
+  "1": "v_101",
+  "2": "v_102",
+  "3": "v_103"
+ },
+ "event_times": [1.0],
+ "tolerances": {
+  "initial": 1e-05,
+  "eig_abs": 0.0001,
+  "eig_rel": 0.0001,
+  "traj_default": 0.001,
+  "traj": {
+   "omega": 1e-05,
+   "delta": 0.0001
+  }
+ },
+ "achieved_2026_08": {
+  "initial": 2.8e-07,
+  "eig_abs": 8.1e-07,
+  "traj_worst": 7.8e-05,
+  "traj_worst_column": "psiq"
+ }
+}

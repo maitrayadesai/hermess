@@ -1,0 +1,6 @@
+# Load step at bus 3 at t = 1 s: +20 MW, +5 Mvar on the constant-impedance
+# load (PSID twin: LoadChange of the impedance references; both tools scale
+# the admittance at the initial power-flow voltage). A load step is used
+# instead of a line trip because the PSID IDA restart across a topology
+# change does not converge with the stiff ideal-source branch.
+Disturbance, time = 1.0, type = "LOAD", bus = "3", p_delta = 20, q_delta = 5

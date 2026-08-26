@@ -1,0 +1,42 @@
+{
+ "model": "Shaft5Mass",
+ "description": "Five-mass torsional shaft (Sauer-Pai torsional data) vs PSID FiveMassShaft; F_hp = 1 matches PSID's torque application; impedance-load step.",
+ "device_class": "SynchronousSubtransientSP",
+ "config": {
+  "T_end": 8.0
+ },
+ "state_columns": {
+  "delta": "delta",
+  "omega": "omega",
+  "psid2": "psid_pp",
+  "psiq2": "psiq_pp",
+  "delta_hp": "delta_hp",
+  "omega_hp": "omega_hp",
+  "delta_ip": "delta_ip",
+  "omega_ip": "omega_ip",
+  "delta_lp": "delta_lp",
+  "omega_lp": "omega_lp",
+  "delta_exc": "delta_exc",
+  "omega_exc": "omega_exc"
+ },
+ "voltage_columns": {
+  "2": "v_102"
+ },
+ "event_times": [1.0],
+ "tolerances": {
+  "initial": 1e-05,
+  "eig_abs": 0.0001,
+  "eig_rel": 0.0001,
+  "traj_default": 0.001,
+  "traj": {
+   "omega": 0.0001,
+   "delta": 0.0001
+  }
+ },
+ "achieved_2026_08": {
+  "initial": 2.8e-07,
+  "eig_abs": 8.9e-07,
+  "traj_worst": 1.6e-04,
+  "traj_worst_column": "delta_exc"
+ }
+}

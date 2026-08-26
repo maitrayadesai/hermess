@@ -1,0 +1,102 @@
+{
+ "description": "Five-mass torsional shaft (HP-IP-LP-GEN-EXC, Sauer-Pai torsional data) on the Sauer-Pai machine, three-bus system, +20 MW / +5 Mvar impedance-load step at bus 103 at t = 1 s; vs hermess Shaft5Mass with F_hp = 1.",
+ "eigenvalues": [
+  [
+   -42.55171780844347,
+   0.0
+  ],
+  [
+   -39.24157684453628,
+   0.0
+  ],
+  [
+   -12.060803228771512,
+   -375.9594305168015
+  ],
+  [
+   -12.060803228771512,
+   375.9594305168015
+  ],
+  [
+   -5.6695519889623,
+   0.0
+  ],
+  [
+   -1.1672319757650507,
+   -8.500272181022474
+  ],
+  [
+   -1.1672319757650507,
+   8.500272181022474
+  ],
+  [
+   -0.8706786625693719,
+   -278.5465714571812
+  ],
+  [
+   -0.8706786625693719,
+   278.5465714571812
+  ],
+  [
+   -0.26338580829388725,
+   -162.4027662416992
+  ],
+  [
+   -0.26338580829388725,
+   162.4027662416992
+  ],
+  [
+   -0.21508842248524315,
+   -57.211281538877394
+  ],
+  [
+   -0.21508842248524315,
+   57.211281538877394
+  ],
+  [
+   -0.15757998206841017,
+   -124.8622810690099
+  ],
+  [
+   -0.15757998206841017,
+   124.8622810690099
+  ],
+  [
+   -0.1295125186582757,
+   0.0
+  ]
+ ],
+ "extra": {},
+ "initial": {
+  "delta": 0.8867590474230191,
+  "delta_exc": 0.8867590474230191,
+  "delta_hp": 0.930618359783909,
+  "delta_ip": 0.915478015195984,
+  "delta_lp": 0.8979652066782269,
+  "omega": 1.0,
+  "omega_exc": 1.0,
+  "omega_hp": 1.0,
+  "omega_ip": 1.0,
+  "omega_lp": 1.0,
+  "psid_pp": 0.7050441230195165,
+  "psiq_pp": -0.681894327165959,
+  "v_102": 1.0099999999999998
+ },
+ "integration": {
+  "abstol": 1.0e-6,
+  "dtmax": 0.005,
+  "reltol": 1.0e-6,
+  "saveat": 0.005,
+  "solver": "Sundials IDA"
+ },
+ "notes": [
+  "hermess state map: delta/omega (gen mass), delta_hp/omega_hp, delta_ip/omega_ip, delta_lp/omega_lp, delta_exc/omega_exc = δ/ω, δ_hp/ω_hp, δ_ip/ω_ip, δ_lp/ω_lp, δ_ex/ω_ex.",
+  "hermess must run with F_hp = 1, F_ip = F_lp = 0 (PSID applies the whole mechanical torque to the HP mass) and f = 0."
+ ],
+ "tool": "PowerSimulationsDynamics.jl",
+ "versions": {
+  "PowerSimulationsDynamics": "0.16.2",
+  "PowerSystems": "5.12.3",
+  "julia": "1.12.6"
+ }
+}

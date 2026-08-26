@@ -1,0 +1,5 @@
+# Load step at bus 3 at t = 1 s: +20 MW, +5 Mvar on the constant-impedance
+# load (PSID twin: LoadChange of the impedance references). With the dynamic
+# network the step excites the line-current and bus-capacitor states
+# directly.
+Disturbance, time = 1.0, type = "LOAD", bus = "3", p_delta = 20, q_delta = 5
