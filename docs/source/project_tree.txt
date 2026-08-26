@@ -12,6 +12,7 @@ hermess
 |   +---3bus_gfm_psid
 |   +---3bus_ieeedc1a
 |   +---3bus_loadstep
+|   +---3bus_marconato_pscad
 |   +---3bus_psskundur
 |   +---3bus_sauerpai_psid
 |   +---3bus_sexst
@@ -23,6 +24,9 @@ hermess
 |   +---ieee39_ideal
 |   +---kundur
 |   +---kundur_conv
+|   +---omib_gfl_pscad
+|   +---omib_gfm_pscad
+|   +---omib_vsm_pscad
 |   +---sea14gen
 |   |   +---case1
 |   |   +---case1_conv
@@ -78,6 +82,19 @@ hermess
 |   |   |   |   +---system
 |   |   |   +---tgov1
 |   |   |   |   +---system
+|   |   +---pscad
+|   |   |   +---test08
+|   |   |   |   +---system
+|   |   |   |   +---upstream
+|   |   |   +---test23
+|   |   |   |   +---system
+|   |   |   |   +---upstream
+|   |   |   +---test24
+|   |   |   |   +---system
+|   |   |   |   +---upstream
+|   |   |   +---test25
+|   |   |   |   +---system
+|   |   |   |   +---upstream
 |   |   +---psid
 |   |   |   +---_generate
 |   |   |   +---dynlines

@@ -165,6 +165,48 @@ The Sauer-Pai system with the network itself dynamic (run it with
 state. The cross-tool validation case for the dynamic network against PSID
 (see :ref:`validation`). Disturbance: a load step.
 
+.. _omib_gfm_pscad:
+
+``omib_gfm_pscad``
+^^^^^^^^^^^^^^^^^^
+
+The one-machine-infinite-bus system of the PSCAD Test23 benchmark: the full
+D'Arco droop grid-forming converter (active damping, split power-filter
+corners) against an ideal source. Validated against both PSID and the PSCAD
+electromagnetic trajectory (see :ref:`validation`). Disturbance: a
+reference-power step (the ``SETPOINT`` event).
+
+.. _omib_vsm_pscad:
+
+``omib_vsm_pscad``
+^^^^^^^^^^^^^^^^^^
+
+The OMIB of the PSCAD Test08 benchmark: the virtual-synchronous-machine
+converter (``angle = "VSM"`` with the Kaura PLL and damped inner control).
+Validated against both PSID and PSCAD (see :ref:`validation`). Disturbance:
+a reference-power step.
+
+.. _omib_gfl_pscad:
+
+``omib_gfl_pscad``
+^^^^^^^^^^^^^^^^^^
+
+The OMIB of the PSCAD Test24 benchmark: the current-injecting GridFollowing
+converter (PI power outers, current-mode inner, reduced-order PLL).
+Validated against PSID exactly and compared against the PSCAD trace (see
+:ref:`validation`). Disturbance: a reference-power step.
+
+.. _3bus_marconato_pscad:
+
+``3bus_marconato_pscad``
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+The three-bus system of the PSCAD Test25 benchmark (60 Hz): two Marconato
+machines (Type II governor and fixed torque, AVRSimple exciters) with every
+line dynamic (run it with ``line_dyn=True`` and ``fn=60``). Validated
+against PSID and the PSCAD voltage trajectory (see :ref:`validation`).
+Disturbance: a reference-power step.
+
 .. _kundur:
 
 ``kundur``

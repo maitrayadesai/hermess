@@ -1,0 +1,102 @@
+{
+ "description": "Droop grid-forming converter (full D'Arco set, kad = 0.2, split power filters) on the OMIB, P_ref step 0.5 -> 0.7 at t = 1 s; the system of the PSCAD Test23 benchmark.",
+ "eigenvalues": [
+  [
+   -1866.391504983888,
+   -5687.228957491337
+  ],
+  [
+   -1866.391504983888,
+   5687.228957491337
+  ],
+  [
+   -1701.7392049818409,
+   -5440.156040398517
+  ],
+  [
+   -1701.7392049818409,
+   5440.156040398517
+  ],
+  [
+   -1419.52104792999,
+   -175.10648869119248
+  ],
+  [
+   -1419.52104792999,
+   175.10648869119248
+  ],
+  [
+   -981.3882704720722,
+   0.0
+  ],
+  [
+   -50.59598092415921,
+   0.0
+  ],
+  [
+   -50.24397430384116,
+   0.0
+  ],
+  [
+   -24.124823634446745,
+   -243.23191389722055
+  ],
+  [
+   -24.124823634446745,
+   243.23191389722055
+  ],
+  [
+   -16.230101880819497,
+   -31.447356101634124
+  ],
+  [
+   -16.230101880819497,
+   31.447356101634124
+  ],
+  [
+   -11.405565085455192,
+   0.0
+  ],
+  [
+   -11.303315513815875,
+   0.0
+  ]
+ ],
+ "extra": {},
+ "initial": {
+  "gamma_d": 0.07033250769081131,
+  "gamma_q": -0.006874512883054994,
+  "ii_cnv": 0.07940067573103783,
+  "ii_filter": 0.005106291898924546,
+  "ir_cnv": 0.49251498365458474,
+  "ir_filter": 0.4999950000500325,
+  "phi_d": 1.0042593191930127,
+  "phi_q": -0.0982486391794259,
+  "pm": 0.5025002107429528,
+  "qm": 0.045413540374576,
+  "theta": 0.19786424752724,
+  "v_101": 1.00001,
+  "v_102": 1.0000000000005207,
+  "vi_filter": 0.10108130264118562,
+  "vr_filter": 1.0039781598934228,
+  "xi_d": 0.0006674499944254477,
+  "xi_q": -0.0001267394099281584
+ },
+ "integration": {
+  "abstol": 1.0e-6,
+  "dtmax": 0.005,
+  "reltol": 1.0e-6,
+  "saveat": 0.005,
+  "solver": "Sundials IDA"
+ },
+ "notes": [
+  "hermess: GridForming with inner = CascadedDamped (Kad, omega_ad) and omega_f_q = 1000; state map as in the psid/gfm_droop case plus phi_d/phi_q.",
+  "The PSCAD trajectory upstream/Test23_theta.csv starts at t = 9 s (offset 9.0, subtract before comparing) and holds θ_oc in rad."
+ ],
+ "tool": "PowerSimulationsDynamics.jl",
+ "versions": {
+  "PowerSimulationsDynamics": "0.16.2",
+  "PowerSystems": "5.12.3",
+  "julia": "1.12.6"
+ }
+}

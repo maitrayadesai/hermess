@@ -67,28 +67,19 @@ admittance at the initial power-flow voltage).
   network frame with the reference device's speed; `generate.jl` pins
   `ConstantFrequency()`, the frame hermess uses with `omega_mode = "nom"`.
 
-## Why the PSCAD-benchmarked PSID cases are not consumed
+## The PSCAD-benchmarked systems
 
 PSID commits four PSCAD-produced trajectories (`test/benchmarks/pscad/`,
-Test08/23/24/25). None is representable by hermess as shipped; consuming
-them would validate someone else's model, not ours:
+Test08/23/24/25). As of v1.1 hermess ships every feature those systems need
+(active damping, split power-filter corners, the VSM angle source, the
+Kaura and reduced-order PLLs, the current-injecting GridFollowing chain,
+the Marconato machine, AVRSimple and TGTypeII), and all four are consumed
+in `../pscad/`, each with a PSID three-level reference of its own plus the
+PSCAD trajectory. The `gfm_droop` case here remains the reduced (kad = 0,
+shared filter corner) variant of Test23 that validates the plain
+GridForming as shipped before v1.1.
 
-| upstream case | blocker |
-|---|---|
-| Test08 (VSM inverter) | hermess ships no virtual-inertia angle source (`VirtualInertia` Ta/kd/kω). |
-| Test23 (droop inverter) | the reference embeds active damping (kad = 0.2) and split power-filter frequencies (ωz = 2π·5, ωf = 1000); hermess has neither. |
-| Test24 (grid following) | PSID's grid-following chain is PI outer + current-mode inner + Kaura PLL; hermess GridSupporting (PLL-anchored droop + voltage-mode cascade) has no PSID counterpart at all — the anchor choice is welded to the actuation type in PSID. |
-| Test25 (multi-machine, dynamic lines) | Marconato machines + AVRSimple + TG Type II, none shipped by hermess. |
-
-The `gfm_droop` case is the exact-match replacement for Test23: same
-component family, active damping disabled on the PSID side instead of
-missing on ours.
-
-## What remains possible here
-
-- A dynamic-lines case (hermess `line_dyn=True` vs PSID `DynamicBranch`) is
-  structurally exact within a documented box: all lines dynamic, unity
-  taps, `g = 0`, charging `b > 0` at every bus, nominal frame; neither tool
-  supports tripping a dynamic line, so the disturbance must be a load step.
-- hermess GridSupporting needs a different reference tool (or a PSID
-  extension); the structural analysis is in the table above.
+One model still has no PSID counterpart: hermess **GridSupporting** (the
+PLL-anchored droop with the voltage-mode cascade; named GridFollowing
+before v1.1). In PSID the frequency-anchor choice is welded to the
+actuation type, so this chain needs a different reference tool.

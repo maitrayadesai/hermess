@@ -1,0 +1,58 @@
+{
+ "model": "GridForming + CascadedDamped",
+ "description": "Droop grid-forming converter with active damping and split power filters (full D'Arco set) on the OMIB; P_ref step; PSID three-level reference plus the PSCAD Test23 trajectory.",
+ "device_class": "GridForming",
+ "config": {
+  "T_end": 4.0
+ },
+ "state_columns": {
+  "delta_c": "theta",
+  "Pc_tilde": "pm",
+  "Qc_tilde": "qm",
+  "Vfd_ext": "vr_filter",
+  "Vfq_ext": "vi_filter",
+  "ifd_ext": "ir_cnv",
+  "ifq_ext": "ii_cnv",
+  "itd_ext": "ir_filter",
+  "itq_ext": "ii_filter",
+  "xi_d": "xi_d",
+  "xi_q": "xi_q",
+  "gamma_d": "gamma_d",
+  "gamma_q": "gamma_q",
+  "phi_d": "phi_d",
+  "phi_q": "phi_q"
+ },
+ "voltage_columns": {
+  "1": "v_101",
+  "2": "v_102"
+ },
+ "event_times": [1.0],
+ "pscad": {
+  "csv": "upstream/Test23_theta.csv",
+  "quantity": "delta_c",
+  "offset": 9.0,
+  "tol_inf": 0.03,
+  "upstream_acceptance": "PSID-vs-PSCAD 2-norm <= 3e-2 on theta"
+ },
+ "tolerances": {
+  "initial": 1e-06,
+  "eig_abs": 0.0001,
+  "eig_rel": 0.0001,
+  "traj_default": 0.0002,
+  "traj": {}
+ },
+ "achieved_2026_08": {
+  "initial": 3.7e-10,
+  "eig_scaled": 1.3e-10,
+  "psid_traj_worst": 1.5e-05,
+  "pscad_inf": 1.3e-02,
+  "pscad_2norm": 5.0e-02
+ },
+ "upstream": {
+  "repository": "https://github.com/Sienna-Platform/PowerSimulationsDynamics.jl",
+  "commit": "dfb56d80b7a019b2d287f1da4d65157d6de134fa",
+  "path": "test/benchmarks/pscad/Test23",
+  "license": "BSD-3-Clause (upstream/LICENSE)",
+  "note": "the PSCAD component libraries (PSID_Library*.pslx, ~1 MB) are not copied; they live at the pinned upstream path"
+ }
+}

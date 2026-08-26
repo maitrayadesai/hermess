@@ -98,7 +98,12 @@ function run_and_write(
     # PSID default (ReferenceBus) rotates the frame with the reference
     # device's own speed, which is a (slightly) different vector field: the
     # trajectories barely move but the linearization shifts every
-    # oscillatory mode.
+    # oscillatory mode. A case may opt back into the default
+    # (extra_meta["reference_bus"]) when PSID's initialization refuses the
+    # constant frame (the all-machine dynamic-lines case does); its
+    # rotating-frame states are then not comparable, only invariants are.
+    freq_ref = get(extra_meta, "reference_bus", false) ? PSID.ReferenceBus() :
+               PSID.ConstantFrequency()
     sim = PSID.Simulation(
         PSID.ResidualModel,
         sys,
@@ -106,7 +111,7 @@ function run_and_write(
         (0.0, t_end),
         perturbation;
         all_lines_dynamic = get(extra_meta, "all_lines_dynamic", false),
-        frequency_reference = PSID.ConstantFrequency(),
+        frequency_reference = freq_ref,
     )
 
     ss = PSID.small_signal_analysis(sim)

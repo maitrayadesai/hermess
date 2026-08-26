@@ -1,0 +1,4 @@
+# Reference-power step 0.8 -> 0.9 (device p.u.) on the bus-2 machine at
+# t = 1 s, the perturbation of the PSCAD benchmark run (PSID:
+# ControlReferenceChange :P_ref on the constant-power machine).
+Disturbance, time = 1.0, type = "SETPOINT", device = "SG2", param = "Pref", value = 0.9

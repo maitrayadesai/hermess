@@ -1,0 +1,57 @@
+{
+ "model": "GridFollowing",
+ "description": "Grid-following converter (PI power outers, current-mode inner, reduced-order PLL) on the OMIB; P_ref step; PSID three-level reference plus the PSCAD Test24 trajectory.",
+ "device_class": "GridFollowing",
+ "config": {
+  "T_end": 2.0
+ },
+ "state_columns": {
+  "sigma_p": "sigma_p",
+  "Pc_tilde": "pm",
+  "sigma_q": "sigma_q",
+  "Qc_tilde": "qm",
+  "gamma_d": "gamma_d",
+  "gamma_q": "gamma_q",
+  "Vfd_ext": "vr_filter",
+  "Vfq_ext": "vi_filter",
+  "ifd_ext": "ir_cnv",
+  "ifq_ext": "ii_cnv",
+  "itd_ext": "ir_filter",
+  "itq_ext": "ii_filter",
+  "vq_lp": "vq_lp",
+  "epsilon": "epsilon",
+  "delta_pll": "delta_pll"
+ },
+ "voltage_columns": {
+  "2": "v_102"
+ },
+ "event_times": [1.0],
+ "pscad": {
+  "csv": "upstream/Test24_p.csv",
+  "quantity": "Pc_tilde",
+  "offset": 9.0,
+  "tol_inf": 0.15,
+  "upstream_acceptance": "none: the upstream suite keeps its PSCAD trajectory assertion for this case commented out; hermess and PSID agree to 9e-5 while both differ from the PSCAD power trace, so the loose bound only pins gross regressions"
+ },
+ "tolerances": {
+  "initial": 1e-06,
+  "eig_abs": 0.0001,
+  "eig_rel": 0.0001,
+  "traj_default": 0.0005,
+  "traj": {}
+ },
+ "achieved_2026_08": {
+  "initial": 1.7e-10,
+  "eig_scaled": 9.4e-10,
+  "psid_traj_worst": 9.2e-05,
+  "pscad_inf": 1.1e-01,
+  "pscad_2norm": 2.9e-01
+ },
+ "upstream": {
+  "repository": "https://github.com/Sienna-Platform/PowerSimulationsDynamics.jl",
+  "commit": "dfb56d80b7a019b2d287f1da4d65157d6de134fa",
+  "path": "test/benchmarks/pscad/Test24",
+  "license": "BSD-3-Clause (upstream/LICENSE)",
+  "note": "the PSCAD component libraries (PSID_Library*.pslx) are not copied; they live at the pinned upstream path"
+ }
+}

@@ -1,0 +1,101 @@
+{
+ "description": "Grid-following converter (PI power outers, current-mode inner, reduced-order PLL) on the OMIB, P_ref step 0.5 -> 0.7 at t = 1 s; the system of the PSCAD Test24 benchmark.",
+ "eigenvalues": [
+  [
+   -13464.059313555308,
+   -0.40642814439452063
+  ],
+  [
+   -13464.059313555308,
+   0.40642814439452063
+  ],
+  [
+   -212.49614154563875,
+   -4903.488338574773
+  ],
+  [
+   -212.49614154563875,
+   4903.488338574773
+  ],
+  [
+   -202.25229517185403,
+   -467.6010861373967
+  ],
+  [
+   -202.25229517185403,
+   467.6010861373967
+  ],
+  [
+   -185.99717995823318,
+   -3948.2370205678376
+  ],
+  [
+   -185.99717995823318,
+   3948.2370205678376
+  ],
+  [
+   -111.89093469376664,
+   0.0
+  ],
+  [
+   -110.88189331344809,
+   0.0
+  ],
+  [
+   -10.84906389182592,
+   0.0
+  ],
+  [
+   -10.79469304237539,
+   0.0
+  ],
+  [
+   -10.167444318519385,
+   0.0
+  ],
+  [
+   -1.8979549688362625,
+   0.0
+  ],
+  [
+   -1.8978785072359128,
+   0.0
+  ]
+ ],
+ "extra": {},
+ "initial": {
+  "delta_pll": 0.002043502472985406,
+  "epsilon": 0.0,
+  "gamma_d": 0.011428671789589086,
+  "gamma_q": 0.05732143704018362,
+  "ii_cnv": 2.508829393812539,
+  "ii_filter": 0.005106292151433873,
+  "ir_cnv": 0.494878628578119,
+  "ir_filter": 0.49999500004999947,
+  "pm": 0.5007500632228865,
+  "qm": -0.004090632587739371,
+  "sigma_p": 0.016666813026614973,
+  "sigma_q": -0.08359376235011945,
+  "v_102": 1.0,
+  "vi_filter": 0.002046548588744104,
+  "vq_lp": 0.0,
+  "vr_filter": 1.0014892406880396
+ },
+ "integration": {
+  "abstol": 1.0e-6,
+  "dtmax": 0.005,
+  "reltol": 1.0e-6,
+  "saveat": 0.005,
+  "solver": "Sundials IDA"
+ },
+ "notes": [
+  "hermess: GridFollowing (angle = PLLPowerPI, voltage = QPowerPI, inner = CurrentPI, pll = ReducedPLL); sigma_p/sigma_q, pm = Pc_tilde, qm = Qc_tilde, gamma_d/q, the six filter states and the PLL states map by name; the hermess frame angle delta_c is the algebraic alias of delta_pll = θ_pll.",
+  "The PSCAD trajectory upstream/Test24_p.csv starts at t = 9 s (offset 9.0) and holds the filtered active power p_oc in p.u."
+ ],
+ "tool": "PowerSimulationsDynamics.jl",
+ "versions": {
+  "PowerSimulationsDynamics": "0.16.2",
+  "PowerSystems": "5.12.3",
+  "julia": "1.12.6"
+ }
+}

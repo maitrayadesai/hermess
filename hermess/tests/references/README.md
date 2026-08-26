@@ -26,15 +26,23 @@ references/
 │       ├── system/            the hermess transcription of the upstream case
 │       ├── upstream/          verbatim PSID files: .raw, .dyr, CSV, LICENSE
 │       └── case.json          comparison spec, tolerances, checksums
-└── psid/                      reference tool: PowerSimulationsDynamics.jl
-    ├── README.md              (Julia, run locally; converters, Sauer-Pai,
-    ├── _generate/             shafts, dynamic lines) — pinned Julia env
-    └── <case>/                (Project.toml + Manifest.toml)
-        ├── system/            the hermess system
-        ├── generate.jl        the script that produced the reference
-        ├── *.raw              the network the PSID twin parses
-        ├── reference.csv      + reference_meta.json (committed)
-        └── case.json          comparison spec and tolerances
+├── psid/                      reference tool: PowerSimulationsDynamics.jl
+│   ├── README.md              (Julia, run locally; converters, Sauer-Pai,
+│   ├── _generate/             shafts, dynamic lines) — pinned Julia env
+│   └── <case>/                (Project.toml + Manifest.toml)
+│       ├── system/            the hermess system
+│       ├── generate.jl        the script that produced the reference
+│       ├── *.raw              the network the PSID twin parses
+│       ├── reference.csv      + reference_meta.json (committed)
+│       └── case.json          comparison spec and tolerances
+└── pscad/                     reference tool: PSCAD (electromagnetic
+    ├── README.md              trajectories from the PSID benchmark set)
+    └── <case>/                — each case carries BOTH a locally generated
+        ├── system/            PSID three-level reference (generate.jl) AND
+        ├── upstream/          the verbatim PSCAD trajectory + .pscx +
+        ├── generate.jl        LICENSE; see its README for the two-tier
+        ├── reference.csv      structure and findings
+        └── case.json
 ```
 
 Adding a model = adding a folder: the test module discovers every folder with

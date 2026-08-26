@@ -240,18 +240,74 @@ two inert reference states), one shared power-filter frequency, PSID's
 five-mass shaft as our ``F_hp = 1``, and constant-frame rotation
 (``ConstantFrequency``) matching ``omega_mode = "nom"``.
 
-Two exclusions are documented rather than approximated
-(``hermess/tests/references/psid/README.md``): PSID's four PSCAD-benchmarked
-trajectories all embed features hermess deliberately omits (a VSM angle
-source, active damping, a PI-outer grid-following chain, Marconato
-machines), and hermess ``GridSupporting`` (a PLL-anchored droop with a
-voltage-mode cascade) has no PSID counterpart at all. One measurement
-finding from building this family: the PowerSystems.jl PSS/E parser ignores
-the frequency in the raw header and defaults to 60 Hz, which barely moved
-the trajectories of a mildly disturbed machine while shifting every
-oscillatory eigenvalue by the base-frequency ratio — caught by the
-eigenvalue level of the comparison, and the reason the suite checks spectra
-rather than trajectories alone.
+One model has no PSID counterpart and awaits a different reference tool:
+``GridSupporting``, the PLL-anchored droop with the voltage-mode cascade
+(named ``GridFollowing`` before v1.1); in PSID the frequency-anchor choice
+is welded to the actuation type. One measurement finding from building this
+family: the PowerSystems.jl PSS/E parser ignores the frequency in the raw
+header and defaults to 60 Hz, which barely moved the trajectories of a
+mildly disturbed machine while shifting every oscillatory eigenvalue by the
+base-frequency ratio — caught by the eigenvalue level of the comparison,
+and the reason the suite checks spectra rather than trajectories alone.
+
+Against PSCAD electromagnetic trajectories
+------------------------------------------
+
+The fourth family is the strongest evidence in the suite: comparison
+against PSCAD, a full electromagnetic-transients simulator, on the four
+benchmark systems whose PSCAD runs the PSID project publishes. Enabling
+them drove the v1.1 model additions: the active-damped inner control, the
+virtual-synchronous-machine angle source with the Kaura PLL, the
+literature-standard current-injecting :class:`~hermess.devices.inverter.GridFollowing`
+chain, the :class:`~hermess.devices.synchronous.Marconato` machine with
+:class:`~hermess.devices.avr.AVRSimple` and
+:class:`~hermess.devices.governor.TGTypeII`, and the ``SETPOINT``
+reference-step disturbance. Each case in ``hermess/tests/references/pscad/``
+carries two references for the same system: a locally generated PSID
+reference giving the full three-level check (initial states and eigenvalues
+agree to about 1e-9 for the inverter cases), and the PSCAD trajectory on
+top. The table reports the achieved agreement with PSCAD itself, next to
+the acceptance the upstream project uses for its own PSID-vs-PSCAD
+comparison of the same data.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 24 20 14 14 24
+
+   * - Case
+     - PSCAD quantity
+     - Achieved (inf)
+     - Achieved (2-norm)
+     - Upstream acceptance (2-norm)
+   * - droop grid-forming (Test23)
+     - converter angle
+     - 1.3e-2 rad
+     - 5.0e-2
+     - 3e-2
+   * - virtual synchronous machine (Test08)
+     - converter frequency
+     - 1.3e-4 p.u.
+     - 7.3e-4
+     - 1e-4
+   * - grid following (Test24)
+     - filtered power
+     - 1.1e-1 p.u.
+     - 2.9e-1
+     - none: upstream keeps this assertion disabled
+   * - two Marconato machines, dynamic lines (Test25)
+     - bus voltage
+     - 3.2e-3 p.u.
+     - 9.2e-2
+     - 1e-1 ("relaxed to account for mismatch in damping")
+
+These are electromagnetic-vs-phasor comparisons, so the residuals are
+physics, not implementation error: the same-system PSID references agree
+with hermess to 1e-5 or better on every state, and the Test24 power trace
+is a discrepancy the upstream project itself carries (its assertion is
+commented out). The systems ship as :ref:`omib_gfm_pscad <omib_gfm_pscad>`,
+:ref:`omib_vsm_pscad <omib_vsm_pscad>`,
+:ref:`omib_gfl_pscad <omib_gfl_pscad>` and
+:ref:`3bus_marconato_pscad <3bus_marconato_pscad>`.
 
 Benchmark tables
 ----------------

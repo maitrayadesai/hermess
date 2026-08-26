@@ -72,6 +72,14 @@ PSSE_CASES = sorted(
 PSID_CASES = sorted(
     p.name for p in PSID_ROOT.iterdir() if (p / "case.json").is_file()
 )
+PSCAD_ROOT = Path(__file__).parent / "references" / "pscad"
+PSCAD_CASES = sorted(
+    p.name for p in PSCAD_ROOT.iterdir() if (p / "case.json").is_file()
+)
+# The pscad cases carry a PSID reference of the same three-level shape plus
+# the PSCAD trajectory; the PSID-style checks run over both families.
+PSID_FAMILY = [("psid", n) for n in PSID_CASES] + [("pscad", n) for n in PSCAD_CASES]
+FAMILY_ROOTS = {"psid": PSID_ROOT, "pscad": PSCAD_ROOT}
 
 # The shared run configuration of every reference case; a case.json may carry
 # a "config" dict of overrides (the PSS/E cases run at 60 Hz over 20 s).
@@ -297,55 +305,73 @@ def test_trajectories_match_reference(case, reference_runs):
 
 @pytest.fixture(scope="module")
 def psid_runs():
-    """Run each PSID-family hermess case once; all three checks share the run."""
+    """Run each PSID-family hermess case once; all checks share the run."""
     runs: dict = {}
 
-    def _get(name: str):
-        if name not in runs:
-            case_dir = PSID_ROOT / name
+    def _get(family: str, name: str):
+        key = (family, name)
+        if key not in runs:
+            case_dir = FAMILY_ROOTS[family] / name
             spec = json.loads((case_dir / "case.json").read_text())
             meta = json.loads((case_dir / "reference_meta.json").read_text())
             csv = np.genfromtxt(case_dir / "reference.csv", delimiter=",", names=True)
             sim = _run_hermess(case_dir, spec.get("config", {}))
-            runs[name] = (sim, spec, meta, csv)
-        return runs[name]
+            runs[key] = (sim, spec, meta, csv)
+        return runs[key]
 
     return _get
 
 
-def _psid_device(sim, spec):
-    return [
+def _psid_state(sim, spec, key):
+    """Resolve a state key of a psid/pscad case spec to its trajectory row.
+    A plain key addresses the (single) device of ``device_class``; the form
+    ``"<idx>:<state>"`` addresses the device carrying that id (multi-machine
+    cases, where different strategy combos live in separate containers)."""
+    if ":" in key:
+        idx, state = key.split(":", 1)
+        for dev in sim.device_list:
+            if idx in getattr(dev, "int", {}):
+                return dev.xf[state][dev.int[idx]]
+        raise KeyError(f"no device with idx {idx!r}")
+    dev = [
         d for d in sim.device_list if type(d).__name__ == spec["device_class"]
     ][0]
+    return dev.xf[key][0]
 
 
-@pytest.mark.parametrize("case", PSID_CASES)
-def test_psid_initial_conditions_match_reference(case, psid_runs):
-    sim, spec, meta, _csv = psid_runs(case)
-    dev = _psid_device(sim, spec)
+@pytest.mark.parametrize("family, case", PSID_FAMILY, ids=lambda v: v)
+def test_psid_initial_conditions_match_reference(family, case, psid_runs):
+    sim, spec, meta, _csv = psid_runs(family, case)
     tol = spec["tolerances"]["initial"]
     # The t = 0 trajectory sample is the initialized state on both sides.
+    # initial_only_columns extends the check with states whose trajectories
+    # are not comparable (rotating-frame states of a reference-bus case, or
+    # states realized in a different but equivalent canonical form) while
+    # their t = 0 values still are.
+    ic_map = {**spec["state_columns"], **spec.get("initial_only_columns", {})}
     errors = {
-        ours: abs(float(dev.xf[ours][0, 0]) - float(meta["initial"][col]))
-        for ours, col in spec["state_columns"].items()
+        ours: abs(float(_psid_state(sim, spec, ours)[0]) - float(meta["initial"][col]))
+        for ours, col in ic_map.items()
     }
     worst = max(errors.values())
     assert worst <= tol, (
-        f"psid/{case}: initialized states differ from PSID by {worst:.3e} "
+        f"{family}/{case}: initialized states differ from PSID by {worst:.3e} "
         f"(tolerance {tol:.0e}); per state: "
         + ", ".join(f"{k} {v:.2e}" for k, v in errors.items())
     )
 
 
-@pytest.mark.parametrize("case", PSID_CASES)
-def test_psid_eigenvalues_match_reference(case, psid_runs):
-    sim, spec, meta, _csv = psid_runs(case)
+@pytest.mark.parametrize("family, case", PSID_FAMILY, ids=lambda v: v)
+def test_psid_eigenvalues_match_reference(family, case, psid_runs):
+    sim, spec, meta, _csv = psid_runs(family, case)
+    if "skip_eigenvalues" in spec:
+        pytest.skip(spec["skip_eigenvalues"])
     mu = np.array([complex(re, im) for re, im in meta["eigenvalues"]])
     extra = spec.get("allow_extra_reference_eigenvalues", 0)
     lam = np.asarray(sim.eigenvalues)
     assert lam.size + extra == mu.size, (
-        f"psid/{case}: {lam.size} hermess eigenvalues vs {mu.size} reference "
-        f"ones (expected {extra} unmatched reference artifacts)"
+        f"{family}/{case}: {lam.size} hermess eigenvalues vs {mu.size} "
+        f"reference ones (expected {extra} unmatched reference artifacts)"
     )
     abs_tol = spec["tolerances"]["eig_abs"]
     rel_tol = spec["tolerances"]["eig_rel"]
@@ -360,28 +386,29 @@ def test_psid_eigenvalues_match_reference(case, psid_runs):
         if scaled > worst[0]:
             worst = (scaled, mu[k])
     assert worst[0] <= abs_tol, (
-        f"psid/{case}: eigenvalue nearest to reference {worst[1]:.4f} differs "
-        f"by {worst[0]:.3e} (tolerance {abs_tol:.0e} + {rel_tol:.0e}*|mu|)"
+        f"{family}/{case}: eigenvalue nearest to reference {worst[1]:.4f} "
+        f"differs by {worst[0]:.3e} (tolerance {abs_tol:.0e} + "
+        f"{rel_tol:.0e}*|mu|)"
     )
 
 
-@pytest.mark.parametrize("case", PSID_CASES)
-def test_psid_trajectories_match_reference(case, psid_runs):
-    sim, spec, meta, csv = psid_runs(case)
-    dev = _psid_device(sim, spec)
+@pytest.mark.parametrize("family, case", PSID_FAMILY, ids=lambda v: v)
+def test_psid_trajectories_match_reference(family, case, psid_runs):
+    sim, spec, meta, csv = psid_runs(family, case)
     tols = spec["tolerances"]["traj"]
     default_tol = spec["tolerances"]["traj_default"]
+    ts = spec.get("config", {}).get("ts", 0.005)
 
     nts = min(len(csv["t"]), sim.nts)
-    t = np.arange(nts) * 0.005
+    t = np.arange(nts) * ts
     assert np.allclose(csv["t"][:nts], t)
     keep = np.ones(nts, dtype=bool)
     for ev in spec["event_times"]:
-        keep &= np.abs(t - ev) > 0.0075
+        keep &= np.abs(t - ev) > 1.5 * ts
 
     errors: dict[str, tuple[float, float]] = {}
     for ours, col in spec["state_columns"].items():
-        err = np.abs(dev.xf[ours][0, :nts] - csv[col][:nts]).max()
+        err = np.abs(_psid_state(sim, spec, ours)[:nts] - csv[col][:nts]).max()
         errors[col] = (err, tols.get(col, default_tol))
     for bus, col in spec["voltage_columns"].items():
         vh = np.hypot(*sim.grid.yf[bus])[:nts]
@@ -391,9 +418,35 @@ def test_psid_trajectories_match_reference(case, psid_runs):
     failed = {k: v for k, v in errors.items() if v[0] > v[1]}
     achieved = ", ".join(f"{k} {e:.2e}" for k, (e, _) in errors.items())
     assert not failed, (
-        f"psid/{case}: trajectory differs from PSID beyond tolerance: "
+        f"{family}/{case}: trajectory differs from PSID beyond tolerance: "
         + ", ".join(f"{k} {e:.3e} > {tol:.0e}" for k, (e, tol) in failed.items())
         + f"; all achieved errors: {achieved}"
+    )
+
+
+@pytest.mark.parametrize("case", PSCAD_CASES)
+def test_pscad_trajectory_matches_reference(case, psid_runs):
+    """The electromagnetic cross-check: the same hermess run against the
+    PSCAD-produced trajectory committed upstream (see references/pscad/)."""
+    sim, spec, _meta, _csv = psid_runs("pscad", case)
+    p = spec["pscad"]
+    ts = spec.get("config", {}).get("ts", 0.005)
+
+    M = np.loadtxt(PSCAD_ROOT / case / p["csv"], delimiter=",")
+    t_ref = M[:, 0] - p["offset"]
+    y_ref = M[:, 1]
+    if p["quantity"].startswith("v_"):
+        bus = p["quantity"].split("_", 1)[1]
+        ours = np.hypot(*sim.grid.yf[bus])
+    else:
+        ours = _psid_state(sim, spec, p["quantity"])
+    n = min(len(t_ref), sim.nts)
+    assert np.allclose(t_ref[:n], np.arange(n) * ts, atol=1e-6)
+    err = np.abs(ours[:n] - y_ref[:n]).max()
+    assert err <= p["tol_inf"], (
+        f"pscad/{case}: {p['quantity']} differs from the PSCAD trajectory by "
+        f"{err:.3e} inf-norm (tolerance {p['tol_inf']:.0e}); upstream's own "
+        f"acceptance for this case is recorded in case.json"
     )
 
 
