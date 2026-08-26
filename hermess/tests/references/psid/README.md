@@ -77,7 +77,7 @@ them would validate someone else's model, not ours:
 |---|---|
 | Test08 (VSM inverter) | hermess ships no virtual-inertia angle source (`VirtualInertia` Ta/kd/kω). |
 | Test23 (droop inverter) | the reference embeds active damping (kad = 0.2) and split power-filter frequencies (ωz = 2π·5, ωf = 1000); hermess has neither. |
-| Test24 (grid following) | PSID's grid-following chain is PI outer + current-mode inner + Kaura PLL; hermess GridFollowing (PLL-anchored droop + voltage-mode cascade) has no PSID counterpart at all — the anchor choice is welded to the actuation type in PSID. |
+| Test24 (grid following) | PSID's grid-following chain is PI outer + current-mode inner + Kaura PLL; hermess GridSupporting (PLL-anchored droop + voltage-mode cascade) has no PSID counterpart at all — the anchor choice is welded to the actuation type in PSID. |
 | Test25 (multi-machine, dynamic lines) | Marconato machines + AVRSimple + TG Type II, none shipped by hermess. |
 
 The `gfm_droop` case is the exact-match replacement for Test23: same
@@ -90,5 +90,5 @@ missing on ours.
   structurally exact within a documented box: all lines dynamic, unity
   taps, `g = 0`, charging `b > 0` at every bus, nominal frame; neither tool
   supports tripping a dynamic line, so the disturbance must be a load step.
-- hermess GridFollowing needs a different reference tool (or a PSID
+- hermess GridSupporting needs a different reference tool (or a PSID
   extension); the structural analysis is in the table above.

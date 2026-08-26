@@ -24,7 +24,7 @@ both ``create_baseline_inverter.py`` (which pickles the references) and the
 config here prevents drift between baseline-creation and the tests. Two cases:
 
 - ``sim_ld``  -- SIM, ``line_dyn=True`` (ODE; cvodes): 2 GridForming + 3
-  GridFollowing + 5 SGs through the t=4.0 bus fault. Run at the production output
+  GridSupporting + 5 SGs through the t=4.0 bus fault. Run at the production output
   step ``ts=1e-4`` but stored decimated (every ``SIM_LD_STRIDE``-th sample) so the
   pickle stays ~1 MB; a byte-identical refactor matches at every sample.
 - ``sim_alg`` -- SIM, ``line_dyn=False`` (algebraic network / DAE; idas).

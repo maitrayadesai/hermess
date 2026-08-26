@@ -244,7 +244,7 @@ Two exclusions are documented rather than approximated
 (``hermess/tests/references/psid/README.md``): PSID's four PSCAD-benchmarked
 trajectories all embed features hermess deliberately omits (a VSM angle
 source, active damping, a PI-outer grid-following chain, Marconato
-machines), and hermess ``GridFollowing`` (a PLL-anchored droop with a
+machines), and hermess ``GridSupporting`` (a PLL-anchored droop with a
 voltage-mode cascade) has no PSID counterpart at all. One measurement
 finding from building this family: the PowerSystems.jl PSS/E parser ignores
 the frequency in the raw header and defaults to 60 Hz, which barely moved

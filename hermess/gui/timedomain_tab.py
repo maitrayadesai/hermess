@@ -42,7 +42,7 @@ _MODEL_ABBREV = {
     "Synchronous_machine_subtransient_model_Sauer_Pai": "SM (Sauer-Pai)",
     "Synchronous_machine_subtransient_model_Sauer_Pai_6th_order": "SM (Sauer-Pai, 6th)",
     "GridForming_inverter_model": "Grid-forming inverter",
-    "GridFollowing_inverter_model": "Grid-following inverter",
+    "GridSupporting_inverter_model": "Grid-supporting inverter",
     "Infinite_bus": "Infinite bus",
 }
 

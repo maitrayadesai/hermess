@@ -298,7 +298,7 @@ Grid-following converter
 A grid-following converter, which synchronizes to the grid through a PLL
 [2]_.
 
-.. autoclass:: hermess.devices.inverter.GridFollowing
+.. autoclass:: hermess.devices.inverter.GridSupporting
    :no-index:
 
 Converter control strategies

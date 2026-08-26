@@ -233,7 +233,7 @@ def converter_line(gen: str, bus: str, s_agg: float, kind: str) -> str:
     if kind == "gfm":
         return f'GridForming, filter = "LCL_static", Kp = 0.01, {common}'
     return (
-        f'GridFollowing, filter = "LCL_static", Kp = 0.02, '
+        f'GridSupporting, filter = "LCL_static", Kp = 0.02, '
         f"Kpll_p = 0.9, Kpll_i = 5, {common}"
     )
 

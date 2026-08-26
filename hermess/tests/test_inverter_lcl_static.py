@@ -65,7 +65,7 @@ def _build_fixture(root, filter_name, disturbance):
     sp.write_text(
         "\n".join(
             (line.rstrip() + f', filter = "{filter_name}"')
-            if line.strip().startswith(("GridForming,", "GridFollowing,"))
+            if line.strip().startswith(("GridForming,", "GridSupporting,"))
             else line
             for line in sp.read_text().splitlines()
         )

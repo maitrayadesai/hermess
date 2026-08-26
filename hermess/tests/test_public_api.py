@@ -301,7 +301,7 @@ def test_inverters_publish_their_terminal_power():
     cfg = config.updated(testsystemfile="IEEE39_bus_inverter",
                          **{**_COMMON, "T_end": 0.5, "line_dyn": True})
     dae = run(cfg)
-    inv = next(d for d in dae.device_list if type(d).__name__ in ("GridForming", "GridFollowing"))
+    inv = next(d for d in dae.device_list if type(d).__name__ in ("GridForming", "GridSupporting"))
     assert isinstance(inv.Pc, ca.SX) and inv.Pc.shape == (inv.n, 1)
     assert isinstance(inv.Qc, ca.SX) and inv.Qc.shape == (inv.n, 1)
 

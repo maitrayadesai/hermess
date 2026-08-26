@@ -37,7 +37,7 @@ from hermess.tests.baselines.inverter_baseline import (
 
 
 def test_joint_init_matches_sequential_baseline(monkeypatch):
-    # Force every inverter (GridForming/GridFollowing inherit this) onto the
+    # Force every inverter (GridForming/GridSupporting inherit this) onto the
     # one-shot joint init; the baselines were generated with the sequential init.
     monkeypatch.setattr(Inverter, "_init_method", "joint")
     for case, atol in [("sim_ld", 1e-6)]:

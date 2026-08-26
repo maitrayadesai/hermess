@@ -20,7 +20,7 @@
 threaded correctly through the data loader.
 
 Copies the inverter fixture and appends *explicit, default-matching* strategy
-selectors to every GridForming/GridFollowing row, then checks the simulated
+selectors to every GridForming/GridSupporting row, then checks the simulated
 trajectory is byte-identical to the no-selector sim_ld baseline. This proves the
 threading both (a) routes each selector to the right strategy and (b) reproduces
 the hardcoded defaults exactly -- a regression guard for the registry plumbing.
@@ -48,7 +48,7 @@ def _add_default_selectors(line: str) -> str:
             + ', filter = "LCL", angle = "Droop", voltage = "QVDroop",'
             + ' inner = "Cascaded"'
         )
-    if stripped.startswith("GridFollowing,"):
+    if stripped.startswith("GridSupporting,"):
         return (
             line.rstrip()
             + ', filter = "LCL", angle = "PLL", voltage = "QVDroop",'

@@ -107,14 +107,14 @@ class Inverter(DeviceRect):
         self._filter: Filter = filter or LCL()
 
         # Angle-source strategy is mandatory: the forming-vs-following choice has
-        # no safe silent default. GridForming/GridFollowing supply theirs; a bare
+        # no safe silent default. GridForming/GridSupporting supply theirs; a bare
         # Inverter row must pass angle=. Registered after the filter so its states
         # (Pc_tilde, delta_c) follow.
         if angle is None:
             raise ValueError(
                 "An inverter requires an explicit angle source (the forming-vs-"
                 "following choice). Pass angle=Droop / PLL / ... or use a "
-                "GridForming / GridFollowing device."
+                "GridForming / GridSupporting device."
             )
         self._angle: AngleSource = angle
 
@@ -246,7 +246,7 @@ class Inverter(DeviceRect):
         self._x0.update(self._inner.x0())
 
         # PLL strategy (if present): its states occupy the trailing block of the
-        # vector (e.g. GridFollowing's epsilon/delta_pll).
+        # vector (e.g. GridSupporting's epsilon/delta_pll).
         if self._pll is not None:
             self._params.update(self._pll.params())
             self._descr.update(self._pll.descriptions())
@@ -467,7 +467,7 @@ class Inverter(DeviceRect):
 
     def _finit_sequential(self, dae: Dae) -> None:
         """Strategy-composed staged initialization (the inverter default), shared
-        by GridForming and GridFollowing. Each strategy owns its own stage; the
+        by GridForming and GridSupporting. Each strategy owns its own stage; the
         host threads the operating point between them and assembles the result by
         name. Data flow:
 
@@ -531,15 +531,19 @@ class Inverter(DeviceRect):
             self.__dict__[name] = vals[name]
 
 
-class GridFollowing(Inverter):
-    r"""Grid-following converter: the converter frame rides on a
-    synchronous-reference-frame PLL, so the converter behaves as a
-    current-injecting source synchronized to the grid
-    (model of https://doi.org/10.1109/TPWRS.2021.3061434).
+class GridSupporting(Inverter):
+    r"""Grid-supporting converter (the grid-supporting voltage source of the
+    Rocabert et al. taxonomy): the converter frame rides on a
+    synchronous-reference-frame PLL, with the active-power droop added on the
+    PLL frequency and the full voltage-mode cascade behind it, so the
+    converter supports the grid it synchronizes to
+    (model of https://doi.org/10.1109/TPWRS.2021.3061434; named
+    ``GridFollowing`` before v1.1, when that name moved to the
+    current-injecting PI chain of :class:`GridFollowing`).
 
     Selected in a system file by the class name in the first column::
 
-       GridFollowing, idx = "GFL1", bus = "5", Sn = 100, Kp = 0.01, ...
+       GridSupporting, idx = "GS1", bus = "5", Sn = 100, Kp = 0.01, ...
 
     **Model.** The equations below are the assembled set for the default
     strategy combination (dynamic ``LCL`` filter, ``PLL`` angle source,
@@ -643,7 +647,7 @@ class GridFollowing(Inverter):
 
         # private data
         self._type = "Inverter"
-        self._name = "GridFollowing_inverter_model"
+        self._name = "GridSupporting_inverter_model"
 
         self.properties.update(
             {

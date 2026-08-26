@@ -3032,7 +3032,7 @@ class DaeSim(Dae):
             "Synchronous_machine_subtransient_model_Sauer_Pai": "SM_SP",
             "Synchronous_machine_subtransient_model_Sauer_Pai_6th_order": "SM_SP6",
             "GridForming_inverter_model": "GFM",
-            "GridFollowing_inverter_model": "GFL",
+            "GridSupporting_inverter_model": "GFL",
             "Static_load_power": "SLP",
             "Static_load_impedance": "SLZ",
             "Static_load_ZIP": "ZIP",

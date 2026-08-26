@@ -79,7 +79,7 @@ def _device_cases():
         synchronous.GENROU,
         synchronous.GENSAL,
         inverter.GridForming,
-        inverter.GridFollowing,
+        inverter.GridSupporting,
         svc.SVC,
         static.StaticZIP,
         static.StaticLoadPower,

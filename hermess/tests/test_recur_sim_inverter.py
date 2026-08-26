@@ -18,7 +18,7 @@
 
 """Byte-identical SIM baseline gates for the inverter models.
 
-Exercise GridForming + GridFollowing (+ SGs) through the t=4.0 bus fault and
+Exercise GridForming + GridSupporting (+ SGs) through the t=4.0 bus fault and
 compare the full state trajectory against the pickled references at atol=1e-6,
 for both network realizations:
 
