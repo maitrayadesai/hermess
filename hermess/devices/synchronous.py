@@ -1072,6 +1072,246 @@ class SynchronousSubtransientSP(Synchronous):
         return i_d, i_q, Pe
 
 
+class Marconato(Synchronous):
+    r"""Marconato synchronous machine WITH stator flux dynamics: six
+    electromagnetic states, with the subtransient pair kept as EMFs behind
+    the subtransient reactances and an additional field-voltage feedthrough
+    time constant :math:`T_{AA}` (F. Milano, *Power System Modelling and
+    Scripting*, 2010, eqs. 15.16-15.18; the PSID ``MarconatoMachine``).
+
+    Selected in a system file by the class name in the first column::
+
+       Marconato, idx = "SG1", bus = "1", Sn = 100, avr = "AVRSimple", ...
+
+    **Model.** With the derived coefficients
+
+    .. math::
+
+       \gamma_d = \frac{T''_d\, x''_d}{T'_d\, x'_d} \left( x_d - x'_d \right),
+       \qquad
+       \gamma_q = \frac{T''_q\, x''_q}{T'_q\, x'_q} \left( x_q - x'_q \right),
+
+    the stator currents are explicit in the states,
+
+    .. math::
+
+       i_d = \frac{1}{x''_d} \left( e''_q - \psi_d \right), \qquad
+       i_q = \frac{1}{x''_q} \left( -e''_d - \psi_q \right),
+
+    and the rotor-circuit and stator-flux dynamics are
+
+    .. math::
+
+       T'_d \, \dot{e}'_q &= -e'_q - (x_d - x'_d - \gamma_d)\, i_d
+           + \left(1 - \frac{T_{AA}}{T'_d}\right) E_{fd} \\
+       T'_q \, \dot{e}'_d &= -e'_d + (x_q - x'_q - \gamma_q)\, i_q \\
+       T''_d \, \dot{e}''_q &= -e''_q + e'_q - (x'_d - x''_d + \gamma_d)\, i_d
+           + \frac{T_{AA}}{T'_d} E_{fd} \\
+       T''_q \, \dot{e}''_d &= -e''_d + e'_d + (x'_q - x''_q + \gamma_q)\, i_q \\
+       \dot{\psi}_d &= \omega_b \left( R_s i_d + \omega \psi_q + v_d \right) \\
+       \dot{\psi}_q &= \omega_b \left( R_s i_q - \omega \psi_d + v_q \right)
+
+    with :math:`\omega_b = 2\pi f_n`, :math:`\omega` the absolute per-unit
+    rotor speed, and air-gap power :math:`P_e = \psi_d i_q - \psi_q i_d`.
+    It is cross-validated state for state against the PSID
+    ``MarconatoMachine`` (which derives the same :math:`\gamma_{d,q}`).
+    Rotor motion, exciter and governor come from the shaft, AVR and governor
+    strategies.
+
+    **Symbols** (model-specific; :math:`\gamma_d, \gamma_q` are computed from
+    the parameters, not inputs):
+
+    .. csv-table::
+       :header: Code, Symbol, Meaning, Default
+       :widths: 14, 12, 58, 10
+
+       "``x_dprim``", ":math:`x'_d`", "d-axis transient reactance [p.u.]", "0.1813"
+       "``x_qprim``", ":math:`x'_q`", "q-axis transient reactance [p.u.]", "0.25"
+       "``x_dsec``", ":math:`x''_d`", "d-axis subtransient reactance [p.u.]", "0.14"
+       "``x_qsec``", ":math:`x''_q`", "q-axis subtransient reactance [p.u.]", "0.18"
+       "``T_dprim``", ":math:`T'_d`", "d-axis transient time constant [s]", "5.89"
+       "``T_qprim``", ":math:`T'_q`", "q-axis transient time constant [s]", "0.6"
+       "``T_dsec``", ":math:`T''_d`", "d-axis subtransient time constant [s]", "0.5"
+       "``T_qsec``", ":math:`T''_q`", "q-axis subtransient time constant [s]", "0.023"
+       "``T_aa``", ":math:`T_{AA}`", "field-voltage feedthrough (additional leakage) time constant [s]", "0"
+       "``e_dprim`` / ``e_qprim``", ":math:`e'_d,\ e'_q`", "transient EMFs (states) [p.u.]", ""
+       "``e_dsec`` / ``e_qsec``", ":math:`e''_d,\ e''_q`", "subtransient EMFs (states) [p.u.]", ""
+       "``psid`` / ``psiq``", ":math:`\psi_d,\ \psi_q`", "stator fluxes (states) [p.u.]", ""
+    """
+
+    def __init__(self, avr=None, governor=None, pss=None, shaft=None) -> None:
+        super().__init__(avr=avr, governor=governor, pss=pss, shaft=shaft)
+
+        # private data
+        self._type = "Synchronous_machine"
+        self._name = "Synchronous_machine_Marconato"
+
+        # States
+        self.ns += 6
+        self.states.extend(["e_dprim", "e_qprim", "e_dsec", "e_qsec", "psid", "psiq"])
+        self.units.extend(["p.u.", "p.u.", "p.u.", "p.u.", "p.u.", "p.u."])
+        self.e_dprim = np.array([], dtype=float)
+        self.e_qprim = np.array([], dtype=float)
+        self.e_dsec = np.array([], dtype=float)
+        self.e_qsec = np.array([], dtype=float)
+        self.psid = np.array([], dtype=float)
+        self.psiq = np.array([], dtype=float)
+
+        self._x0.update(
+            {
+                "delta": 0.5,
+                "omega": 1.0,
+                "e_dprim": 0.2,
+                "e_qprim": 1.0,
+                "e_dsec": 0.2,
+                "e_qsec": 1.0,
+                "psid": 1.0,
+                "psiq": -0.5,
+                "psv": 0.5,
+                "pm": 0.5,
+                "Efd": 2.0,
+                "Rf": 0.0,
+                "Vr": 2.0,
+            }
+        )
+
+        # Params
+        self._params.update(
+            {
+                "x_dprim": 0.1813,
+                "x_qprim": 0.25,
+                "x_dsec": 0.14,
+                "x_qsec": 0.18,
+                "T_dprim": 5.89,
+                "T_qprim": 0.6,
+                "T_dsec": 0.5,
+                "T_qsec": 0.023,
+                "T_aa": 0.0,
+            }
+        )
+
+        self._descr.update(
+            {
+                "T_dprim": "d-axis transient time constant",
+                "T_qprim": "q-axis transient time constant",
+                "x_dprim": "d-axis transient reactance",
+                "x_qprim": "q-axis transient reactance",
+                "T_dsec": "d-axis subtransient time constant",
+                "T_qsec": "q-axis subtransient time constant",
+                "x_dsec": "d-axis subtransient reactance",
+                "x_qsec": "q-axis subtransient reactance",
+                "T_aa": "field-voltage feedthrough time constant",
+                "e_dprim": "d-axis transient EMF",
+                "e_qprim": "q-axis transient EMF",
+                "e_dsec": "d-axis subtransient EMF",
+                "e_qsec": "q-axis subtransient EMF",
+                "psid": "stator flux in d axis",
+                "psiq": "stator flux in q axis",
+            }
+        )
+
+        # Parameters
+        self.x_dprim = np.array([], dtype=float)
+        self.x_qprim = np.array([], dtype=float)
+        self.x_dsec = np.array([], dtype=float)
+        self.x_qsec = np.array([], dtype=float)
+        self.T_dprim = np.array([], dtype=float)
+        self.T_qprim = np.array([], dtype=float)
+        self.T_dsec = np.array([], dtype=float)
+        self.T_qsec = np.array([], dtype=float)
+        self.T_aa = np.array([], dtype=float)
+
+        self.properties.update(
+            {
+                "fgcall": True,
+                "finit": True,
+                "init_data": True,
+                "xy_index": True,
+                "save_data": True,
+            }
+        )
+
+        self._init_data()
+
+    def _gammas(self):
+        """Milano's derived coefficients (identical to the PSID constructor)."""
+        gamma_d = (
+            self.T_dsec
+            * self.x_dsec
+            / (self.T_dprim * self.x_dprim)
+            * (self.x_d - self.x_dprim)
+        )
+        gamma_q = (
+            self.T_qsec
+            * self.x_qsec
+            / (self.T_qprim * self.x_qprim)
+            * (self.x_q - self.x_qprim)
+        )
+        return gamma_d, gamma_q
+
+    def input_current(self, dae: Dae) -> Tuple[ca.SX, ca.SX]:
+        """Stator currents as explicit expressions of the EMF/flux states."""
+        i_d = 1 / self.x_dsec * (dae.x[self.e_qsec] - dae.x[self.psid])
+        i_q = 1 / self.x_qsec * (-dae.x[self.e_dsec] - dae.x[self.psiq])
+        return i_d, i_q
+
+    def electromagnetic(self, dae: Dae):
+        i_d, i_q = self.input_current(dae)
+        gamma_d, gamma_q = self._gammas()
+
+        vd = dae.y[self.vre] * np.sin(dae.x[self.delta]) + dae.y[self.vim] * -np.cos(
+            dae.x[self.delta]
+        )
+        vq = dae.y[self.vre] * np.cos(dae.x[self.delta]) + dae.y[self.vim] * np.sin(
+            dae.x[self.delta]
+        )
+
+        Pe = dae.x[self.psid] * i_q - dae.x[self.psiq] * i_d
+        efd = self.var_sym(dae, "Efd")
+
+        dae.f[self.e_qprim] = (
+            1
+            / self.T_dprim
+            * (
+                -dae.x[self.e_qprim]
+                - (self.x_d - self.x_dprim - gamma_d) * i_d
+                + (1 - self.T_aa / self.T_dprim) * efd
+            )
+        )
+        dae.f[self.e_dprim] = (
+            1
+            / self.T_qprim
+            * (-dae.x[self.e_dprim] + (self.x_q - self.x_qprim - gamma_q) * i_q)
+        )
+        dae.f[self.e_qsec] = (
+            1
+            / self.T_dsec
+            * (
+                -dae.x[self.e_qsec]
+                + dae.x[self.e_qprim]
+                - (self.x_dprim - self.x_dsec + gamma_d) * i_d
+                + self.T_aa / self.T_dprim * efd
+            )
+        )
+        dae.f[self.e_dsec] = (
+            1
+            / self.T_qsec
+            * (
+                -dae.x[self.e_dsec]
+                + dae.x[self.e_dprim]
+                + (self.x_qprim - self.x_qsec + gamma_q) * i_q
+            )
+        )
+        dae.f[self.psid] = (
+            2 * np.pi * dae.fn * (self.R_s * i_d + dae.x[self.omega] * dae.x[self.psiq] + vd)
+        )
+        dae.f[self.psiq] = (
+            2 * np.pi * dae.fn * (self.R_s * i_q - dae.x[self.omega] * dae.x[self.psid] + vq)
+        )
+
+        return i_d, i_q, Pe
+
+
 class SynchronousSubtransientSP6(Synchronous):
     r"""Subtransient Sauer-Pai machine with NEGLECTED stator dynamics: the
     sixth-order model, with the stator as algebraic equations

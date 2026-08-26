@@ -901,6 +901,62 @@ class AVRAC1A(AVR):
         dae.f[host.Efd] = (dae.x[host.Vr] - host.KE * dae.x[host.Efd]) / host.TE
 
 
+class AVRSimple(AVR):
+    r"""Simple proportional exciter: the field voltage is a pure integrator on
+    the voltage error (the PSID ``AVRSimple``).
+
+    Selected on a machine line with ``avr = "AVRSimple"``.
+
+    **Model.**
+
+    .. math::
+
+       \dot{E}_{fd} = K_v \left( V_{ref} - V_t \right)
+
+    with :math:`V_t = |\bar{v}_n|` the terminal-voltage magnitude. The
+    integrator makes the steady-state voltage error exactly zero, so the
+    initialization pins :math:`V_{ref} = V_t`.
+
+    **Symbols.**
+
+    .. csv-table::
+       :header: Code, Symbol, Meaning, Default
+       :widths: 14, 12, 58, 10
+
+       "``Kv``", ":math:`K_v`", "integrator gain", "1"
+       "``Efd``", ":math:`E_{fd}`", "field voltage (state) [p.u.]", ""
+       "``Vf_ref``", ":math:`V_{ref}`", "voltage setpoint (set by the initialization)", ""
+    """
+
+    def states(self) -> List[str]:
+        return ["Efd"]
+
+    def units(self) -> List[str]:
+        return ["p.u."]
+
+    def params(self) -> Dict[str, float]:
+        return {"Kv": 1.0}
+
+    def x0(self) -> Dict[str, float]:
+        return {"Efd": 1.5}
+
+    def descriptions(self) -> Dict[str, str]:
+        return {
+            "Kv": "integrator gain",
+            "Efd": "internal field voltage",
+            "Vf_ref": "exciter set point voltage",
+        }
+
+    def setpoints(self) -> Dict[str, float]:
+        return {"Vf_ref": 1.0}
+
+    def fgcall(self, host, dae: Dae) -> None:
+        from hermess.devices.device import sqrt
+
+        v_t = sqrt(dae.y[host.vre] ** 2 + dae.y[host.vim] ** 2)
+        dae.f[host.Efd] = host.Kv * (host.Vf_ref - v_t)
+
+
 class AVRCONST(AVR):
     r"""Constant field voltage: no excitation dynamics, the zero-response limit
     of any exciter (:math:`K_A \to 0` with the operating point held). The
@@ -975,4 +1031,5 @@ AVR_REGISTRY: Dict[str, type] = {
     "AVRST1A": AVRST1A,
     "AVRAC1A": AVRAC1A,
     "AVRCONST": AVRCONST,
+    "AVRSimple": AVRSimple,
 }

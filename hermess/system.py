@@ -2038,6 +2038,14 @@ class Dae:
                                 q=dist.q_delta[0],
                                 bus=[dist.bus[0]],
                             )
+                        case "SETPOINT":
+                            device = self._find_device(dist.device[0])
+                            row = device.int[dist.device[0]]
+                            getattr(device, dist.param[0])[row] = dist.value[0]
+                            # Setpoint values are baked into the symbolic
+                            # expressions as constants: rebuild them.
+                            self.exec_setpoint()
+                            params_changed = True
                         case "FAULT_BUS":
                             short_index = self.grid.get_node_index([dist.bus[0]])[0][0]
                             self.grid.bus_is_faulted[short_index] = True
@@ -2063,6 +2071,49 @@ class Dae:
                     for key, value in dist._params.items():
                         dist.__dict__[key] = np.array(dist.__dict__[key][1:])
         return params_changed
+
+    def _find_device(self, idx: str):
+        """The device whose ``int`` map carries the id ``idx`` (SETPOINT
+        disturbances address devices by id, not by bus)."""
+        for dev in self.device_list:
+            if idx in getattr(dev, "int", {}):
+                return dev
+        raise KeyError(f"SETPOINT disturbance: no device with idx {idx!r}")
+
+    def exec_setpoint(self) -> None:
+        """Rebuild the model equations after a setpoint change. The setpoint
+        arrays enter the symbolic expressions as numeric constants, so a
+        changed value only takes effect through a rebuild. With dynamic lines
+        :meth:`exec_dist` already rebuilds every device; the quasi-static path
+        mirrors it: fresh symbols, every device's equations, then the network.
+        Limitation (shared with the full rebuild of :meth:`exec_dist`): the
+        rebuild discards the extra current injections of LOAD events executed
+        earlier in the same run; schedule a SETPOINT before any LOAD step."""
+        if self.line_dyn:
+            self.exec_dist()
+            return
+
+        saved_sinit = self.sinit.copy()
+        self.init_symbolic()
+        self.sinit = saved_sinit
+        # Fresh algebraic symbols and zeroed residuals (dae.y / dae.g live on
+        # the grid's symbolic init, like in the dynamic-line rebuild).
+        self.grid.init_symbolic(self)
+
+        for dev in self.device_list:
+            if dev.properties["fgcall"]:
+                dev.fgcall(self)
+
+        self.grid.build_y_sym()
+        self.update_omega()
+        self.grid.build_y_sym(
+            omega_buses=self.omega_ref_buses,
+            omega_lines=self.omega_ref_lines,
+            dyn_update=True,
+        )
+        self.grid.gcall(self)
+        self.grid.build_y()
+        self.fgcall()
 
     def exec_dist(self):
         if self.line_dyn:

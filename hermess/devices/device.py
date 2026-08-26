@@ -210,6 +210,14 @@ class Disturbance(Element):
        "``bus``", "", "affected bus (bus-fault and load events)", ""
        "``p_delta``", ":math:`\Delta P`", "active-power step [MW] (``\"LOAD\"``)", "0"
        "``q_delta``", ":math:`\Delta Q`", "reactive-power step [MVAr] (``\"LOAD\"``)", "0"
+       "``device``", "", "device id (``\"SETPOINT\"``)", ""
+       "``param``", "", "setpoint name to step, e.g. ``Pref`` (``\"SETPOINT\"``)", ""
+       "``value``", "", "new setpoint value, device p.u. (``\"SETPOINT\"``)", "0"
+
+    A seventh event type, ``"SETPOINT"``, steps a device setpoint (a reference
+    step, the standard control test signal)::
+
+       Disturbance, time = 1.0, type = "SETPOINT", device = "GFM1", param = "Pref", value = 0.7
     """
 
     def __init__(self) -> None:
@@ -227,6 +235,9 @@ class Disturbance(Element):
                 "bus": None,
                 "p_delta": 0,
                 "q_delta": 0,
+                "device": None,
+                "param": None,
+                "value": 0,
             }
         )
 
@@ -238,6 +249,9 @@ class Disturbance(Element):
         self.bus = np.array([], dtype=str)
         self.p_delta = np.array([], dtype=float)
         self.q_delta = np.array([], dtype=float)
+        self.device = np.array([], dtype=str)
+        self.param = np.array([], dtype=str)
+        self.value = np.array([], dtype=float)
 
     def sort_chrono(self):
         sorted_indices = np.argsort(self.time)

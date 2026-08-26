@@ -178,6 +178,88 @@ class QVDroop(VoltageControl):
         return {"Qc_tilde": Qc, "Qref": Qc, "Vref": Vcd}
 
 
+class QPowerPI(VoltageControl):
+    r"""Reactive-power PI: a PI on the filtered reactive power produces the
+    q-axis current command consumed by a current-mode inner control (the PSID
+    ``ReactivePowerPI`` grid-following outer; pairs with
+    ``angle = "PLLPowerPI"`` and ``inner = "CurrentPI"``).
+
+    Selected on a converter line with ``voltage = "QPowerPI"``.
+
+    **Model.**
+
+    .. math::
+
+       i_{q}^{cmd} &= -\left[ K_p^{q} \left( q_c^{*} - \tilde{q}_c \right)
+           + K_i^{q} \, \sigma_q \right], \qquad
+       \dot{\sigma}_q = q_c^{*} - \tilde{q}_c
+
+    with :math:`\tilde{q}_c` the host's filtered reactive power. The q-axis
+    gain is negative because the PLL drives the frame's q-voltage to zero, so
+    :math:`q_c \approx -v_d i_q`. Published on ``host.Iqc_cmd`` (read by the
+    inner control via ``host.current_command``); no voltage-magnitude command
+    is produced.
+
+    **Symbols.**
+
+    .. csv-table::
+       :header: Code, Symbol, Meaning, Default
+       :widths: 14, 12, 58, 10
+
+       "``Kpq``", ":math:`K_p^{q}`", "reactive-power PI proportional gain", "2"
+       "``Qc_tilde``", ":math:`\\tilde{q}_c`", "filtered reactive power (state) [p.u.]", ""
+       "``Kiq``", ":math:`K_i^{q}`", "reactive-power PI integral gain", "30"
+       "``sigma_q``", ":math:`\sigma_q`", "reactive-power PI integrator (state) [p.u.]", ""
+       "``Qref``", ":math:`q_c^{*}`", "reactive-power setpoint (set to :math:`q_c` by the initialization)", ""
+    """
+
+    def states(self) -> List[str]:
+        return ["Qc_tilde", "sigma_q"]
+
+    def units(self) -> List[str]:
+        return ["p.u.", "p.u."]
+
+    def params(self) -> Dict[str, float]:
+        return {"Kpq": 2.0, "Kiq": 30.0}
+
+    def x0(self) -> Dict[str, float]:
+        return {"Qc_tilde": 0.0, "sigma_q": 0.0}
+
+    def setpoints(self) -> Dict[str, float]:
+        return {"Qref": 0.01}
+
+    def descriptions(self) -> Dict[str, str]:
+        return {
+            "Kpq": "reactive-power PI proportional gain",
+            "Kiq": "reactive-power PI integral gain",
+            "Qc_tilde": "Filtered internal reactive power",
+            "sigma_q": "reactive-power PI integrator",
+            "Qref": "Reactive power set point",
+        }
+
+    def fgcall(self, host, dae: Dae):
+        err = host.Qref - dae.x[host.Qc_tilde]
+        host.Iqc_cmd = -(host.Kpq * err + host.Kiq * dae.x[host.sigma_q])
+        dae.f[host.sigma_q] = err
+
+    def finit_sequential(
+        self, host, dae: Dae, Qc: np.ndarray, Vcd: np.ndarray
+    ) -> Dict[str, np.ndarray]:
+        # Steady state: Qref = Qc and the q-current command equals the
+        # converter-side filter current, fixing the integrator:
+        # sigma_q = -ifq_int / Kiq. The filter operating point and frame angle
+        # are stashed on the host by the sequential-init driver.
+        filt = host._finit_filt
+        delta_c = host._finit_delta_c
+        _, ifq_int = host.to_internal(filt["ifd_ext"], filt["ifq_ext"], delta_c)
+        return {
+            "Qc_tilde": Qc,
+            "sigma_q": -ifq_int / host.Kiq,
+            "Qref": Qc,
+        }
+
+
 VOLTAGE_REGISTRY: Dict[str, type] = {
+    "QPowerPI": QPowerPI,
     "QVDroop": QVDroop,
 }

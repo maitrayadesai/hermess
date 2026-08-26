@@ -374,6 +374,259 @@ class Cascaded(InnerControl):
         }
 
 
+class CascadedDamped(Cascaded):
+    r""":class:`Cascaded` with capacitor-voltage active damping: the filter
+    voltage is high-pass filtered (gain :math:`K_{ad}`, corner
+    :math:`\omega_{ad}`) and subtracted from the switching-voltage reference,
+    damping the LC resonance (the D'Arco ``VoltageModeControl`` with its
+    active damping enabled; :class:`Cascaded` is the :math:`K_{ad} = 0`
+    special case without the two filter states).
+
+    Selected on a converter line with ``inner = "CascadedDamped"``.
+
+    **Model.** As :class:`Cascaded`, with the switching-voltage references
+    extended by the damping term and the two low-pass states:
+
+    .. math::
+
+       v_{swd} &\mathrel{{-}{=}} K_{ad} \left( v_{fd} - \phi_d \right), \qquad
+       v_{swq} \mathrel{{-}{=}} K_{ad} \left( v_{fq} - \phi_q \right) \\
+       \dot{\phi}_d &= \omega_{ad} \left( v_{fd} - \phi_d \right), \qquad
+       \dot{\phi}_q = \omega_{ad} \left( v_{fq} - \phi_q \right)
+
+    **Symbols.** As :class:`Cascaded`, plus:
+
+    .. csv-table::
+       :header: Code, Symbol, Meaning, Default
+       :widths: 14, 12, 58, 10
+
+       "``Kad``", ":math:`K_{ad}`", "active damping gain", "0.2"
+       "``omega_ad``", ":math:`\omega_{ad}`", "active damping low-pass corner frequency [rad/s]", "50"
+       "``phi_d`` / ``phi_q``", ":math:`\phi_d,\ \phi_q`", "active damping low-pass states [p.u.]", ""
+    """
+
+    def states(self) -> List[str]:
+        return super().states() + ["phi_d", "phi_q"]
+
+    def units(self) -> List[str]:
+        return super().units() + ["p.u.", "p.u."]
+
+    def params(self) -> Dict[str, float]:
+        p = super().params()
+        p.update({"Kad": 0.2, "omega_ad": 50.0})
+        return p
+
+    def x0(self) -> Dict[str, float]:
+        x = super().x0()
+        x.update({"phi_d": 1.0, "phi_q": 0.0})
+        return x
+
+    def descriptions(self) -> Dict[str, str]:
+        d = super().descriptions()
+        d.update(
+            {
+                "Kad": "active damping gain",
+                "omega_ad": "active damping low-pass corner frequency",
+                "phi_d": "active damping low-pass state, d component",
+                "phi_q": "active damping low-pass state, q component",
+            }
+        )
+        return d
+
+    def fgcall(self, host, dae: Dae, internals, omega_c, delta_c):
+        # Run the cascaded ladder, then retrofit the damping term onto the
+        # switching voltage in the internal frame and add the two low-pass
+        # states. The parent published the undamped Vsw via to_external; redo
+        # the last step with the damped references.
+        Vfd_int = internals["Vfd"]
+        Vfq_int = internals["Vfq"]
+        itd_int = internals["itd"]
+        itq_int = internals["itq"]
+        ifd_int = internals["ifd"]
+        ifq_int = internals["ifq"]
+
+        Vcd = host.voltage_command(dae)
+
+        Vfd_ref = Vcd - host.Rv * itd_int + omega_c * host.Lv * itq_int
+        Vfq_ref = -host.Rv * itq_int - omega_c * host.Lv * itd_int
+
+        ifd_ref = (
+            host.Kpv * (Vfd_ref - Vfd_int)
+            + host.Kiv * dae.x[host.xi_d]
+            - omega_c * host.Cf * Vfq_int
+            + host.Kffv * itd_int
+        )
+        ifq_ref = (
+            host.Kpv * (Vfq_ref - Vfq_int)
+            + host.Kiv * dae.x[host.xi_q]
+            + omega_c * host.Cf * Vfd_int
+            + host.Kffv * itq_int
+        )
+        host.ifd_ref, host.ifq_ref = ifd_ref, ifq_ref
+        ifd_ref, ifq_ref = host.current_ref(dae)
+
+        Vswd_ref = (
+            host.Kpc * (ifd_ref - ifd_int)
+            + host.Kic * dae.x[host.gamma_d]
+            - omega_c * host.Lf * ifq_int
+            + host.Kffc * Vfd_int
+            - host.Kad * (Vfd_int - dae.x[host.phi_d])
+        )
+        Vswq_ref = (
+            host.Kpc * (ifq_ref - ifq_int)
+            + host.Kic * dae.x[host.gamma_q]
+            + omega_c * host.Lf * ifd_int
+            + host.Kffc * Vfq_int
+            - host.Kad * (Vfq_int - dae.x[host.phi_q])
+        )
+
+        host.Vswd, host.Vswq = host.to_external(Vswd_ref, Vswq_ref, delta_c)
+
+        dae.f[host.xi_d] = Vfd_ref - Vfd_int
+        dae.f[host.xi_q] = Vfq_ref - Vfq_int
+        dae.f[host.gamma_d] = ifd_ref - ifd_int
+        dae.f[host.gamma_q] = ifq_ref - ifq_int
+        dae.f[host.phi_d] = host.omega_ad * (Vfd_int - dae.x[host.phi_d])
+        dae.f[host.phi_q] = host.omega_ad * (Vfq_int - dae.x[host.phi_q])
+
+    def finit_sequential(self, host, dae: Dae, filt, omega_c) -> Dict[str, np.ndarray]:
+        # At steady state the damping low-passes track the filter voltage
+        # exactly (phi = Vf_int), so the damping term vanishes and the parent's
+        # 6-unknown solve stays valid; phi follows analytically.
+        vals = super().finit_sequential(host, dae, filt, omega_c)
+        phi_d, phi_q = host.to_internal(
+            filt["Vfd_ext"], filt["Vfq_ext"], vals["delta_c"]
+        )
+        vals["phi_d"] = np.asarray(phi_d, dtype=float).flatten()
+        vals["phi_q"] = np.asarray(phi_q, dtype=float).flatten()
+        return vals
+
+
+class CurrentPI(InnerControl):
+    r"""Current-mode inner control: a single PI tracks the converter-side
+    filter current against the commands published by the power PI outers,
+    with inductor decoupling and capacitor-voltage feed-forward (the PSID
+    ``CurrentModeControl``; pairs with ``angle = "PLLPowerPI"`` and
+    ``voltage = "QPowerPI"``).
+
+    Selected on a converter line with ``inner = "CurrentPI"``.
+
+    **Model.** In the converter frame (the PLL frame):
+
+    .. math::
+
+       v_{swd} &= K_p^c \left( i_{d}^{cmd} - i_{fd} \right) + K_i^c \, \gamma_d
+                  - \omega_c l_f \, i_{fq} + K_{ff}^c \, v_{fd} \\
+       v_{swq} &= K_p^c \left( i_{q}^{cmd} - i_{fq} \right) + K_i^c \, \gamma_q
+                  + \omega_c l_f \, i_{fd} + K_{ff}^c \, v_{fq} \\
+       \dot{\gamma}_d &= i_{d}^{cmd} - i_{fd}, \qquad
+       \dot{\gamma}_q = i_{q}^{cmd} - i_{fq}
+
+    The commands come host-mediated from ``host.current_command``; the
+    voltage feed-forward is enabled by default (:math:`K_{ff}^c = 1`), as in
+    the reference model.
+
+    **Symbols.**
+
+    .. csv-table::
+       :header: Code, Symbol, Meaning, Default
+       :widths: 14, 12, 58, 10
+
+       "``Kpc``", ":math:`K_p^c`", "current-loop proportional gain", "0.37"
+       "``Kic``", ":math:`K_i^c`", "current-loop integral gain", "0.7"
+       "``Kffc``", ":math:`K_{ff}^c`", "capacitor-voltage feed-forward gain", "1"
+       "``gamma_d`` / ``gamma_q``", ":math:`\gamma_d,\ \gamma_q`", "current-loop integrator states [p.u.]", ""
+    """
+
+    def states(self) -> List[str]:
+        return ["gamma_d", "gamma_q"]
+
+    def units(self) -> List[str]:
+        return ["p.u.", "p.u."]
+
+    def params(self) -> Dict[str, float]:
+        return {"Kpc": 0.37, "Kic": 0.7, "Kffc": 1.0}
+
+    def x0(self) -> Dict[str, float]:
+        return {"gamma_d": 0, "gamma_q": 0}
+
+    def descriptions(self) -> Dict[str, str]:
+        return {
+            "Kpc": "Proportional gain for current controller",
+            "Kic": "Integral gain for current controller",
+            "Kffc": "Feed-forward gain of current controller",
+            "gamma_d": "Integrator state of the d-component of the internal current",
+            "gamma_q": "Integrator state of the q-component of the internal current",
+        }
+
+    def fgcall(self, host, dae: Dae, internals, omega_c, delta_c):
+        Vfd_int = internals["Vfd"]
+        Vfq_int = internals["Vfq"]
+        ifd_int = internals["ifd"]
+        ifq_int = internals["ifq"]
+
+        id_cmd, iq_cmd = host.current_command(dae)
+        if id_cmd is None or iq_cmd is None:
+            raise ValueError(
+                "CurrentPI requires an outer control that publishes current "
+                "commands (angle = 'PLLPowerPI' and voltage = 'QPowerPI'); the "
+                "voltage-command outers (QVDroop) pair with the Cascaded inner "
+                "instead."
+            )
+        host.ifd_ref, host.ifq_ref = id_cmd, iq_cmd
+        id_cmd, iq_cmd = host.current_ref(dae)
+
+        Vswd_ref = (
+            host.Kpc * (id_cmd - ifd_int)
+            + host.Kic * dae.x[host.gamma_d]
+            - omega_c * host.Lf * ifq_int
+            + host.Kffc * Vfd_int
+        )
+        Vswq_ref = (
+            host.Kpc * (iq_cmd - ifq_int)
+            + host.Kic * dae.x[host.gamma_q]
+            + omega_c * host.Lf * ifd_int
+            + host.Kffc * Vfq_int
+        )
+
+        host.Vswd, host.Vswq = host.to_external(Vswd_ref, Vswq_ref, delta_c)
+
+        dae.f[host.gamma_d] = id_cmd - ifd_int
+        dae.f[host.gamma_q] = iq_cmd - ifq_int
+
+    def finit_sequential(self, host, dae: Dae, filt, omega_c) -> Dict[str, np.ndarray]:
+        """Steady state of the current loop. The frame angle is the PLL lock
+        (the filter-voltage angle); the current commands equal the converter
+        current (integrators steady), which leaves the integrators to absorb
+        the switching-voltage match analytically."""
+        delta_c = np.arctan2(filt["Vfq_ext"], filt["Vfd_ext"])
+
+        Vfd_int, Vfq_int = host.to_internal(
+            filt["Vfd_ext"], filt["Vfq_ext"], delta_c
+        )
+        ifd_int, ifq_int = host.to_internal(
+            filt["ifd_ext"], filt["ifq_ext"], delta_c
+        )
+        Vswd_int, Vswq_int = host.to_internal(filt["Vswd"], filt["Vswq"], delta_c)
+
+        omega_c = np.asarray(omega_c, dtype=float)
+        gamma_d = (
+            Vswd_int + omega_c * host.Lf * ifq_int - host.Kffc * Vfd_int
+        ) / host.Kic
+        gamma_q = (
+            Vswq_int - omega_c * host.Lf * ifd_int - host.Kffc * Vfq_int
+        ) / host.Kic
+
+        return {
+            "delta_c": delta_c,
+            "Vcd": np.zeros(host.n),
+            "gamma_d": gamma_d,
+            "gamma_q": gamma_q,
+        }
+
+
 INNER_REGISTRY: Dict[str, type] = {
     "Cascaded": Cascaded,
+    "CascadedDamped": CascadedDamped,
+    "CurrentPI": CurrentPI,
 }

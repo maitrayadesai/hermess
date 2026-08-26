@@ -40,10 +40,10 @@ if TYPE_CHECKING:
     from hermess.system import Dae
 from hermess.devices.device import DeviceRect
 from hermess.devices.inverter_filter import Filter, LCL
-from hermess.devices.inverter_pll import PLL, SRF_PLL
-from hermess.devices.inverter_angle import AngleSource, DroopAngle, PLLAngle
-from hermess.devices.inverter_voltage import VoltageControl, QVDroop
-from hermess.devices.inverter_inner import InnerControl, Cascaded
+from hermess.devices.inverter_pll import PLL, SRF_PLL, ReducedPLL
+from hermess.devices.inverter_angle import AngleSource, DroopAngle, PLLAngle, PLLPowerPI
+from hermess.devices.inverter_voltage import VoltageControl, QVDroop, QPowerPI
+from hermess.devices.inverter_inner import InnerControl, Cascaded, CurrentPI
 import casadi as ca
 import numpy as np
 
@@ -84,6 +84,7 @@ class Inverter(DeviceRect):
        "``Vn``", ":math:`V_n`", "rated voltage [kV]", "\-"
        "``fn``", ":math:`f_n`", "rated frequency [Hz]", "50"
        "``omega_f``", ":math:`\omega_f`", "power measurement filter corner frequency [rad/s]", "2\ *pi*\ 5"
+       "``omega_f_q``", ":math:`\omega_f^{q}`", "Q-side filter corner frequency [rad/s] (default: follows ``omega_f``)", "NaN"
        "``Pc_tilde``", ":math:`\tilde{p}_c`", "filtered active power (state) [p.u.]", ""
        "``Qc_tilde``", ":math:`\tilde{q}_c`", "filtered reactive power (state) [p.u.]", ""
        "``Pc`` / ``Qc``", ":math:`p_c, q_c`", "unfiltered terminal powers (published expressions)", ""
@@ -137,6 +138,8 @@ class Inverter(DeviceRect):
         self._params.update(
             {
                 "omega_f": 2 * np.pi * 5,
+                # Q-side power-filter corner; NaN means "follow omega_f".
+                "omega_f_q": float("nan"),
             }
         )
         self._params.update(self._filter.params())
@@ -155,6 +158,7 @@ class Inverter(DeviceRect):
                 "gamma_d": "Integrator state of the d-component of the internal current",
                 "gamma_q": "Integrator state of the q-component of the internal current",
                 "omega_f": "cut-off frequency for the low pass filter",
+                "omega_f_q": "Q-side power-filter cut-off (NaN: follows omega_f)",
                 "Kpc": "Proportional gain for current controller",
                 "Kic": "Integral gain for current controller",
                 "Kffc": "Feed-forward gain of current controller",
@@ -169,8 +173,9 @@ class Inverter(DeviceRect):
         )
         self._descr.update(self._filter.descriptions())
 
-        # Host parameter array (power-filter cut-off).
+        # Host parameter arrays (power-filter cut-offs).
         self.omega_f = np.array([], dtype=float)
+        self.omega_f_q = np.array([], dtype=float)
         # Filter parameter arrays (filled by the data loader, read by the strategy).
         for param_name in self._filter.params():
             setattr(self, param_name, np.array([], dtype=float))
@@ -213,6 +218,15 @@ class Inverter(DeviceRect):
         self._setpoints.update(self._angle.setpoints())
         for sp_name in self._angle.setpoints():
             setattr(self, sp_name, np.array([], dtype=float))
+        # Angle-source private algebraics (e.g. PLLPowerPI's delta_c, the
+        # algebraic alias of the PLL angle); var_sym resolves them to dae.y.
+        angle_algebs = self._angle.algebs()
+        if angle_algebs:
+            self._algebs_int.extend(angle_algebs)
+            self._algebs_int_units.update(self._angle.algebs_units())
+            self._algebs_int_x0.update(self._angle.algebs_x0())
+            for name in angle_algebs:
+                setattr(self, name, np.array([], dtype=float))
 
         # Outer voltage control: its state (Qc_tilde) follows. Owns Kq and the
         # Qref/Vref setpoints; the host writes the Qc_tilde measurement-filter
@@ -288,6 +302,8 @@ class Inverter(DeviceRect):
         # are symbolic intermediates, not registered DAE variables. Pre-initialized
         # to None like omega_pll/omega_c.
         self.Vcd = None  # voltage-magnitude command (from the voltage strategy)
+        self.Idc_cmd = None  # current commands (from the power-PI outers)
+        self.Iqc_cmd = None
         self.ifd_ref = None  # current references (from the inner strategy)
         self.ifq_ref = None
         self.Vswd = None  # switching voltage (from the inner strategy)
@@ -354,6 +370,13 @@ class Inverter(DeviceRect):
         intermediate, not a DAE variable."""
         return self.Vcd
 
+    def current_command(self, dae: Dae):
+        """Outer current commands ``(Idc_cmd, Iqc_cmd)``, host-mediated:
+        published by the power-PI outer strategies (PLLPowerPI / QPowerPI) and
+        read by the current-mode inner control. ``None`` when the selected
+        outers publish a voltage command instead."""
+        return self.Idc_cmd, self.Iqc_cmd
+
     def current_ref(self, dae: Dae):
         """Inner current references ``(ifd_ref, ifq_ref)``, host-mediated:
         published by the inner strategy and read back by its own current loop. This
@@ -398,13 +421,6 @@ class Inverter(DeviceRect):
         # source and reference-frame machinery, and writes its own state equations.
         self._pll_fgcall(dae, omega_ref_vec, omega_b)
 
-        # Angle source: converter frequency + angle dynamics (pluggable strategy).
-        omega_c = self._angle.fgcall(self, dae, omega_ref_vec, omega_b)
-
-        # Outer voltage control: publishes the voltage-magnitude command on the
-        # host (read by the inner ladder below via self.voltage_command).
-        self._voltage.fgcall(self, dae)
-
         # Filter-state and frame-angle reads go through var_sym so a quasi-static
         # filter (where these are algebraics) is transparent to the control ladder.
         Vfd_ext_s = self.var_sym(dae, "Vfd_ext")
@@ -416,8 +432,10 @@ class Inverter(DeviceRect):
         delta_c_s = self.var_sym(dae, "delta_c")
 
         # Park-rotate the filter quantities into the converter (internal) frame and
-        # form the injected powers. The internal quantities are handed to the inner
-        # control strategy below.
+        # form the injected powers. Published BEFORE the angle stage so an angle
+        # source may consume the unfiltered power (the virtual-synchronous-machine
+        # inertia does); delta_c is a registered variable, so its symbol exists
+        # before the angle strategy writes its equation.
         Vfd_int, Vfq_int = self.to_internal(Vfd_ext_s, Vfq_ext_s, delta_c_s)
         itd_int, itq_int = self.to_internal(itd_ext_s, itq_ext_s, delta_c_s)
         ifd_int, ifq_int = self.to_internal(ifd_ext_s, ifq_ext_s, delta_c_s)
@@ -429,6 +447,14 @@ class Inverter(DeviceRect):
         # filter; keeping the unfiltered expressions lets them be read back after
         # a run (plots, objectives) for any filter/control strategy.
         self.Pc, self.Qc = Pc, Qc
+
+        # Angle source: converter frequency + angle dynamics (pluggable strategy).
+        omega_c = self._angle.fgcall(self, dae, omega_ref_vec, omega_b)
+
+        # Outer voltage control: publishes the voltage-magnitude command (or, for
+        # the power-PI outers, the q-axis current command) on the host, read by
+        # the inner ladder below.
+        self._voltage.fgcall(self, dae)
 
         # Inner control (cascaded V/I + virtual impedance): consumes the converter-
         # frame quantities + omega_c, reads the voltage command via
@@ -448,10 +474,18 @@ class Inverter(DeviceRect):
         # strategy. It reads the driving switching voltage via self.switching_voltage.
         self._filter.fgcall(self, dae, omega_ref_vec, omega_b)
 
-        # Power-measurement filters (host-level: Pc/Qc come from the Park loop and
-        # feed both the angle and voltage strategies).
-        dae.f[self.Pc_tilde] = self.omega_f * (Pc - dae.x[self.Pc_tilde])
-        dae.f[self.Qc_tilde] = self.omega_f * (Qc - dae.x[self.Qc_tilde])
+        # Power-measurement filters (host-level: Pc/Qc come from the Park loop
+        # and feed the angle and voltage strategies). Written only when the
+        # selected strategies declare the filtered state (the VSM angle source
+        # consumes the unfiltered power and declares none). The Q-side filter
+        # may have its own corner frequency (omega_f_q, NaN = follow omega_f).
+        if "Pc_tilde" in self.states:
+            dae.f[self.Pc_tilde] = self.omega_f * (Pc - dae.x[self.Pc_tilde])
+        if "Qc_tilde" in self.states:
+            omega_f_q_eff = np.where(
+                np.isnan(self.omega_f_q), self.omega_f, self.omega_f_q
+            )
+            dae.f[self.Qc_tilde] = omega_f_q_eff * (Qc - dae.x[self.Qc_tilde])
 
         self.gcall(dae)
 
@@ -487,6 +521,10 @@ class Inverter(DeviceRect):
             vals[name] = filt[name]
         for name in self._filter.algebs():
             vals[name] = filt[name]
+        # Stash the filter operating point for strategies whose init needs
+        # quantities outside their stage signature (the power-PI outers read
+        # the converter-side current here).
+        self._finit_filt = filt
 
         # 2. PLL (if present): locked to the filter voltage (decoupled).
         if self._pll is not None:
@@ -508,6 +546,7 @@ class Inverter(DeviceRect):
         inner = self._inner.finit_sequential(self, dae, filt, omega_c)
         for name in self._inner.states():
             vals[name] = inner[name]
+        self._finit_delta_c = inner["delta_c"]
 
         # 5. Angle source: owns delta_c (value from the inner) + Pref / Pc_tilde.
         vals.update(self._angle.finit_sequential(self, dae, Pc, inner["delta_c"]))
@@ -529,6 +568,66 @@ class Inverter(DeviceRect):
             dae.yinit[self.__dict__[name]] = vals[name]
         for name in self._setpoints:
             self.__dict__[name] = vals[name]
+
+
+class GridFollowing(Inverter):
+    r"""Grid-following converter (the literature-standard current-injecting
+    chain, as in PowerSimulationsDynamics.jl and its PSCAD benchmarks): the
+    converter frame IS the PLL frame, PI controllers on the filtered active
+    and reactive power produce dq current commands, and a current-mode inner
+    loop tracks them on the LCL filter. Introduced in v1.1; the PLL-anchored
+    droop chain that carried this name before is :class:`GridSupporting`.
+
+    Selected in a system file by the class name in the first column::
+
+       GridFollowing, idx = "GFL1", bus = "5", Sn = 100, Kpp = 2, Kip = 30, ...
+
+    **Model.** The default strategy combination is ``LCL`` filter,
+    ``PLLPowerPI`` angle source (frame = PLL, active-power PI),
+    ``QPowerPI`` voltage slot (reactive-power PI), ``CurrentPI`` inner
+    control and ``ReducedPLL``; each block's own class documents its
+    equations, and the parameter symbols are listed in the strategy classes
+    and :class:`Inverter`. The chain, in signal-flow order:
+
+    .. math::
+
+       0 &= -\delta_c + \delta_{pll} \\
+       i_{d}^{cmd} &= K_p^{p} ( p_c^{*} - \tilde{p}_c ) + K_i^{p} \sigma_p \\
+       i_{q}^{cmd} &= -\left[ K_p^{q} ( q_c^{*} - \tilde{q}_c )
+           + K_i^{q} \sigma_q \right] \\
+       v_{swdq} &= K_p^c ( i_{dq}^{cmd} - i_{fdq} ) + K_i^c \gamma_{dq}
+           \mp \omega_c l_f i_{fqd} + K_{ff}^c v_{fdq}
+
+    with the six LCL filter states as in :class:`GridForming` and the PLL as
+    documented in its strategy class.
+    """
+
+    def __init__(
+        self, filter=None, angle=None, voltage=None, inner=None, pll=None
+    ) -> None:
+        # Grid-following = PLL frame + power-PI outers + current-mode inner.
+        super().__init__(
+            filter=filter,
+            angle=angle or PLLPowerPI(),
+            voltage=voltage or QPowerPI(),
+            inner=inner or CurrentPI(),
+            pll=pll or ReducedPLL(),
+        )
+
+        # private data
+        self._type = "Inverter"
+        self._name = "GridFollowing_inverter_model"
+
+        self.properties.update(
+            {
+                "fgcall": True,
+                "finit": True,
+                "init_data": True,
+                "xy_index": True,
+                "save_data": True,
+            }
+        )
+        self._init_data()
 
 
 class GridSupporting(Inverter):

@@ -128,6 +128,16 @@ by the 14-generator South East Australian benchmark.
 .. autoclass:: hermess.devices.synchronous.GENSAL
    :no-index:
 
+Marconato model
+"""""""""""""""
+
+The Milano/Marconato six-state machine with stator flux dynamics, the
+counterpart of the PSID ``MarconatoMachine`` used by the PSCAD-benchmarked
+multi-machine case.
+
+.. autoclass:: hermess.devices.synchronous.Marconato
+   :no-index:
+
 .. _strategies:
 
 Machine controller strategies
@@ -193,6 +203,8 @@ Automatic voltage regulators (``avr = ...``)
    :no-index:
 .. autoclass:: hermess.devices.avr.AVRCONST
    :no-index:
+.. autoclass:: hermess.devices.avr.AVRSimple
+   :no-index:
 
 Governors (``governor = ...``)
 """"""""""""""""""""""""""""""
@@ -209,6 +221,8 @@ Governors (``governor = ...``)
 .. autoclass:: hermess.devices.governor.Droop
    :no-index:
 .. autoclass:: hermess.devices.governor.TGOV1
+   :no-index:
+.. autoclass:: hermess.devices.governor.TGTypeII
    :no-index:
 
 Power system stabilizers (``pss = ...``)
@@ -301,6 +315,9 @@ A grid-following converter, which synchronizes to the grid through a PLL
 .. autoclass:: hermess.devices.inverter.GridSupporting
    :no-index:
 
+.. autoclass:: hermess.devices.inverter.GridFollowing
+   :no-index:
+
 Converter control strategies
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -329,17 +346,27 @@ Angle sources (``angle = ...``)
    :no-index:
 .. autoclass:: hermess.devices.inverter_angle.PLLAngle
    :no-index:
+.. autoclass:: hermess.devices.inverter_angle.VSMAngle
+   :no-index:
+.. autoclass:: hermess.devices.inverter_angle.PLLPowerPI
+   :no-index:
 
 Voltage control (``voltage = ...``)
 """""""""""""""""""""""""""""""""""
 
 .. autoclass:: hermess.devices.inverter_voltage.QVDroop
    :no-index:
+.. autoclass:: hermess.devices.inverter_voltage.QPowerPI
+   :no-index:
 
 Inner control (``inner = ...``)
 """""""""""""""""""""""""""""""
 
 .. autoclass:: hermess.devices.inverter_inner.Cascaded
+   :no-index:
+.. autoclass:: hermess.devices.inverter_inner.CascadedDamped
+   :no-index:
+.. autoclass:: hermess.devices.inverter_inner.CurrentPI
    :no-index:
 
 Phase-locked loops (``pll = ...``)
@@ -353,6 +380,10 @@ Phase-locked loops (``pll = ...``)
    driven to zero, locking :math:`\delta_{pll}` to the filter-voltage phasor.
 
 .. autoclass:: hermess.devices.inverter_pll.SRF_PLL
+   :no-index:
+.. autoclass:: hermess.devices.inverter_pll.ReducedPLL
+   :no-index:
+.. autoclass:: hermess.devices.inverter_pll.KauraPLL
    :no-index:
 
 Static var compensator

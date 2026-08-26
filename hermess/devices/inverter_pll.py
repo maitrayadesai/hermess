@@ -208,6 +208,177 @@ class SRF_PLL(PLL):
         return {"epsilon": sol[n : 2 * n], "delta_pll": sol[2 * n : 3 * n]}
 
 
+class ReducedPLL(SRF_PLL):
+    r"""Reduced-order PLL: the :class:`SRF_PLL` with a first-order low-pass
+    filter on the measured q-axis voltage (the reduced-order PLL of the PSID
+    grid-following reference model).
+
+    Selected on a converter line with ``pll = "ReducedPLL"``.
+
+    **Model.** The filter voltage is rotated into the PLL frame as in
+    :class:`SRF_PLL`; the PI loop acts on the low-pass-filtered q-component:
+
+    .. math::
+
+       \dot{v}_{q,lp} &= \omega_{lp} \left( v_{fq,pll} - v_{q,lp} \right) \\
+       \omega_{pll} &= \omega_{net} + K_p^{pll} \, v_{q,lp} + K_i^{pll} \, \epsilon \\
+       \dot{\epsilon} &= v_{q,lp} \\
+       \dot{\delta}_{pll} &= \omega_b \left( \omega_{pll} - \omega_{ref} \right)
+
+    In the limit :math:`\omega_{lp} \to \infty` this is exactly the
+    :class:`SRF_PLL`.
+
+    **Symbols.** As :class:`SRF_PLL`, plus:
+
+    .. csv-table::
+       :header: Code, Symbol, Meaning, Default
+       :widths: 14, 12, 58, 10
+
+       "``omega_lp``", ":math:`\omega_{lp}`", "measurement low-pass corner frequency [rad/s]", "414.69"
+       "``vq_lp``", ":math:`v_{q,lp}`", "filtered PLL q-axis voltage (state) [p.u.]", ""
+    """
+
+    def states(self) -> List[str]:
+        return ["vq_lp", "epsilon", "delta_pll"]
+
+    def units(self) -> List[str]:
+        return ["p.u.", "p.u.", "p.u."]
+
+    def params(self) -> Dict[str, float]:
+        return {"Kpll_p": 2.0, "Kpll_i": 20.0, "omega_lp": 1.32 * 2 * np.pi * 50}
+
+    def x0(self) -> Dict[str, float]:
+        return {"vq_lp": 0, "epsilon": 0, "delta_pll": 0}
+
+    def descriptions(self) -> Dict[str, str]:
+        d = super().descriptions()
+        d.update(
+            {
+                "omega_lp": "PLL measurement low-pass corner frequency",
+                "vq_lp": "filtered PLL q-axis voltage",
+            }
+        )
+        return d
+
+    def fgcall(self, host, dae: Dae, omega_ref_vec, omega_b) -> None:
+        Vfd_ext_s = host.var_sym(dae, "Vfd_ext")
+        Vfq_ext_s = host.var_sym(dae, "Vfq_ext")
+        delta_pll_s = host.var_sym(dae, "delta_pll")
+
+        _, Vfq_pll = host.to_internal(Vfd_ext_s, Vfq_ext_s, delta_pll_s)
+        vq_lp_s = dae.x[host.vq_lp]
+        host.omega_pll = (
+            dae.omega_net + host.Kpll_p * vq_lp_s + host.Kpll_i * dae.x[host.epsilon]
+        )
+
+        dae.f[host.vq_lp] = host.omega_lp * (Vfq_pll - vq_lp_s)
+        dae.f[host.epsilon] = vq_lp_s
+        dae.f[host.delta_pll] = omega_b * (host.omega_pll - omega_ref_vec)
+
+    def finit_sequential(self, host, dae: Dae, Vfd_ext, Vfq_ext) -> Dict[str, np.ndarray]:
+        # Locked steady state: the low-pass tracks the q-voltage, which the PI
+        # drives to zero, so vq_lp = epsilon = 0 and delta_pll is the
+        # filter-voltage angle (analytic, no solve needed).
+        vals = super().finit_sequential(host, dae, Vfd_ext, Vfq_ext)
+        vals["vq_lp"] = np.zeros(host.n)
+        return vals
+
+
+class KauraPLL(PLL):
+    r"""Kaura-Blasko PLL: low-pass filters on both dq components of the
+    measured filter voltage and a phase detector on their angle
+    (Kaura and Blasko 1997; the PSID/PSCAD virtual-synchronous-machine
+    reference uses it).
+
+    Selected on a converter line with ``pll = "Kaura"``.
+
+    **Model.** The filter voltage is rotated into the PLL frame and low-pass
+    filtered on both axes; the PI loop acts on the phase error
+    :math:`\operatorname{atan2}(v_{q,lp}, v_{d,lp})`:
+
+    .. math::
+
+       \dot{v}_{d,lp} &= \omega_{lp} \left( v_{fd,pll} - v_{d,lp} \right) \\
+       \dot{v}_{q,lp} &= \omega_{lp} \left( v_{fq,pll} - v_{q,lp} \right) \\
+       \omega_{pll} &= \omega_{net}
+           + K_p^{pll} \operatorname{atan2}(v_{q,lp}, v_{d,lp})
+           + K_i^{pll} \, \epsilon \\
+       \dot{\epsilon} &= \operatorname{atan2}(v_{q,lp}, v_{d,lp}) \\
+       \dot{\delta}_{pll} &= \omega_b \left( \omega_{pll} - \omega_{ref} \right)
+
+    Near the lock (:math:`v_{q,lp} \approx 0`, :math:`v_{d,lp} \approx |v_f|`)
+    this linearizes to the magnitude-normalized :class:`SRF_PLL`.
+
+    **Symbols.**
+
+    .. csv-table::
+       :header: Code, Symbol, Meaning, Default
+       :widths: 14, 12, 58, 10
+
+       "``Kpll_p``", ":math:`K_p^{pll}`", "PLL proportional gain", "0.084"
+       "``Kpll_i``", ":math:`K_i^{pll}`", "PLL integral gain", "4.69"
+       "``omega_lp``", ":math:`\omega_{lp}`", "measurement low-pass corner frequency [rad/s]", "500"
+       "``vd_lp`` / ``vq_lp``", ":math:`v_{d,lp},\ v_{q,lp}`", "filtered PLL-frame voltages (states) [p.u.]", ""
+       "``epsilon``", ":math:`\epsilon`", "PLL integrator state [p.u.]", ""
+       "``delta_pll``", ":math:`\delta_{pll}`", "PLL-frame angle relative to the network (state) [rad]", ""
+    """
+
+    def states(self) -> List[str]:
+        return ["vd_lp", "vq_lp", "epsilon", "delta_pll"]
+
+    def units(self) -> List[str]:
+        return ["p.u.", "p.u.", "p.u.", "p.u."]
+
+    def params(self) -> Dict[str, float]:
+        return {"Kpll_p": 0.084, "Kpll_i": 4.69, "omega_lp": 500.0}
+
+    def x0(self) -> Dict[str, float]:
+        return {"vd_lp": 1.0, "vq_lp": 0, "epsilon": 0, "delta_pll": 0}
+
+    def descriptions(self) -> Dict[str, str]:
+        return {
+            "Kpll_p": "Proportional gain for PLL",
+            "Kpll_i": "Integral gain for PLL",
+            "omega_lp": "PLL measurement low-pass corner frequency",
+            "vd_lp": "filtered PLL d-axis voltage",
+            "vq_lp": "filtered PLL q-axis voltage",
+            "epsilon": "PLL integrator state",
+            "delta_pll": "angle difference between the dq-reference frame of the PLL and the network",
+        }
+
+    def fgcall(self, host, dae: Dae, omega_ref_vec, omega_b) -> None:
+        Vfd_ext_s = host.var_sym(dae, "Vfd_ext")
+        Vfq_ext_s = host.var_sym(dae, "Vfq_ext")
+        delta_pll_s = host.var_sym(dae, "delta_pll")
+
+        Vfd_pll, Vfq_pll = host.to_internal(Vfd_ext_s, Vfq_ext_s, delta_pll_s)
+        vd_lp_s = dae.x[host.vd_lp]
+        vq_lp_s = dae.x[host.vq_lp]
+        phase_err = ca.atan2(vq_lp_s, vd_lp_s)
+        host.omega_pll = (
+            dae.omega_net + host.Kpll_p * phase_err + host.Kpll_i * dae.x[host.epsilon]
+        )
+
+        dae.f[host.vd_lp] = host.omega_lp * (Vfd_pll - vd_lp_s)
+        dae.f[host.vq_lp] = host.omega_lp * (Vfq_pll - vq_lp_s)
+        dae.f[host.epsilon] = phase_err
+        dae.f[host.delta_pll] = omega_b * (host.omega_pll - omega_ref_vec)
+
+    def finit_sequential(self, host, dae: Dae, Vfd_ext, Vfq_ext) -> Dict[str, np.ndarray]:
+        # Locked steady state (analytic): the PLL frame aligns with the filter
+        # voltage (vq = 0, epsilon = 0), the d-axis low-pass carries its
+        # magnitude, and delta_pll is the filter-voltage angle.
+        delta_pll = np.arctan2(Vfq_ext, Vfd_ext)
+        return {
+            "vd_lp": np.hypot(Vfd_ext, Vfq_ext),
+            "vq_lp": np.zeros(host.n),
+            "epsilon": np.zeros(host.n),
+            "delta_pll": delta_pll,
+        }
+
+
 PLL_REGISTRY: Dict[str, type] = {
     "SRF_PLL": SRF_PLL,
+    "ReducedPLL": ReducedPLL,
+    "Kaura": KauraPLL,
 }

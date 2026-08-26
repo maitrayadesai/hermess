@@ -340,8 +340,89 @@ class GOVCONST(Governor):
         dae.g[host.pm] = -dae.y[host.pm] + host.Pref
 
 
+class TGTypeII(Governor):
+    r"""Type II speed governor: a droop on the frequency deviation through
+    one lead-lag, added to the constant reference power (F. Milano, *Power
+    System Modelling and Scripting*, 2010; the PSID ``TGTypeII``).
+
+    Selected on a machine line with ``governor = "TGTypeII"``.
+
+    **Model.** The lead-lag is realized as one lag state plus feedthrough,
+    so the mechanical power is a device-private algebraic:
+
+    .. math::
+
+       u &= \frac{1}{R_d} \left( \omega_{net} - \omega \right) \\
+       T_2 \, \dot{x}_g &= u - x_g \\
+       0 &= -p_m + \frac{T_1}{T_2} \left( u - x_g \right) + x_g + P_{ref}
+
+    with :math:`\omega` the absolute per-unit rotor speed. At steady state
+    :math:`x_g = u = 0` and :math:`p_m = P_{ref}`. Like the PSID reference
+    (which publishes this output as the mechanical torque without a
+    :math:`1/\omega` factor), the output feeds the swing equation unmodified.
+
+    **Symbols.**
+
+    .. csv-table::
+       :header: Code, Symbol, Meaning, Default
+       :widths: 14, 12, 58, 10
+
+       "``Rd``", ":math:`R_d`", "speed droop constant", "0.05"
+       "``T1``", ":math:`T_1`", "lead (transient droop) time constant [s]", "1"
+       "``T2``", ":math:`T_2`", "lag time constant [s]", "2"
+       "``xg``", ":math:`x_g`", "lead-lag lag state [p.u.]", ""
+       "``pm``", ":math:`p_m`", "mechanical power (private algebraic) [p.u.]", ""
+       "``Pref``", ":math:`P_{ref}`", "mechanical-power setpoint (set by the initialization)", ""
+    """
+
+    def states(self) -> List[str]:
+        return ["xg"]
+
+    def units(self) -> List[str]:
+        return ["p.u."]
+
+    def algebs(self) -> List[str]:
+        return ["pm"]  # direct feedthrough of the speed deviation
+
+    def algebs_units(self) -> Dict[str, str]:
+        return {"pm": "p.u."}
+
+    def algebs_x0(self) -> Dict[str, float]:
+        return {"pm": 0.5}
+
+    def params(self) -> Dict[str, float]:
+        return {"Rd": 0.05, "T1": 1.0, "T2": 2.0}
+
+    def x0(self) -> Dict[str, float]:
+        return {"xg": 0.0}
+
+    def descriptions(self) -> Dict[str, str]:
+        return {
+            "Rd": "droop constant",
+            "T1": "lead (transient droop) time constant",
+            "T2": "lag time constant",
+            "xg": "lead-lag lag state",
+            "pm": "mechanical power (lead-lag output plus reference)",
+            "Pref": "generator mechanical power set point",
+        }
+
+    def setpoints(self) -> Dict[str, float]:
+        return {"Pref": 0.1}
+
+    def fgcall(self, host, dae: Dae) -> None:
+        u = (dae.omega_net - dae.x[host.omega]) / host.Rd
+        dae.f[host.xg] = (u - dae.x[host.xg]) / host.T2
+        dae.g[host.pm] = (
+            -dae.y[host.pm]
+            + host.T1 / host.T2 * (u - dae.x[host.xg])
+            + dae.x[host.xg]
+            + host.Pref
+        )
+
+
 GOVERNOR_REGISTRY: Dict[str, type] = {
     "TGOV1": TGOV1,
     "Droop": Droop,
     "GOVCONST": GOVCONST,
+    "TGTypeII": TGTypeII,
 }
