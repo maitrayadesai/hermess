@@ -1,67 +1,73 @@
 {
- "model": "Marconato + AVRSimple + TGTypeII, dynamic lines",
- "description": "Two Marconato machines (Type II governor / fixed torque, AVRSimple) on a fully dynamic 60 Hz network; P_ref step; PSID reference plus the PSCAD Test25 voltage trajectory.",
- "device_class": "Marconato",
- "config": {
-  "T_end": 40.0,
-  "ts": 0.01,
-  "fn": 60,
-  "line_dyn": true
- },
- "state_columns": {
-  "SG1:omega": "omega_1",
-  "SG2:omega": "omega_2",
-  "SG1:Efd": "efd_1",
-  "SG2:Efd": "efd_2"
- },
- "initial_only_columns": {
-  "SG1:delta": "delta_1",
-  "SG1:xg": "xg_1",
-  "SG1:psiq": "psiq_1",
-  "SG1:psid": "psid_1",
-  "SG1:e_qprim": "eq_p_1",
-  "SG1:e_dprim": "ed_p_1",
-  "SG1:e_qsec": "eq_pp_1",
-  "SG1:e_dsec": "ed_pp_1",
-  "SG2:delta": "delta_2",
-  "SG2:psid": "psid_2",
-  "SG2:psiq": "psiq_2"
- },
- "voltage_columns": {
-  "1": "v_101",
-  "2": "v_102",
-  "3": "v_103"
- },
- "skip_eigenvalues": "the PSID reference runs in its ReferenceBus frame (its constant-frequency frame fails to initialize with all lines dynamic), a different linearization from the hermess nominal frame; the invariant trajectories and the PSCAD comparison carry this case",
- "event_times": [1.0],
- "pscad": {
-  "csv": "upstream/Test25_v102.csv",
-  "quantity": "v_2",
-  "offset": 49.0,
-  "tol_inf": 0.01,
-  "upstream_acceptance": "PSID-vs-PSCAD 2-norm <= 0.1 on v102 (relaxed upstream to account for mismatch in damping)"
- },
- "tolerances": {
-  "initial": 1e-05,
-  "eig_abs": 0.0001,
-  "eig_rel": 0.0001,
-  "traj_default": 0.0005,
-  "traj": {
-   "efd_1": 0.002,
-   "efd_2": 0.002
-  }
- },
- "achieved_2026_08": {
-  "initial": 1.1e-06,
-  "psid_traj_worst": 8.5e-04,
-  "pscad_inf": 3.2e-03,
-  "pscad_2norm": 9.2e-02,
-  "note": "SG1:xg is excluded from the trajectory comparison: PSID realizes the lead-lag with the feedthrough separated (its state settles at (1 - T1/T2) times ours); the input/output behavior is identical, as the omega agreement shows"
- },
- "upstream": {
-  "repository": "https://github.com/Sienna-Platform/PowerSimulationsDynamics.jl",
-  "commit": "dfb56d80b7a019b2d287f1da4d65157d6de134fa",
-  "path": "test/benchmarks/pscad/Test25",
-  "license": "BSD-3-Clause (upstream/LICENSE)"
- }
+    "model": "Marconato + AVRSimple + TGTypeII, dynamic lines",
+    "description": "Two Marconato machines (Type II governor / fixed torque, AVRSimple) on a fully dynamic 60 Hz network; P_ref step; PSID reference plus the PSCAD Test25 voltage trajectory.",
+    "device_class": "Marconato",
+    "config": {
+        "T_end": 40.0,
+        "ts": 0.01,
+        "fn": 60,
+        "line_dyn": true
+    },
+    "state_columns": {
+        "SG1:omega": "omega_1",
+        "SG2:omega": "omega_2",
+        "SG1:Efd": "efd_1",
+        "SG2:Efd": "efd_2"
+    },
+    "initial_only_columns": {
+        "SG1:delta": "delta_1",
+        "SG1:xg": "xg_1",
+        "SG1:psiq": "psiq_1",
+        "SG1:psid": "psid_1",
+        "SG1:e_qprim": "eq_p_1",
+        "SG1:e_dprim": "ed_p_1",
+        "SG1:e_qsec": "eq_pp_1",
+        "SG1:e_dsec": "ed_pp_1",
+        "SG2:delta": "delta_2",
+        "SG2:psid": "psid_2",
+        "SG2:psiq": "psiq_2"
+    },
+    "voltage_columns": {
+        "1": "v_101",
+        "2": "v_102",
+        "3": "v_103"
+    },
+    "skip_eigenvalues": "the PSID reference runs in its ReferenceBus frame (its constant-frequency frame fails to initialize with all lines dynamic), a different linearization from the hermess nominal frame; the invariant trajectories and the PSCAD comparison carry this case",
+    "event_times": [
+        1.0
+    ],
+    "pscad": {
+        "csv": "upstream/Test25_v102.csv",
+        "quantity": "v_2",
+        "offset": 49.0,
+        "tol_inf": 0.01,
+        "upstream_acceptance": "PSID-vs-PSCAD 2-norm <= 0.1 on v102 (relaxed upstream to account for mismatch in damping)"
+    },
+    "tolerances": {
+        "initial": 1e-05,
+        "eig_abs": 0.0001,
+        "eig_rel": 0.0001,
+        "traj_default": 0.0005,
+        "traj": {
+            "efd_1": 0.002,
+            "efd_2": 0.002
+        }
+    },
+    "achieved_2026_08": {
+        "initial": 1.1e-06,
+        "psid_traj_worst": 0.00085,
+        "pscad_inf": 0.0032,
+        "pscad_2norm": 0.092,
+        "note": "SG1:xg is excluded from the trajectory comparison: PSID realizes the lead-lag with the feedthrough separated (its state settles at (1 - T1/T2) times ours); the input/output behavior is identical, as the omega agreement shows"
+    },
+    "upstream": {
+        "repository": "https://github.com/Sienna-Platform/PowerSimulationsDynamics.jl",
+        "commit": "dfb56d80b7a019b2d287f1da4d65157d6de134fa",
+        "path": "test/benchmarks/pscad/Test25",
+        "license": "BSD-3-Clause (upstream/LICENSE)",
+        "sha256": {
+            "upstream/LICENSE": "c379eea612a3ab9e627dbaba5dd61d6d51060033f3998e5f2836c092c914be92",
+            "upstream/Test25_v102.csv": "6bd2d973a000185ad8e631f79594fcf93755e5969b28d4469212b62386b2781d"
+        }
+    }
 }

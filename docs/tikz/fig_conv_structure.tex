@@ -24,6 +24,6 @@
   \draw[sig] ($(grid.south)+(0,-0.1)$) |- (pll.east) node[pos=0.85, above, lbl] {$v_f$};
   \draw[sig] (pll) -- (angle) node[midway, above, lbl] {$\omega_{pll}$};
   \node[lbl, text=ethgrey] at ($(volt.south)+(2.4,-0.65)$)
-    {\footnotesize \textbf{GridForming}: droop angle source;\ \ \textbf{GridFollowing}: PLL angle source; each block is a pluggable strategy};
+    {\footnotesize \textbf{GridForming}: droop angle source;\ \ \textbf{GridSupporting}: PLL angle source; each block is a pluggable strategy (\textbf{GridFollowing} is a separate current-injecting chain)};
 \end{tikzpicture}
 \end{document}

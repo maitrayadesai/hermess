@@ -184,6 +184,18 @@ to the consumption, in the same units as ``Sb`` (MW and MVAr by default).
 - **p_delta** (*float*) – Active power change in MW.
 - **q_delta** (*float*) – Reactive power change in MVAr.
 
+**SETPOINT** — steps a device setpoint (a reference step, the standard control
+test signal). The setpoint enters the model equations as a numeric constant,
+so the equations are rebuilt at the event; the rebuild discards the extra
+current injections of ``LOAD`` events executed earlier in the same run, so
+schedule a ``SETPOINT`` before any ``LOAD`` step.
+
+- **time** (*float*) – Time of the disturbance in seconds.
+- **type** (*str*) – Must be ``"SETPOINT"``.
+- **device** (*str*) – Id of the device whose setpoint is stepped (its ``idx``).
+- **param** (*str*) – Name of the setpoint, e.g. ``Pref``.
+- **value** (*float*) – New setpoint value, in device per unit.
+
 The shipped systems in :ref:`test_cases` are worked examples of both files, and
 the notebooks under ``examples/`` walk through them step by step.
 

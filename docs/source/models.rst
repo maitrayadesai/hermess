@@ -264,7 +264,7 @@ implements the power path** (the voltage-source converter behind its LCL
 output filter), and the control blocks are pluggable strategies. The filter
 strategy carries the plant states :math:`v_f, i_f, i_t`; the angle source sets
 the converter frequency :math:`\omega_c` and angle :math:`\delta_c` (from the
-active-power droop for a grid-forming unit, from the PLL for a grid-following
+active-power droop for a grid-forming unit, from the PLL for a grid-supporting
 unit); the voltage controller turns the reactive-power error into the voltage
 command :math:`V_{cd}`; the inner controller closes the cascaded voltage and
 current loops and produces the switching voltage :math:`v_{sw}^{*}`; and the
@@ -276,7 +276,9 @@ PLL tracks the filter-voltage phasor:
 
    How a converter is composed: the converter class implements the power
    path; filter, angle source, voltage control, inner control and PLL are
-   pluggable strategies selected by keyword on the converter line.
+   pluggable strategies selected by keyword on the converter line. The
+   grid-following converter replaces this voltage-source chain by a
+   current-injecting one, documented in its class.
 
 Converter models
 ^^^^^^^^^^^^^^^^

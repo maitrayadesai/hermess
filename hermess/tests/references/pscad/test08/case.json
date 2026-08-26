@@ -1,61 +1,68 @@
 {
- "model": "VSM + Kaura PLL",
- "description": "Virtual-synchronous-machine converter (D'Arco set, Kaura PLL) on the OMIB; P_ref step; PSID three-level reference plus the PSCAD Test08 trajectory.",
- "device_class": "GridForming",
- "config": {
-  "T_end": 4.0
- },
- "state_columns": {
-  "delta_c": "theta",
-  "omega_vsm": "omega_vsm",
-  "Qc_tilde": "qm",
-  "Vfd_ext": "vr_filter",
-  "Vfq_ext": "vi_filter",
-  "ifd_ext": "ir_cnv",
-  "ifq_ext": "ii_cnv",
-  "itd_ext": "ir_filter",
-  "itq_ext": "ii_filter",
-  "xi_d": "xi_d",
-  "xi_q": "xi_q",
-  "gamma_d": "gamma_d",
-  "gamma_q": "gamma_q",
-  "phi_d": "phi_d",
-  "phi_q": "phi_q",
-  "vd_lp": "vd_lp",
-  "vq_lp": "vq_lp",
-  "epsilon": "epsilon",
-  "delta_pll": "delta_pll"
- },
- "voltage_columns": {
-  "2": "v_102"
- },
- "event_times": [1.0],
- "pscad": {
-  "csv": "upstream/Test08_omega.csv",
-  "quantity": "omega_vsm",
-  "offset": 9.0,
-  "tol_inf": 0.0005,
-  "upstream_acceptance": "PSID-vs-PSCAD 2-norm <= 1e-4 on omega"
- },
- "tolerances": {
-  "initial": 1e-06,
-  "eig_abs": 0.0001,
-  "eig_rel": 0.0001,
-  "traj_default": 0.0002,
-  "traj": {}
- },
- "achieved_2026_08": {
-  "initial": 3.7e-10,
-  "eig_scaled": 1.6e-10,
-  "psid_traj_worst": 1.9e-05,
-  "pscad_inf": 1.3e-04,
-  "pscad_2norm": 7.3e-04
- },
- "upstream": {
-  "repository": "https://github.com/Sienna-Platform/PowerSimulationsDynamics.jl",
-  "commit": "dfb56d80b7a019b2d287f1da4d65157d6de134fa",
-  "path": "test/benchmarks/pscad/Test08",
-  "license": "BSD-3-Clause (upstream/LICENSE)",
-  "note": "the PSCAD component library (PSID_Library.pslx) is not copied; it lives at the pinned upstream path"
- }
+    "model": "VSM + Kaura PLL",
+    "description": "Virtual-synchronous-machine converter (D'Arco set, Kaura PLL) on the OMIB; P_ref step; PSID three-level reference plus the PSCAD Test08 trajectory.",
+    "device_class": "GridForming",
+    "config": {
+        "T_end": 4.0
+    },
+    "state_columns": {
+        "delta_c": "theta",
+        "omega_vsm": "omega_vsm",
+        "Qc_tilde": "qm",
+        "Vfd_ext": "vr_filter",
+        "Vfq_ext": "vi_filter",
+        "ifd_ext": "ir_cnv",
+        "ifq_ext": "ii_cnv",
+        "itd_ext": "ir_filter",
+        "itq_ext": "ii_filter",
+        "xi_d": "xi_d",
+        "xi_q": "xi_q",
+        "gamma_d": "gamma_d",
+        "gamma_q": "gamma_q",
+        "phi_d": "phi_d",
+        "phi_q": "phi_q",
+        "vd_lp": "vd_lp",
+        "vq_lp": "vq_lp",
+        "epsilon": "epsilon",
+        "delta_pll": "delta_pll"
+    },
+    "voltage_columns": {
+        "2": "v_102"
+    },
+    "event_times": [
+        1.0
+    ],
+    "pscad": {
+        "csv": "upstream/Test08_omega.csv",
+        "quantity": "omega_vsm",
+        "offset": 9.0,
+        "tol_inf": 0.0005,
+        "upstream_acceptance": "PSID-vs-PSCAD 2-norm <= 1e-4 on omega"
+    },
+    "tolerances": {
+        "initial": 1e-06,
+        "eig_abs": 0.0001,
+        "eig_rel": 0.0001,
+        "traj_default": 0.0002,
+        "traj": {}
+    },
+    "achieved_2026_08": {
+        "initial": 3.7e-10,
+        "eig_scaled": 1.6e-10,
+        "psid_traj_worst": 1.9e-05,
+        "pscad_inf": 0.00013,
+        "pscad_2norm": 0.00073
+    },
+    "upstream": {
+        "repository": "https://github.com/Sienna-Platform/PowerSimulationsDynamics.jl",
+        "commit": "dfb56d80b7a019b2d287f1da4d65157d6de134fa",
+        "path": "test/benchmarks/pscad/Test08",
+        "license": "BSD-3-Clause (upstream/LICENSE)",
+        "note": "the PSCAD component library (PSID_Library.pslx) is not copied; it lives at the pinned upstream path",
+        "sha256": {
+            "upstream/LICENSE": "c379eea612a3ab9e627dbaba5dd61d6d51060033f3998e5f2836c092c914be92",
+            "upstream/Test08_omega.csv": "f4d3668b049bcfccd8f297f0724a65779f2af54deb1e87fa113e3f8135414bef",
+            "upstream/test08.pscx": "95c4041d210ea9756b6e9aec99c51f9a2f6c856c46784012d51e7e222b4498fa"
+        }
+    }
 }
