@@ -201,6 +201,12 @@ Automatic voltage regulators (``avr = ...``)
    :no-index:
 .. autoclass:: hermess.devices.avr.AVRKundur_NoTGR
    :no-index:
+
+Two minimal exciters close the family, useful as limiting cases and for
+matching references without excitation dynamics. ``AVRCONST`` holds the
+field voltage constant at its operating point, and ``AVRSimple`` integrates
+the voltage error, :math:`\dot{E}_{fd} = K_v \left( V_{ref} - V_t \right)`.
+
 .. autoclass:: hermess.devices.avr.AVRCONST
    :no-index:
 .. autoclass:: hermess.devices.avr.AVRSimple
@@ -222,6 +228,14 @@ Governors (``governor = ...``)
    :no-index:
 .. autoclass:: hermess.devices.governor.TGOV1
    :no-index:
+
+.. figure:: /_static/schematics/gov_tgtype2.svg
+   :alt: Type II governor block diagram
+   :width: 420px
+
+   Type II governor: the frequency deviation acts through the droop and one
+   lead-lag, added to the constant reference power.
+
 .. autoclass:: hermess.devices.governor.TGTypeII
    :no-index:
 
@@ -261,24 +275,50 @@ Converters
 
 A converter is composed in exactly the same manner: the **converter class
 implements the power path** (the voltage-source converter behind its LCL
-output filter), and the control blocks are pluggable strategies. The filter
-strategy carries the plant states :math:`v_f, i_f, i_t`; the angle source sets
-the converter frequency :math:`\omega_c` and angle :math:`\delta_c` (from the
-active-power droop for a grid-forming unit, from the PLL for a grid-supporting
-unit); the voltage controller turns the reactive-power error into the voltage
-command :math:`V_{cd}`; the inner controller closes the cascaded voltage and
-current loops and produces the switching voltage :math:`v_{sw}^{*}`; and the
-PLL tracks the filter-voltage phasor:
+output filter), and the control blocks are pluggable strategies on five
+axes, the output filter, the angle source, the voltage control, the inner
+control and the PLL. Three converter classes ship, differing in how they
+synchronize and in which strategies they plug in by default.
+:class:`~hermess.devices.inverter.GridForming` sets its own frequency and
+voltage from an active-power droop.
+:class:`~hermess.devices.inverter.GridSupporting` rides on a PLL and adds
+the droop on the PLL frequency, keeping the full voltage-mode cascade.
+:class:`~hermess.devices.inverter.GridFollowing` also rides on a PLL but
+replaces that cascade by a current-injecting chain of power-PI and
+current-PI controllers.
+
+In the voltage-mode chain of the grid-forming and grid-supporting
+converters, the filter strategy carries the plant states
+:math:`v_f, i_f, i_t`; the angle source sets the converter frequency
+:math:`\omega_c` and angle :math:`\delta_c` (from the active-power droop
+for a grid-forming unit, from the PLL for a grid-supporting unit); the
+voltage controller turns the reactive-power error into the voltage command
+:math:`V_{cd}`; the inner controller closes the cascaded voltage and
+current loops and produces the switching voltage :math:`v_{sw}^{*}`; and
+the PLL tracks the filter-voltage phasor:
 
 .. figure:: /_static/schematics/conv_structure.svg
-   :alt: Converter composition
+   :alt: Converter composition, voltage-mode chain
    :width: 560px
 
-   How a converter is composed: the converter class implements the power
-   path; filter, angle source, voltage control, inner control and PLL are
-   pluggable strategies selected by keyword on the converter line. The
-   grid-following converter replaces this voltage-source chain by a
-   current-injecting one, documented in its class.
+   How a grid-forming or grid-supporting converter is composed: the
+   converter class implements the power path; filter, angle source, voltage
+   control, inner control and PLL are pluggable strategies selected by
+   keyword on the converter line.
+
+In the current-injecting chain of the grid-following converter, the
+converter frame is the PLL frame itself. PI controllers on the filtered
+active and reactive power occupy the angle and voltage slots and produce
+the dq current commands, and a current-mode inner loop tracks them on the
+same LCL filter:
+
+.. figure:: /_static/schematics/conv_gfl.svg
+   :alt: Converter composition, current-injecting chain
+   :width: 560px
+
+   How a grid-following converter is composed: the same power path, with
+   the power-PI outers and the current-mode inner loop in the strategy
+   slots and the PLL fixing the converter frame.
 
 Converter models
 ^^^^^^^^^^^^^^^^
@@ -306,16 +346,28 @@ small-signal behavior in low-inertia systems follows [2]_.
 .. autoclass:: hermess.devices.inverter.GridForming
    :no-index:
 
+.. _grid_supporting_converter:
+
+Grid-supporting converter
+"""""""""""""""""""""""""
+
+A grid-supporting converter, which synchronizes to the grid through a PLL
+and adds the active-power droop on the PLL frequency, keeping the full
+voltage-mode cascade [2]_. The class was named ``GridFollowing`` before
+v1.1, when that name moved to the current-injecting chain below.
+
+.. autoclass:: hermess.devices.inverter.GridSupporting
+   :no-index:
+
 .. _grid_following_converter:
 
 Grid-following converter
 """"""""""""""""""""""""
 
-A grid-following converter, which synchronizes to the grid through a PLL
-[2]_.
-
-.. autoclass:: hermess.devices.inverter.GridSupporting
-   :no-index:
+A grid-following converter in the literature-standard current-injecting
+form, matching the PowerSimulationsDynamics.jl reference model and its
+PSCAD benchmarks: the frame rides on the PLL, power-PI outers produce the
+current commands and a current-mode inner loop tracks them.
 
 .. autoclass:: hermess.devices.inverter.GridFollowing
    :no-index:
@@ -344,6 +396,14 @@ Output filters (``filter = ...``)
 Angle sources (``angle = ...``)
 """""""""""""""""""""""""""""""
 
+The angle source fixes how the converter synchronizes. ``Droop`` is the
+grid-forming active-power droop, and ``PLL`` adds the same droop on the
+PLL frequency for a grid-supporting unit. ``VSM`` is a
+virtual-synchronous-machine swing with virtual inertia, damped against the
+PLL frequency. ``PLLPowerPI`` is the grid-following choice, which aliases
+the converter frame to the PLL frame and turns the active-power error into
+the d-axis current command.
+
 .. autoclass:: hermess.devices.inverter_angle.DroopAngle
    :no-index:
 .. autoclass:: hermess.devices.inverter_angle.PLLAngle
@@ -356,6 +416,10 @@ Angle sources (``angle = ...``)
 Voltage control (``voltage = ...``)
 """""""""""""""""""""""""""""""""""
 
+``QVDroop`` turns the reactive-power error into the voltage-magnitude
+command of the voltage-mode cascade. ``QPowerPI`` replaces it in the
+current-injecting chain and produces the q-axis current command instead.
+
 .. autoclass:: hermess.devices.inverter_voltage.QVDroop
    :no-index:
 .. autoclass:: hermess.devices.inverter_voltage.QPowerPI
@@ -363,6 +427,11 @@ Voltage control (``voltage = ...``)
 
 Inner control (``inner = ...``)
 """""""""""""""""""""""""""""""
+
+``Cascaded`` closes the voltage and current loops of the voltage-mode
+cascade, and ``CascadedDamped`` adds capacitor-voltage active damping on
+top of it. ``CurrentPI`` is the current-mode loop of the grid-following
+chain, tracking the commands of the power PIs directly.
 
 .. autoclass:: hermess.devices.inverter_inner.Cascaded
    :no-index:
@@ -380,6 +449,11 @@ Phase-locked loops (``pll = ...``)
 
    Synchronous-reference-frame PLL: the q-component of the filter voltage is
    driven to zero, locking :math:`\delta_{pll}` to the filter-voltage phasor.
+
+``SRF_PLL`` is the synchronous-reference-frame loop of the figure.
+``ReducedPLL`` low-pass filters the measured q-voltage before the loop, and
+``Kaura`` filters both axes and acts on the phase angle of the filtered
+phasor.
 
 .. autoclass:: hermess.devices.inverter_pll.SRF_PLL
    :no-index:

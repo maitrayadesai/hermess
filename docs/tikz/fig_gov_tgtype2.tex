@@ -1,0 +1,16 @@
+\documentclass[tikz,border=6pt]{standalone}
+\input{style.tex}
+\begin{document}
+\begin{tikzpicture}
+  \node[block] (droop) {$\dfrac{1}{R_d}$};
+  \node[block, right=12mm of droop] (ll) {$\dfrac{1 + sT_1}{1 + sT_2}$};
+  \node[sum, right=12mm of ll] (s) {};
+  \node[lbl] at ($(s)+(-0.32,0.30)$) {$+$};
+  \node[lbl] at ($(s)+(-0.02,0.44)$) {$+$};
+  \draw[sig] ($(droop.west)+(-1.5,0)$) node[above, lbl] {$\omega_{net} - \omega$} -- (droop);
+  \draw[sig] (droop) -- (ll) node[midway, above, lbl] {$u$};
+  \draw[sig] (ll) -- (s);
+  \draw[sig] ($(s)+(0,1.2)$) node[above, lbl] {$P_{ref}$} -- (s);
+  \draw[sig] (s.east) -- ++(1.2,0) node[above, lbl] {$p_m$};
+\end{tikzpicture}
+\end{document}

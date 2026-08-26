@@ -12,7 +12,7 @@ and integrates them with implicit and explicit schemes built on CasADi.
 
 It models synchronous machines (transient, subtransient, Sauer-Pai and PSS/E
 formulations) with pluggable AVR, governor, PSS and multi-mass shaft strategies,
-grid-forming and grid-following converters with composable control blocks, static
+grid-forming, grid-supporting and grid-following converters with composable control blocks, static
 var compensators, static loads and an infinite bus, and quasi-static or fully
 dynamic transmission lines. Faults, line switching and load steps can be applied
 at scheduled times, and the operating point can be analyzed with a small-signal
@@ -27,7 +27,7 @@ dynamic state estimation layer has been removed.
 
    - **Nonlinear DAE time-domain simulation** — the full nonlinear DAE system, integrated with ``idas``, ``cvodes``, ``collocation`` or ``rk``.
    - **Detailed machine models** — transient, subtransient, Sauer-Pai and PSS/E (``GENROU``, ``GENSAL``) machines, with AVR, governor, PSS and multi-mass shaft strategies.
-   - **Converters** — grid-forming and grid-following models composed from filter, angle, voltage, inner-control and PLL blocks.
+   - **Converters** — grid-forming, grid-supporting and grid-following models composed from filter, angle, voltage, inner-control and PLL blocks.
    - **Hybrid EMT/RMS network** — quasi-static or fully dynamic (electromagnetic) line models, selected per run.
    - **Disturbances** — bus and line faults and their clearing, line opening, and load steps, applied at scheduled times.
    - **Reference-frame modes** — center-of-inertia, single-machine, nominal and distributed.
