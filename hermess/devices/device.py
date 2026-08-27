@@ -158,7 +158,7 @@ class BusInit(Element):
        "``p``", ":math:`P`", "injected active power [MW]; positive = consumption", "0"
        "``q``", ":math:`Q`", "injected reactive power [MVAr]; positive = consumption", "0"
        "``v``", ":math:`|\bar{v}|`", "voltage magnitude [p.u.] (used for PV and slack buses)", "1.0"
-       "``type``", "", "bus type: ``\"PQ\"``, ``\"PV\"`` or ``\"slack\"``", ""
+       "``type``", "", "bus type: ``""PQ""``, ``""PV""`` or ``""slack""``", ""
     """
 
     def __init__(self) -> None:
@@ -212,11 +212,11 @@ class Disturbance(Element):
        "``bus_j``", "", "receiving-end bus of the affected line", ""
        "``y``", ":math:`y`", "fault admittance [p.u.] (fault events)", "10"
        "``bus``", "", "affected bus (bus-fault and load events)", ""
-       "``p_delta``", ":math:`\Delta P`", "active-power step [MW] (``\"LOAD\"``)", "0"
-       "``q_delta``", ":math:`\Delta Q`", "reactive-power step [MVAr] (``\"LOAD\"``)", "0"
-       "``device``", "", "device id (``\"SETPOINT\"``)", ""
-       "``param``", "", "setpoint name to step, e.g. ``Pref`` (``\"SETPOINT\"``)", ""
-       "``value``", "", "new setpoint value, device p.u. (``\"SETPOINT\"``)", "0"
+       "``p_delta``", ":math:`\Delta P`", "active-power step [MW] (``""LOAD""``)", "0"
+       "``q_delta``", ":math:`\Delta Q`", "reactive-power step [MVAr] (``""LOAD""``)", "0"
+       "``device``", "", "device id (``""SETPOINT""``)", ""
+       "``param``", "", "setpoint name to step, e.g. ``Pref`` (``""SETPOINT""``)", ""
+       "``value``", "", "new setpoint value, device p.u. (``""SETPOINT""``)", "0"
 
     A seventh event type, ``"SETPOINT"``, steps a device setpoint (a reference
     step, the standard control test signal)::
