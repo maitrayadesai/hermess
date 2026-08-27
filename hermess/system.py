@@ -1396,9 +1396,16 @@ class Dae:
         self.fl: Optional[ca.SX] = (
             None  # Symbolic vector for derivatives of line currents
         )
-        self.p: Optional[ca.SX] = None  # Will be used for parameters/inputs
+        self.p: Optional[ca.SX] = None  # Stacked device-parameter symbols
+        # (parametric build only; see hermess/parametric.py)
+        self.p_val: Optional[np.ndarray] = None  # Their numeric values
         self.p0: Optional[ca.SX] = None  # Will be used for parameters/inputs
         self.s: Optional[ca.SX] = None  # Switches
+        #: Parametric expressions of the build (a
+        #: :class:`hermess.parametric.ParametricModel`), set by
+        #: :func:`hermess.parametric.finalize` when ``Config.parametric``;
+        #: ``None`` otherwise.
+        self.parametric_model = None
 
         # Simulation outputs
         self.x_full: Optional[np.ndarray] = None  # Differential states output
@@ -1522,6 +1529,30 @@ class Dae:
 
     def init_symbolic(self) -> None:
         pass
+
+    def parametric_rhs(self):
+        """The parametric right-hand side of the build, for user-defined
+        sensitivity problems.
+
+        Returns a namespace with the symbol vectors (``x``, ``y``, ``s``,
+        and ``xl``/``sl`` with dynamic lines), the assembled expressions
+        (``f``, ``g``, ``fnode``, ``fl``) containing the parameter symbols
+        ``p``, and their numeric values ``p_val``; the reference-frequency
+        placeholders are already substituted, mirroring the integrator build.
+        ``ca.substitute(f, p, p_val)`` recovers the numeric model, and
+        ``ca.jacobian(f, p)`` is the parameter Jacobian. Requires a run with
+        ``Config(parametric=True)``; see :mod:`hermess.parametric` for the
+        scope and for :meth:`~hermess.parametric.ParametricModel.dae_dict`,
+        which packages the same expressions for ``ca.integrator``. After a
+        mid-run rebuild (dynamic-line disturbance or SETPOINT event) the
+        returned expressions still describe the pre-disturbance model.
+        """
+        if self.parametric_model is None:
+            raise RuntimeError(
+                "no parametric build available: run with "
+                "Config(parametric=True)"
+            )
+        return self.parametric_model.rhs()
 
     def compute_coi_expr(self, device_list=None) -> None:
         """Compute the symbolic Centre-of-Inertia expression from devices.

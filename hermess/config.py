@@ -70,6 +70,12 @@ class Config(BaseModel):
         # bands) when small_signal_analysis is set; False computes the data
         # only, for headless or embedded (GUI) use
     )
+    parametric: bool = (
+        False  # Build the equations with device parameters as CasADi symbols
+        # and stash the parametric model as dae.parametric_model (the numeric
+        # model is recovered by substitution, so the run itself is unchanged
+        # up to floating point rounding). See hermess/parametric.py.
+    )
     log_level: Levels
 
     def updated(self, **kwargs: Any) -> "Config":
@@ -147,6 +153,13 @@ class Config(BaseModel):
             (``eigenvalues``, ``modes``, participation factors on the returned
             model), for headless or embedded use.
         :type small_signal_figures: bool
+        :param parametric: Build the equations with device parameters as
+            CasADi symbols, so trajectories and functionals can be
+            differentiated with respect to them. The parametric expressions
+            are stashed as ``dae.parametric_model``; the run itself uses the
+            numeric model recovered by substitution and is unchanged up to
+            floating point rounding. See :mod:`hermess.parametric`.
+        :type parametric: bool
 
         :returns: A new instance of the :class:`Config` class configured with the provided parameters.
         :rtype: Config

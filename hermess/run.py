@@ -20,6 +20,7 @@ from matplotlib import cm
 
 from hermess.utils import data_loader
 from hermess.config import Config
+from hermess import parametric
 import matplotlib.pyplot as plt
 import importlib
 from hermess import system
@@ -199,11 +200,24 @@ def run(config: Config, progress_callback=None) -> system.DaeSim:
         if item.properties["finit"]:
             item.finit(system.dae_sim)
 
+    # Parametric build: initialization is finished (numeric), the equations
+    # are not assembled yet, so the parameters can be swapped for symbols in
+    # between without touching any model body. See hermess/parametric.py.
+    registry = None
+    if config.parametric:
+        registry = parametric.swap_parameters(system.device_list_sim)
+
     for item in system.device_list_sim:
         if item.properties["fgcall"]:
             item.fgcall(system.dae_sim)
 
     system.grid_sim.gcall(system.dae_sim, line=system.line_sim)
+
+    if registry is not None:
+        # Stash the parametric expressions (dae_sim.parametric_model),
+        # substitute the numeric values back in place and restore the numeric
+        # device attributes; the rest of the run is the model as built today.
+        parametric.finalize(system.dae_sim, registry)
 
     system.disturbance_sim.sort_chrono()
 

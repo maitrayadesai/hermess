@@ -142,6 +142,9 @@ class Inverter(DeviceRect):
                 "omega_f_q": float("nan"),
             }
         )
+        # The parametric build resolves the NaN fallback numerically before
+        # creating the omega_f_q symbol.
+        self._param_sentinels.update({"omega_f_q": "omega_f"})
         self._params.update(self._filter.params())
 
         self._descr.update(

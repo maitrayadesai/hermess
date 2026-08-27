@@ -49,6 +49,10 @@ class Element:
         )  # Dictionary of unique identifiers for each device based on the variable "idx"
         self._data: dict[str, Any] = {"u": True}  # Default entries for lists
         self._params: dict[str, float] = {}  # Default entries for np.arrays params
+        # NaN-sentinel parameters and the parameter each falls back to; the
+        # parametric build resolves the sentinel numerically before creating
+        # symbols (see hermess/parametric.py).
+        self._param_sentinels: dict[str, str] = {}
         self._setpoints: dict[
             str, float
         ] = {}  # Default entries for np.arrays set points
