@@ -531,7 +531,7 @@ class SynchronousTransient(Synchronous):
         i_d = ca.SX.sym("id", self.n)
         i_q = ca.SX.sym("iq", self.n)
         for i in range(self.n):
-            adq = ca.SX(
+            adq = ca.blockcat(
                 [[self.R_s[i], -self.x_qprim[i]], [self.x_dprim[i], self.R_s[i]]]
             )
             vd = dae.y[self.vre[i]] * np.sin(dae.x[self.delta[i]]) + dae.y[
@@ -717,7 +717,9 @@ class SynchronousSubtransient(Synchronous):
         i_d = ca.SX.sym("Id", self.n)
         i_q = ca.SX.sym("Iq", self.n)
         for i in range(self.n):
-            adq = ca.SX([[self.R_s[i], -self.x_qsec[i]], [self.x_dsec[i], self.R_s[i]]])
+            adq = ca.blockcat(
+                [[self.R_s[i], -self.x_qsec[i]], [self.x_dsec[i], self.R_s[i]]]
+            )
             vd = dae.y[self.vre[i]] * np.sin(dae.x[self.delta[i]]) + dae.y[
                 self.vim[i]
             ] * -np.cos(dae.x[self.delta[i]])
@@ -2054,7 +2056,7 @@ class GENROU(Synchronous):
             ] * np.sin(dae.x[self.delta[i]])
             # Stator eqs. (17)-(18): R_s*Id - X''q*Iq = psi''q - vd
             #                        X''d*Id + R_s*Iq = psi''d - vq
-            adq = ca.SX(
+            adq = ca.blockcat(
                 [[self.R_s[i], -self.x_qsec[i]], [self.x_dsec[i], self.R_s[i]]]
             )
             b = ca.vertcat(psi2q[i] - vd, psi2d[i] - vq)

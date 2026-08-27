@@ -482,9 +482,15 @@ class Inverter(DeviceRect):
         if "Pc_tilde" in self.states:
             dae.f[self.Pc_tilde] = self.omega_f * (Pc - dae.x[self.Pc_tilde])
         if "Qc_tilde" in self.states:
-            omega_f_q_eff = np.where(
-                np.isnan(self.omega_f_q), self.omega_f, self.omega_f_q
-            )
+            if isinstance(self.omega_f_q, np.ndarray):
+                omega_f_q_eff = np.where(
+                    np.isnan(self.omega_f_q), self.omega_f, self.omega_f_q
+                )
+            else:
+                # A symbolic parameter cannot be tested for NaN; a build that
+                # replaces the array with symbols must resolve the fallback
+                # numerically before doing so.
+                omega_f_q_eff = self.omega_f_q
             dae.f[self.Qc_tilde] = omega_f_q_eff * (Qc - dae.x[self.Qc_tilde])
 
         self.gcall(dae)
