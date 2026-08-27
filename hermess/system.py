@@ -2348,6 +2348,13 @@ class DaeSim(Dae):
         #: per accepted block with ``incl_lim``, one per disturbance interval
         #: otherwise (a disturbance-free run reports only 0 and 1).
         self.progress_callback = None
+        #: Optional hook called once at the initialized operating point,
+        #: after the small-signal analysis (when enabled) and before the time
+        #: stepping, with this model as its argument. Returning ``False``
+        #: cancels the run by raising
+        #: :class:`~hermess.errors.SimulationCancelled` — e.g. to abort when
+        #: :attr:`eigenvalues` show the operating point is unstable.
+        self.init_callback = None
         self.t0: float  # Start of the next DAE call
         self.tf: float  # End of the next DAE call
         self.line_dyn: bool  # Simulate with dynamic lines or not
@@ -2571,7 +2578,14 @@ class DaeSim(Dae):
         self.grid.build_y()
         self._fault_intervals = [(0, self._snapshot_branch_params())]
 
-        # The model is built and initialized; time stepping starts now.
+        # The model is built and initialized; give the caller one look at the
+        # operating point (eigenvalues, power flow) before the time stepping.
+        if self.init_callback is not None and self.init_callback(self) is False:
+            raise SimulationCancelled(
+                "Simulation cancelled at the operating point by the init callback."
+            )
+
+        # Time stepping starts now.
         self._report_progress(0.0)
 
         if self.incl_lim:

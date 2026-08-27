@@ -71,6 +71,7 @@ def simulate(
     system: str,
     system_root: "str | Path | None" = None,
     progress_callback: Any = None,
+    init_callback: Any = None,
     **overrides: Any,
 ) -> "DaeSim":
     """Run one simulation and return the finished :class:`~hermess.system.DaeSim`.
@@ -91,6 +92,9 @@ def simulate(
     :param progress_callback: Optional hook called during the time stepping with
         the completed fraction in [0, 1]; returning ``False`` cancels the run by
         raising :class:`~hermess.errors.SimulationCancelled`.
+    :param init_callback: Optional hook called once with the initialized model
+        at the operating point, before the time stepping; returning ``False``
+        cancels the run (e.g. after inspecting ``dae.eigenvalues``).
     :param overrides: Any field of :class:`~hermess.config.Config`
         (``T_end``, ``ts``, ``line_dyn``, ``omega_mode``, ``small_signal_analysis``,
         ``plot``, ...). Plotting is off by default here, unlike the shipped
@@ -113,7 +117,9 @@ def simulate(
     )
     settings.update(overrides)
     return _run(
-        _default_config.updated(**settings), progress_callback=progress_callback
+        _default_config.updated(**settings),
+        progress_callback=progress_callback,
+        init_callback=init_callback,
     )
 
 
