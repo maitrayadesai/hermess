@@ -232,6 +232,48 @@ def test_main_window_builds(app):
     window._runner.shutdown()
 
 
+def test_info_dialog_and_topology_double_click(app):
+    import hermess
+    from hermess.gui import device_info, sysparse
+    from hermess.gui.info_dialog import InfoDialog
+    from hermess.gui.topology_tab import TopologyTab
+
+    root = device_info.schematics_dir()
+    dialog = InfoDialog(
+        "GFMI2 — GridForming",
+        "A grid-forming converter.",
+        params={"Sn": "100", "Kp": "0.01"},
+        diagrams=[("Control structure", root / "conv_structure.svg")],
+    )
+    assert dialog.windowTitle().startswith("GFMI2")
+    dialog.close()
+
+    tab = TopologyTab()
+    tab.set_system(sysparse.parse_system(hermess.SYSTEMS_DIR / "3bus"))
+    # Double-click handlers build their dialogs without raising.
+    tab._show_device_info(tab._desc.devices[1])  # the grid-forming converter
+    tab._show_bus_info(0)
+
+
+def test_preflight_blocks_on_errors(app, monkeypatch):
+    from PySide6.QtWidgets import QMessageBox
+
+    from hermess.gui.main_window import MainWindow
+
+    monkeypatch.setattr(QMessageBox, "exec", lambda self: 0)
+    window = MainWindow()
+    shipped = window._systems._tree.topLevelItem(0)
+    for i in range(shipped.childCount()):
+        if shipped.child(i).text(0) == "3bus":
+            window._systems._tree.setCurrentItem(shipped.child(i))
+            break
+    assert window._preflight() is True
+    window._overrides = {"int_scheme_sim": "cvodes", "line_dyn": False}
+    assert window._preflight() is False
+    window._runner.shutdown()
+    window.close()
+
+
 def test_settings_roundtrip(app, tmp_path):
     import hermess
     from hermess.gui.main_window import MainWindow

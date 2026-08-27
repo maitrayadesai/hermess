@@ -43,6 +43,7 @@ class SimulationRunner(QObject):
 
     progressed = Signal(float)  # completed fraction in [0, 1]
     logged = Signal(int, str)  # (levelno, text)
+    stability = Signal(object)  # payload of the worker's stability report
     finished = Signal(object)  # SimulationResults
     failed = Signal(str)  # readable error text
     cancelled = Signal()
@@ -55,6 +56,7 @@ class SimulationRunner(QObject):
         self._conn = None
         self._cancel_event = None
         self._cancel_at = None
+        self._awaiting_decision = False
         self._timer = QTimer(self)
         self._timer.setInterval(50)
         self._timer.timeout.connect(self._poll)
@@ -66,25 +68,41 @@ class SimulationRunner(QObject):
     def start(self, request: RunRequest) -> None:
         if self.running:
             raise RuntimeError("A simulation is already running.")
-        recv_conn, send_conn = self._ctx.Pipe(duplex=False)
-        self._conn = recv_conn
+        # Duplex: the worker streams messages up, and the stability gate's
+        # continue/stop answer travels down the same pipe.
+        parent_conn, child_conn = self._ctx.Pipe(duplex=True)
+        self._conn = parent_conn
         self._cancel_event = self._ctx.Event()
         self._cancel_at = None
+        self._awaiting_decision = False
         self._process = self._ctx.Process(
             target=simulation_worker,
-            args=(send_conn, request, self._cancel_event),
+            args=(child_conn, request, self._cancel_event),
             daemon=True,
         )
         self._process.start()
-        send_conn.close()  # keep only the child's handle on the send end
+        child_conn.close()  # keep only the child's handle on its end
         self._timer.start()
         self.stateChanged.emit(True)
+
+    def answer_stability(self, proceed: bool) -> None:
+        """Answer a pending stability question from the worker."""
+        if not self._awaiting_decision or self._conn is None:
+            return
+        self._awaiting_decision = False
+        try:
+            self._conn.send(("continue", bool(proceed)))
+        except (OSError, ValueError, BrokenPipeError):
+            pass
 
     def stop(self) -> None:
         """Request cancellation; escalates to terminate() after a grace period."""
         if not self.running:
             return
         self._cancel_event.set()
+        # A worker blocked on the stability question only sees the event after
+        # an answer arrives.
+        self.answer_stability(False)
         self._cancel_at = time.monotonic()
 
     def shutdown(self) -> None:
@@ -104,6 +122,9 @@ class SimulationRunner(QObject):
                     self.logged.emit(msg[1], msg[2])
                 elif kind == "progress":
                     self.progressed.emit(msg[1])
+                elif kind == "stability":
+                    self._awaiting_decision = bool(msg[1].get("unstable"))
+                    self.stability.emit(msg[1])
                 elif kind in ("done", "cancelled", "error"):
                     final = msg
                     break
@@ -144,4 +165,5 @@ class SimulationRunner(QObject):
         self._conn = None
         self._cancel_event = None
         self._cancel_at = None
+        self._awaiting_decision = False
         self.stateChanged.emit(False)

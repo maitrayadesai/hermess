@@ -27,6 +27,12 @@ tuple messages over a one-way pipe:
     A log record from the simulation.
 ``("progress", fraction)``
     Completed fraction of the time stepping in [0, 1], throttled.
+``("stability", payload)``
+    Sent once at the initialized operating point when the small-signal
+    analysis ran. The payload dict carries ``n_modes`` and ``unstable`` (a
+    list of mode summaries with positive-real-part eigenvalues). When
+    ``unstable`` is non-empty the worker BLOCKS until the GUI answers with
+    ``("continue", bool)`` on the (duplex) pipe; False cancels the run.
 ``("done", SimulationResults)``
     The finished run's data; final message on success.
 ``("cancelled",)``
@@ -97,6 +103,52 @@ class _PipeStdout:
 # Minimum seconds between progress messages; 0 and 1 always pass.
 PROGRESS_INTERVAL = 0.1
 
+# Eigenvalue real part above which a mode counts as unstable (the same
+# threshold the core's own instability log message uses).
+UNSTABLE_REAL = 1e-4
+
+
+def stability_gate(conn, cancel_event, dae):
+    """The worker's init callback: report the operating-point stability and,
+    when unstable modes exist, hold the run until the GUI decides.
+
+    Sends nothing when the small-signal analysis did not run (no eigenvalue
+    data). Returns False (cancelling the run) when the GUI answers no or the
+    cancel event fires while waiting.
+    """
+    import numpy as np
+
+    if cancel_event.is_set():
+        return False
+    eigs = getattr(dae, "eigenvalues", None)
+    if eigs is None or np.size(eigs) == 0:
+        return None
+    unstable = []
+    for mode in dae.modes or []:
+        if mode["eig"].real > UNSTABLE_REAL:
+            unstable.append(
+                {
+                    "id": mode["id"],
+                    "eig": complex(mode["eig"]),
+                    "freq_hz": float(mode["freq_hz"]),
+                    "zeta": float(mode["zeta"]),
+                    "dominant": [
+                        (name, float(pf)) for name, pf in mode["dominant"][:3]
+                    ],
+                }
+            )
+    conn.send(
+        ("stability", {"n_modes": len(dae.modes or []), "unstable": unstable})
+    )
+    if not unstable:
+        return None
+    # Block until the GUI decides; its Stop button answers ("continue", False).
+    reply = conn.recv()
+    if cancel_event.is_set():
+        return False
+    if not (isinstance(reply, tuple) and reply[:2] == ("continue", True)):
+        return False
+
 
 def simulation_worker(conn, request: RunRequest, cancel_event) -> None:
     """Process entry point: run one simulation and stream messages to ``conn``."""
@@ -145,7 +197,11 @@ def simulation_worker(conn, request: RunRequest, cancel_event) -> None:
             if cancel_event.is_set():
                 return False
 
-        dae = run_simulation(cfg, progress_callback=report)
+        dae = run_simulation(
+            cfg,
+            progress_callback=report,
+            init_callback=lambda model: stability_gate(conn, cancel_event, model),
+        )
         results = extract_results(dae, cfg)
         conn.send(("done", results))
     except SimulationCancelled:

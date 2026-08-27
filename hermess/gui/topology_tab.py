@@ -20,8 +20,10 @@
 
 Built from the parsed text files, so it works before any simulation; after a
 run of the same system the buses are annotated with the initial power flow
-(|V| and angle). Node positions come from :mod:`hermess.gui.graphlayout` and
-can be adjusted by dragging.
+(voltage magnitude and angle). Node positions come from
+:mod:`hermess.gui.graphlayout` and can be adjusted by dragging. Double
+clicking a bus or a device glyph opens its detail pop-up
+(:mod:`hermess.gui.info_dialog`).
 """
 
 from __future__ import annotations
@@ -37,8 +39,9 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from hermess.gui import theme
+from hermess.gui import device_info, theme
 from hermess.gui.graphlayout import spring_layout
+from hermess.gui.info_dialog import InfoDialog
 
 _NODE_SIZE = 18
 _GLYPH_OFFSET = 0.11  # distance of a device glyph from its bus
@@ -68,13 +71,22 @@ def _is_transformer(entry) -> bool:
 
 
 class _OneLineGraph(pg.GraphItem):
-    """GraphItem with left-drag node repositioning."""
+    """GraphItem with left-drag node repositioning and double-click details."""
 
-    def __init__(self, moved):
+    def __init__(self, moved, double_clicked):
         self._moved = moved  # callback(node_index, (x, y))
+        self._double_clicked = double_clicked  # callback(node_index)
         self._drag_index = None
         self._drag_offset = None
         super().__init__()
+
+    def mouseDoubleClickEvent(self, ev):
+        points = self.scatter.pointsAt(ev.pos())
+        if len(points):
+            self._double_clicked(int(points[0].data()))
+            ev.accept()
+        else:
+            ev.ignore()
 
     def mouseDragEvent(self, ev):
         if ev.button() != Qt.LeftButton:
@@ -101,6 +113,21 @@ class _OneLineGraph(pg.GraphItem):
         ev.accept()
 
 
+class _ClickableScatter(pg.ScatterPlotItem):
+    """Device glyph opening its detail pop-up on double click."""
+
+    def __init__(self, double_clicked, **kwargs):
+        super().__init__(**kwargs)
+        self._double_clicked = double_clicked
+
+    def mouseDoubleClickEvent(self, ev):
+        if len(self.pointsAt(ev.pos())):
+            self._double_clicked()
+            ev.accept()
+        else:
+            ev.ignore()
+
+
 class TopologyTab(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -117,7 +144,7 @@ class TopologyTab(QWidget):
         self._view.hideAxis("left")
         self._view.setMenuEnabled(False)
 
-        self._graph = _OneLineGraph(self._node_moved)
+        self._graph = _OneLineGraph(self._node_moved, self._show_bus_info)
         self._view.addItem(self._graph)
 
         relayout = QPushButton("Re-layout")
@@ -128,7 +155,9 @@ class TopologyTab(QWidget):
             f'<span style="color:{theme.ETH_RED}">■</span> inverter   '
             f'<span style="color:{theme.ETH_GREY}">▼</span> load   '
             "★ infinite bus   "
-            f'<span style="color:{theme.ETH_BRONZE}">—</span> transformer'
+            f'<span style="color:{theme.ETH_BRONZE}">—</span> transformer   '
+            f'<span style="color:{theme.ETH_GREY}">(double-click a component '
+            "for details, drag buses to arrange)</span>"
         )
 
         bar = QHBoxLayout()
@@ -254,7 +283,8 @@ class TopologyTab(QWidget):
                 angle = base + (slot - (len(entries) - 1) / 2) * 0.7
                 symbol, color, _caption = _glyph_for(entry.kind)
                 connector = pg.PlotDataItem(pen=pg.mkPen("#B0B3B8", width=1))
-                scatter = pg.ScatterPlotItem(
+                scatter = _ClickableScatter(
+                    lambda entry=entry: self._show_device_info(entry),
                     symbol=symbol,
                     size=13,
                     pen=pg.mkPen(color),
@@ -295,6 +325,67 @@ class TopologyTab(QWidget):
             connector.setData(
                 [self._pos[i][0], glyph[0]], [self._pos[i][1], glyph[1]]
             )
+
+    # ---- detail pop-ups ------------------------------------------------------
+
+    def _show_device_info(self, entry) -> None:
+        import html as _html
+
+        title = f"{entry.get('idx') or entry.kind} — {entry.kind}"
+        description = device_info.class_description(entry.kind)
+        description = _html.escape(description) if description else None
+        root = device_info.schematics_dir()
+        diagrams = []
+        if root is not None:
+            diagrams = [
+                (caption, root / filename)
+                for caption, filename in device_info.schematics_for(entry)
+                if (root / filename).exists()
+            ]
+        InfoDialog(
+            title, description, params=entry.params, diagrams=diagrams, parent=self
+        ).show()
+
+    def _show_bus_info(self, node_index: int) -> None:
+        import html as _html
+
+        bus = self._desc.buses()[node_index]
+        parts = []
+        init = next((e for e in self._desc.bus_inits if e.get("bus") == bus), None)
+        if init is not None:
+            fields = ", ".join(
+                f"{k} = {v}" for k, v in init.params.items() if k != "bus"
+            )
+            parts.append(f"Initialization: {_html.escape(fields)}")
+        if bus in self._annotations:
+            vmag, vdeg = self._annotations[bus]
+            parts.append(
+                f"Initialized voltage (shown run): {vmag:.4f} p.u. ∠ {vdeg:.2f}°"
+            )
+        devices = [
+            f"{e.get('idx') or e.kind} ({e.kind})"
+            for e in self._desc.devices
+            if e.get("bus") == bus
+        ]
+        if devices:
+            parts.append("Devices: " + _html.escape(", ".join(devices)))
+        lines = [
+            f"to bus {e.get('bus_j') if e.get('bus_i') == bus else e.get('bus_i')}"
+            + (
+                f" (r = {e.get('r')}, x = {e.get('x')}"
+                + (", transformer)" if _is_transformer(e) else ")")
+            )
+            for e in self._desc.lines
+            if bus in (e.get("bus_i"), e.get("bus_j"))
+        ]
+        if lines:
+            parts.append("Branches: " + _html.escape("; ".join(lines)))
+        InfoDialog(
+            f"Bus {bus}",
+            "<br>".join(parts) or "No further data for this bus.",
+            doc_link=False,
+            parent=self,
+        ).show()
 
     def _update_labels(self) -> None:
         for bus, label in zip(self._desc.buses(), self._bus_labels):

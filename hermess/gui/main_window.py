@@ -39,7 +39,7 @@ from PySide6.QtWidgets import (
 )
 
 import hermess
-from hermess.gui import export, sysparse
+from hermess.gui import export, sysparse, validation
 from hermess.gui.logpanel import LogPanel
 from hermess.gui.options_dialog import OptionsDialog
 from hermess.gui.powerflow_tab import PowerFlowTab
@@ -157,6 +157,7 @@ class MainWindow(QMainWindow):
         self._runner.stateChanged.connect(self._on_state_changed)
         self._runner.progressed.connect(self._on_progress)
         self._runner.logged.connect(self._log.append_record)
+        self._runner.stability.connect(self._on_stability)
         self._runner.finished.connect(self._on_finished)
         self._runner.failed.connect(self._on_failed)
         self._runner.cancelled.connect(self._on_cancelled)
@@ -175,12 +176,107 @@ class MainWindow(QMainWindow):
         if self._runner.running:
             return
         name, root = selected
+        if not self._preflight():
+            return
         self._log.append_notice(f"Running {name} …")
         self._progress.setValue(0)
         self._progress.setVisible(True)
         self.statusBar().showMessage(f"Building and initializing {name} …")
         self._runner.start(
             RunRequest(system=name, system_root=root, overrides=dict(self._overrides))
+        )
+
+    def _preflight(self) -> bool:
+        """Validate the (system, options) pair; True when the run may start.
+
+        Errors block; warnings ask for confirmation. Every issue also lands
+        in the log so it survives the dialog.
+        """
+        folder = self._systems.system_folder()
+        if folder is None:
+            return True
+        issues = validation.validate(
+            sysparse.parse_system(folder), self._overrides
+        )
+        if not issues:
+            return True
+        errors = [i for i in issues if i.severity == "error"]
+        for issue in issues:
+            self._log.append_record(
+                logging.ERROR if issue.severity == "error" else logging.WARNING,
+                issue.message,
+            )
+        listing = "\n\n".join(
+            ("✖  " if i.severity == "error" else "⚠  ") + i.message
+            for i in issues
+        )
+        if errors:
+            box = QMessageBox(
+                QMessageBox.Critical,
+                "Cannot start the simulation",
+                "The system or the simulation options have problems that "
+                "would make the run fail:",
+                parent=self,
+            )
+            box.setInformativeText(listing)
+            box.exec()
+            return False
+        box = QMessageBox(
+            QMessageBox.Warning,
+            "Check the configuration",
+            "The run can start, but the following looks questionable:",
+            parent=self,
+        )
+        box.setInformativeText(listing)
+        run_button = box.addButton("Run anyway", QMessageBox.AcceptRole)
+        box.addButton("Cancel", QMessageBox.RejectRole)
+        box.exec()
+        return box.clickedButton() is run_button
+
+    def _on_stability(self, payload: dict) -> None:
+        """The worker's operating-point report; unstable holds the run until
+        the user decides."""
+        n_modes = payload.get("n_modes", 0)
+        unstable = payload.get("unstable", [])
+        if not unstable:
+            self._log.append_notice(
+                f"Operating point is stable ({n_modes} modes)."
+            )
+            return
+        lines = []
+        for mode in unstable:
+            eig = mode["eig"]
+            dominant = ", ".join(
+                f"{name} ({pf:.0%})" for name, pf in mode["dominant"]
+            )
+            lines.append(
+                f"mode {mode['id']}:  λ = {eig.real:+.4f} ± {abs(eig.imag):.3f}j,  "
+                f"f = {mode['freq_hz']:.3f} Hz,  ζ = {mode['zeta'] * 100:+.1f}%\n"
+                f"    dominant states: {dominant}"
+            )
+        self._log.append_record(
+            logging.WARNING,
+            f"Operating point unstable ({len(unstable)} of {n_modes} modes):\n"
+            + "\n".join(lines),
+        )
+        box = QMessageBox(
+            QMessageBox.Warning,
+            "Unstable operating point",
+            f"The small-signal analysis found {len(unstable)} unstable "
+            f"mode(s) at the operating point. The simulation will likely "
+            "diverge or fail.",
+            parent=self,
+        )
+        box.setInformativeText("\n\n".join(lines))
+        cont = box.addButton("Continue anyway", QMessageBox.AcceptRole)
+        box.addButton("Stop the run", QMessageBox.RejectRole)
+        box.exec()
+        proceed = box.clickedButton() is cont
+        self._runner.answer_stability(proceed)
+        self._log.append_notice(
+            "Continuing despite the unstable operating point."
+            if proceed
+            else "Run stopped at the unstable operating point."
         )
 
     def _on_system_selected(self, name: str, _root) -> None:

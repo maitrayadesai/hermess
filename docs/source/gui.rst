@@ -67,6 +67,26 @@ single system folder (containing ``sim_param.txt`` and optionally
 never edits system files: change them in your editor, press *Reload*, and run
 again.
 
+Pre-flight checks
+^^^^^^^^^^^^^^^^^
+
+Run first validates the system and the options together, so common mistakes
+surface as one dialog instead of a failed run. Hard errors block the start: a
+network that is not fully connected (with the detached bus groups named), an
+ODE-only integration scheme (``cvodes``, ``rk``) applied to a model with
+algebraic variables, a ``single`` reference frame pointing at a device that
+does not exist in the file, or a time step that is non-positive or larger
+than the end time. Questionable but runnable settings, such as a quasi-static
+inverter filter on a dynamic network or a very large number of output steps,
+are listed as warnings and ask for confirmation.
+
+When the small-signal analysis is enabled, the run additionally pauses at the
+initialized operating point if unstable modes are found: a dialog lists them
+(eigenvalue, frequency, damping ratio and dominant states) and asks whether
+to continue or stop, before any time is spent on an integration that will
+likely diverge. Stable operating points are noted in the log and the run
+proceeds without interruption.
+
 Viewer tabs
 -----------
 
@@ -79,6 +99,12 @@ attached to their buses (circle for a synchronous machine, square for an
 inverter, triangle for a load), and transformer branches are drawn in bronze.
 After a run of the same system, every bus is annotated with its initialized
 voltage magnitude and angle.
+
+Double-clicking any component opens a detail pop-up: for a device, a short
+model description with the matching control schematics (the same block
+diagrams as in :ref:`models`) and the parameters from the system file; for a
+bus, its initialization, the connected branches and devices, and the
+initialized voltage of the shown run.
 
 .. image:: _static/gui_topology_ieee39.png
    :width: 100%
