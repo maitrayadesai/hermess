@@ -3120,8 +3120,13 @@ class DaeSim(Dae):
             "Static_load_ZIP": "ZIP",
             "Infinite_bus": "INF",
         }
+        # Use the devices and grid bound to THIS Dae, not the module globals:
+        # run() reloads this module in place, so the globals always describe
+        # the most recently built system, and a lazy eigenvalue_analysis() on
+        # an earlier run would label (or mis-count) its states from the wrong
+        # system.
         state_names = []
-        for item in device_list_sim:
+        for item in self.device_list:
             short = _device_abbrev.get(item._name, item._name[:6])
             for i in range(item.n):
                 for state in item.states:
@@ -3130,14 +3135,15 @@ class DaeSim(Dae):
         if self.line_dyn:
             # Dynamic-network states: branch currents (LINE_i-j) and the
             # algebraic-turned-differential node voltages (BUS_n).
-            for i in range(grid_sim.nb):
-                for state in line_sim.states:
+            line = self.grid.line
+            for i in range(self.grid.nb):
+                for state in line.states:
                     state_names.append(
-                        f"LINE_{line_sim.bus_i[i]}-{line_sim.bus_j[i]}:{state}"
+                        f"LINE_{line.bus_i[i]}-{line.bus_j[i]}:{state}"
                     )
-            for i in range(grid_sim.nn):
+            for i in range(self.grid.nn):
                 for state in ["vre", "vim"]:
-                    state_names.append(f"BUS_{grid_sim.buses[i]}:{state}")
+                    state_names.append(f"BUS_{self.grid.buses[i]}:{state}")
 
         self.participation_factors = participation_factors
         self.participation_factors_normalized = participation_normalized
