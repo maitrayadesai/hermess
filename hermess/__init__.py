@@ -30,7 +30,7 @@ if TYPE_CHECKING:  # pragma: no cover - import kept out of the runtime path
 try:
     __version__ = version("hermess")  # Must match the name in pyproject.toml
 except PackageNotFoundError:  # running from source without an install
-    __version__ = "1.1.0"
+    __version__ = "1.2.0"
 
 
 __all__ = [

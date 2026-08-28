@@ -4,6 +4,21 @@ Notable changes to HERMESS. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/) as spelled out in `RELEASING.md`.
 
+## [1.2.0] - 2026-08-28
+
+### Added
+- Real command-line interface behind the `hermess` console script and
+  `python -m hermess`: `hermess list` prints the runnable systems and
+  `hermess run <system>` simulates one, with `--t-end`, `--ts`, `--no-plot`,
+  `--small-signal`, `--system-root`, and `--set KEY=VALUE` for any other
+  `Config` field. `--help` and `--version` behave as expected.
+
+### Changed
+- A bare `hermess` (or `python -m hermess`) now prints the usage instead of
+  immediately running the configuration shipped in `hermess/config.py`; that
+  demo run is now `hermess run ieee39_conv --small-signal`. In 1.1.0 every
+  invocation, including `hermess --help`, started that simulation.
+
 ## [1.1.0] - 2026-08-28
 
 First release on PyPI.
