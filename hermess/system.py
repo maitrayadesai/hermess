@@ -1373,6 +1373,23 @@ class GridSim(Grid):
         self.build_incident_matrix()
         self.build_linecurrents_to_nodes()
         self.init_from_power_flow(dae, bus_init)
+        # With dynamic lines the shunt susceptance doubles as the bus
+        # capacitance: the voltage derivative is scaled by 1/Bsum, so a bus
+        # whose branches all carry b = 0 makes the network ODE singular.
+        # System files written for quasi-static (RMS) studies often omit the
+        # line charging, so fail here with the bus names instead of letting
+        # the integrator report an Inf at the first step.
+        if getattr(dae, "line_dyn", False):
+            dead = np.flatnonzero(self.Bsum <= 0.0)
+            if dead.size:
+                names = ", ".join(str(self.buses[int(k)]) for k in dead)
+                raise ValueError(
+                    "line_dyn=True requires shunt susceptance at every bus, "
+                    "because the line charging b acts as the bus capacitance "
+                    f"of the dynamic network; bus(es) {names} have none. Add "
+                    "the line charging b to the branches at these buses, or "
+                    "run this system with line_dyn=False."
+                )
         self.init_symbolic(dae)
 
     def update_effective_line_params(self) -> None:

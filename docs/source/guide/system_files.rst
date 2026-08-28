@@ -47,6 +47,15 @@ per unit and no separate transformer model is needed: the ``trafo`` field holds
 the off-nominal tap ratio of that branch, ideally close to 1.0. See
 :ref:`models_static_line` for the parameter list.
 
+.. note::
+
+   With ``line_dyn=True`` the line charging ``b`` doubles as the bus
+   capacitance of the dynamic network, so every bus needs at least one
+   connected branch with ``b > 0``. System files written for quasi-static
+   (RMS) studies often set ``b = 0``; such a file runs only with
+   ``line_dyn=False``, and the setup rejects it otherwise, naming the buses
+   without shunt susceptance.
+
 .. _dyn_param:
 
 2) Dynamic models
