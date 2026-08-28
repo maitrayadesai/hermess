@@ -37,3 +37,8 @@ venv/
 
 # Large simulation-result artifacts (regenerated; not version-controlled)
 hermess/tests/results/
+
+# Example notebooks copied into the docs tree at build time
+docs/source/examples/*.ipynb
+docs/source/examples/*.png
+docs/source/_static/preview_response.png

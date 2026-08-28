@@ -57,7 +57,11 @@ docs = [
     "sphinx-autoapi>=3.6.0",
     "sphinx-design>=0.6.1",
     "sphinx-copybutton>=0.5.2",
+    "sphinx-argparse>=0.5",
+    "sphinx-reredirects>=0.1.5",
+    "myst-parser>=4.0",
     "nbsphinx>=0.9.7",
+    "ipykernel>=6.29.5",
 ]
 dev = [
     { include-group = "test" },
