@@ -62,6 +62,7 @@ docs = [
     "myst-parser>=4.0",
     "nbsphinx>=0.9.7",
     "ipykernel>=6.29.5",
+    "sphinx-sitemap>=2.6",
 ]
 dev = [
     { include-group = "test" },

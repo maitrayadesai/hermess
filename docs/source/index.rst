@@ -138,6 +138,7 @@ and :ref:`advanced_usage` for the system-file format and the analysis outputs.
    :caption: API reference
    :hidden:
 
+   api
    autoapi/hermess/index
 
 .. toctree::

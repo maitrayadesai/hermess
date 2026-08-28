@@ -38,8 +38,12 @@ extensions = [
     "sphinxarg.ext",
     "myst_parser",
     "nbsphinx",
+    "sphinx_sitemap",
     "hermess_models",
 ]
+
+# sphinx-sitemap: html_baseurl is set below; one flat URL per page.
+sitemap_url_scheme = "{link}"
 
 napoleon_google_docstring = True
 # Render docstring "Attributes:" sections as :ivar: fields instead of
@@ -153,6 +157,7 @@ html_theme_options = {
     "dark_logo": "_static/schematics/logo_dark.svg",
     "github_url": "https://github.com/maitrayadesai/hermess",
     "show_ai_links": False,
+    "og_image_url": "https://maitrayadesai.github.io/hermess/_static/card.png",
     "nav_links": [
         {"title": "Get started", "url": "getting_started/installation"},
         {"title": "Guide", "url": "guide/simulating"},
