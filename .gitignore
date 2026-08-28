@@ -42,3 +42,6 @@ hermess/tests/results/
 docs/source/examples/*.ipynb
 docs/source/examples/*.png
 docs/source/_static/preview_response.png
+
+# Local docs build output (CI builds to _site on the runner)
+_site/
