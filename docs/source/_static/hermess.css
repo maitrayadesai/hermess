@@ -119,6 +119,72 @@ p.front-cite {
   margin-top: 2.6rem;
 }
 
+/* Book-style article pages (compact layout): one centered reading column,
+ * no side rails. The empty right rail and the buttons that toggled the
+ * removed rails are hidden. */
+.sy-rside,
+.rside-overlay,
+button[aria-controls="rside"],
+button[aria-controls="lside"] {
+  display: none !important;
+}
+.sy-page main > .flex > div {
+  max-width: 100%;
+}
+.sy-page article.yue {
+  max-width: 47rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+.sy-page .sy-breadcrumbs-inner {
+  max-width: 47rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+/* The theme treats breadcrumbs as a mobile-only bar; in the book layout they
+ * are the wayfinding on every width, like a running head. */
+@media (min-width: 1280px) {
+  .sy-breadcrumbs {
+    display: block;
+  }
+}
+
+/* The contents block hermess.js inserts after the page title. */
+nav.page-contents {
+  display: inline-block;
+  min-width: 16rem;
+  max-width: 100%;
+  margin: 0.4rem 0 1.6rem;
+  padding: 0.7rem 1.4rem 0.8rem;
+  border: 1px solid var(--accent-a4);
+  background: var(--accent-a2);
+  border-radius: 2px;
+}
+nav.page-contents .page-contents-title {
+  font-weight: bold;
+  font-variant: small-caps;
+  letter-spacing: 0.04em;
+  margin: 0 0 0.3rem;
+}
+nav.page-contents ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+nav.page-contents > ul > li {
+  margin: 0.12rem 0;
+}
+nav.page-contents ul ul {
+  padding-left: 1.2rem;
+  font-size: 0.95em;
+}
+nav.page-contents a {
+  text-decoration: none;
+}
+nav.page-contents a:hover {
+  text-decoration: underline;
+}
+
 /* ETH Blue accent scale (seed #215CAF, hue 215). Shibuya resolves its accent
  * from the radix "blue" scale; these overrides replace that scale's role with
  * an ETH Blue ramp for both color modes. */

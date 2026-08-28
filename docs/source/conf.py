@@ -152,17 +152,72 @@ html_baseurl = "https://maitrayadesai.github.io/hermess/"
 html_theme_options = {
     "accent_color": "blue",  # radix preset; the ETH Blue scale lives in hermess.css
     "color_mode": "light",  # light default, the toggle stays available
+    # Book-style pages: one reading column, no side rails. Navigation lives in
+    # the header dropdowns and the breadcrumbs; the per-page contents box is
+    # injected by hermess.js.
+    "page_layout": "compact",
     "light_logo": "_static/schematics/logo_light.svg",
     "dark_logo": "_static/schematics/logo_dark.svg",
     "github_url": "https://github.com/maitrayadesai/hermess",
     "show_ai_links": False,
     "og_image_url": "https://maitrayadesai.github.io/hermess/_static/card.png",
     "nav_links": [
-        {"title": "Get started", "url": "getting_started/installation"},
-        {"title": "Guide", "url": "guide/simulating"},
-        {"title": "Models", "url": "models/index"},
+        {
+            "title": "Get started",
+            "children": [
+                {"title": "Installation", "url": "getting_started/installation"},
+                {"title": "Quickstart", "url": "getting_started/quickstart"},
+                {"title": "Command line", "url": "getting_started/cli"},
+            ],
+        },
+        {
+            "title": "Guide",
+            "children": [
+                {"title": "Running simulations", "url": "guide/simulating"},
+                {"title": "System files", "url": "guide/system_files"},
+                {"title": "Disturbances", "url": "guide/disturbances"},
+                {"title": "Reading the results", "url": "guide/results"},
+                {"title": "Parametric sensitivities", "url": "guide/sensitivities"},
+                {"title": "Using your own models", "url": "guide/custom_models"},
+                {"title": "Configuration", "url": "guide/configuration"},
+                {"title": "Graphical interface", "url": "gui"},
+            ],
+        },
+        {
+            "title": "Models",
+            "children": [
+                {"title": "Model library", "url": "models/index"},
+                {"title": "Synchronous machines", "url": "models/synchronous"},
+                {"title": "Voltage regulators", "url": "models/avr"},
+                {"title": "Governors", "url": "models/governor"},
+                {"title": "Stabilizers", "url": "models/pss"},
+                {"title": "Shafts", "url": "models/shaft"},
+                {"title": "Converters", "url": "models/converters"},
+                {"title": "Converter controls", "url": "models/converter_controls"},
+                {"title": "Static var compensator", "url": "models/svc"},
+                {"title": "Network", "url": "models/network"},
+            ],
+        },
         {"title": "Examples", "url": "examples/index"},
-        {"title": "API", "url": "autoapi/hermess/index"},
+        {
+            "title": "Reference",
+            "children": [
+                {"title": "Test systems", "url": "systems"},
+                {"title": "Validation", "url": "validation"},
+                {"title": "Public API", "url": "api"},
+                {"title": "API reference", "url": "autoapi/hermess/index"},
+            ],
+        },
+        {
+            "title": "Project",
+            "children": [
+                {"title": "About", "url": "about"},
+                {"title": "Contributing", "url": "dev/contributing"},
+                {"title": "Releasing", "url": "dev/releasing"},
+                {"title": "Changelog", "url": "dev/changelog"},
+                {"title": "License", "url": "license"},
+            ],
+        },
         {
             "title": "PyPI",
             "url": "https://pypi.org/project/hermess/",
@@ -170,6 +225,10 @@ html_theme_options = {
         },
     ],
 }
+
+# No sidebar cards: the compact layout's right rail is empty and hidden, and
+# hermess.js puts a contents block at the head of the article instead.
+html_sidebars = {"**": []}
 
 # "Edit this page" links in the right sidebar.
 html_context = {
@@ -182,6 +241,7 @@ html_context = {
 
 html_static_path = ["_static"]
 html_css_files = ["hermess.css"]
+html_js_files = ["hermess.js"]
 html_favicon = "_static/schematics/logo_light.svg"
 
 
