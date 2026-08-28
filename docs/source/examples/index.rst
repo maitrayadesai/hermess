@@ -3,15 +3,27 @@
 Examples
 ========
 
-Complete worked studies as Jupyter notebooks. Each one is executed when the
-documentation is built, so the outputs below come from the installed version;
-the sources live in
+Five notebooks, one aspect of the simulator each. They are executed when the
+documentation is built, so every output below comes from the installed
+version; the sources live in
 `examples/ <https://github.com/maitrayadesai/hermess/tree/main/examples>`_
 in the repository.
 
+- **Getting started**: run a shipped system, read the power flow, plot the
+  trajectories.
+- **Disturbances**: the scheduled-event machinery, read off the Kundur
+  two-area inter-area oscillation.
+- **One system, RMS and EMT**: the same system file under the quasi-static
+  and the dynamic network model.
+- **Small-signal analysis**: eigenvalues, modal report and participation
+  factors of the IEEE 39-bus system.
+- **Parametric sensitivities**: the gradient of a trajectory functional with
+  respect to every device parameter, checked against finite differences.
+
 .. nbgallery::
 
-   demo
-   basic_usage
-   39bus_inv
-   3bus_gfm_nn_control
+   getting_started
+   disturbances
+   hybrid_network
+   small_signal
+   sensitivities

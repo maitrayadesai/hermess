@@ -91,14 +91,12 @@ language = "en"
 # version.
 
 _EXAMPLE_FILES = [
-    "examples/demo.ipynb",
-    "examples/basic_usage/basic_usage.ipynb",
-    "examples/renewables/39bus_inv.ipynb",
-    "examples/neural_gfm_control/3bus_gfm_nn_control.ipynb",
+    "examples/getting_started.ipynb",
+    "examples/disturbances.ipynb",
+    "examples/hybrid_network.ipynb",
+    "examples/small_signal.ipynb",
+    "examples/sensitivities.ipynb",
 ]
-# Gallery thumbnails must be inside a copied static dir, so the preview image
-# goes to _static (gitignored there).
-_EXAMPLE_THUMBS = ["examples/neural_gfm_control/preview_response.png"]
 
 nbsphinx_execute = "auto"
 nbsphinx_timeout = 900
@@ -107,10 +105,8 @@ nbsphinx_timeout = 900
 # inline backend and break plt.show() inside the notebooks, so drop it; on a
 # headless builder matplotlib falls back to Agg on its own.
 os.environ.pop("MPLBACKEND", None)
-nbsphinx_thumbnails = {
-    "examples/39bus_inv": "_static/39network_inv.jpg",
-    "examples/3bus_gfm_nn_control": "_static/preview_response.png",
-}
+# Gallery thumbnails come from each notebook's own figures (the last image,
+# or the cell tagged nbsphinx-thumbnail).
 
 
 def _copy_example_notebooks(app):
@@ -121,9 +117,6 @@ def _copy_example_notebooks(app):
     target.mkdir(exist_ok=True)
     for rel in _EXAMPLE_FILES:
         shutil.copy2(repo / rel, target / Path(rel).name)
-    static = Path(__file__).parent / "_static"
-    for rel in _EXAMPLE_THUMBS:
-        shutil.copy2(repo / rel, static / Path(rel).name)
 
 
 def setup(app):
