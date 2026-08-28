@@ -4,22 +4,24 @@
 \begin{tikzpicture}
   \node[sum] (s) {};
   \node[lbl] at ($(s)+(-0.30,0.32)$) {$+$};
-  \node[lbl] at ($(s)+(0.02,0.42)$)  {$-$};
-  \node[lbl] at ($(s)+(-0.30,-0.32)$) {$+$};
-  \node[lbl] at ($(s)+(0.30,-0.32)$) {$-$};
+  \node[lbl] at ($(s)+(0.28,0.34)$)  {$-$};
+  \node[lbl] at ($(s)+(-0.38,-0.34)$) {$+$};
+  \node[lbl] at ($(s)+(0.38,-0.34)$) {$-$};
   \node[block, right=of s] (reg) {$\dfrac{K_A}{1 + sT_A}$};
   \node[block, right=14mm of reg] (exc) {$\dfrac{1}{K_E + sT_E}$};
   \coordinate[left=11mm of s] (in);
   \draw[sig] (in) node[above, lbl] {$V_{ref}$} -- (s);
   \draw[sig] ($(s)+(0,1.2)$) node[above, lbl] {$V_t$} -- (s);
-  \draw[sig] ($(s)+(-0.9,-1.2)$) node[below, lbl] {$V_s$} -| (s);
+  % stabilizer and rate feedback enter the junction at separate points so
+  % each carries its own sign
+  \draw[sig] ($(s)+(-0.9,-1.2)$) node[below, lbl] {$V_s$} -| (s.235);
   \draw[sig] (s) -- (reg) node[midway, above, lbl] {};
   \draw[sig] (reg) -- (exc) node[midway, above, lbl] {$V_r$};
   \draw[sig] (exc.east) -- ++(1.4,0) node[above, lbl] {$E_{fd}$};
   % rate feedback
   \node[block, below=11mm of exc] (fb) {$\dfrac{sK_F}{1 + sT_F}$};
   \draw[sig] ($(exc.east)+(0.7,0)$) |- (fb.east);
-  \draw[sig] (fb.west) -| (s) node[pos=0.02, above, lbl] {$R_f$};
+  \draw[sig] (fb.west) -| (s.305) node[pos=0.02, above, lbl] {$R_f$};
   \node[lbl, text=ethgrey] at ($(fb.south)+(0,-0.5)$)
     {\footnotesize realized as the state pair $(R_f, V_r)$; anti-windup on $V_r^{max,min}$};
 \end{tikzpicture}
