@@ -4,6 +4,30 @@ Notable changes to HERMESS. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/) as spelled out in `RELEASING.md`.
 
+## [1.2.1] - 2026-08-29
+
+### Added
+- `Documentation` link in the package metadata, pointing at the rebuilt
+  documentation site (https://maitrayadesai.github.io/hermess/): report-style
+  pages, a per-family model reference generated from the code, executed
+  example notebooks and a public API page.
+- Docstrings for the core classes (`Grid`, `GridSim`, `Dae`, `DaeSim`) and
+  the entry modules, so `help()` on the model returned by `simulate` is
+  informative.
+
+### Changed
+- The example notebooks are rebuilt as five studies, one simulator aspect
+  each: a first run, scheduled disturbances, the hybrid EMT/RMS network,
+  small-signal analysis and parametric sensitivities. They are executed
+  during the documentation build, so the shown outputs always match the
+  installed version.
+- `hermess.utils` is a regular package instead of an implicit namespace
+  package.
+
+### Fixed
+- Opening a line no longer emits a spurious numpy overflow
+  `RuntimeWarning` when the opened branch's impedance is inverted.
+
 ## [1.2.0] - 2026-08-28
 
 ### Added
