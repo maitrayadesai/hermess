@@ -15,15 +15,21 @@
   \node[block, below=11mm of vsc, minimum width=20mm] (inner) {inner control\\[-1pt]{\footnotesize\texttt{inner =}}};
   \node[block, below=10mm of inner, minimum width=20mm] (volt) {voltage control\\[-1pt]{\footnotesize\texttt{voltage =}}};
   \node[block, below=10mm of meas, minimum width=20mm] (angle) {angle source\\[-1pt]{\footnotesize\texttt{angle =}}};
-  \node[block, right=12mm of angle, minimum width=18mm] (pll) {PLL\\[-1pt]{\footnotesize\texttt{pll =}}};
+  % the PLL sits directly under the network block, so its input drops in
+  % vertically without touching any other block
+  \node[block, minimum width=18mm] (pll) at (angle -| grid) {PLL\\[-1pt]{\footnotesize\texttt{pll =}}};
   \draw[sig] (meas) -- (angle) node[midway, right, lbl] {$\tilde p_c$};
-  \draw[sig] ($(meas.south)+(-0.5,0)$) |- ($(volt.east)+(0,0.25)$) node[pos=0.85, above, lbl] {$\tilde q_c$};
+  % reactive power to the voltage controller, routed through the free lane
+  % between the two block columns
+  \draw[sig] ($(meas.west)+(0,-0.15)$) -- ++(-0.5,0) |- ($(volt.east)+(0,0.25)$)
+    node[pos=0.25, left, lbl] {$\tilde q_c$};
   \draw[sig] (angle.west) -- (volt.east) node[midway, below, lbl] {$\omega_c,\ \delta_c$};
   \draw[sig] (volt) -- (inner) node[midway, left, lbl] {$V_{cd}$};
   \draw[sig] (inner) -- (vsc) node[midway, left, lbl] {$v_{sw}^{*}$};
-  \draw[sig] ($(grid.south)+(0,-0.1)$) |- (pll.east) node[pos=0.85, above, lbl] {$v_f$};
+  \draw[sig] (grid) -- (pll) node[midway, right, lbl] {$v_f$};
   \draw[sig] (pll) -- (angle) node[midway, above, lbl] {$\omega_{pll}$};
-  \node[lbl, text=ethgrey] at ($(volt.south)+(2.4,-0.65)$)
-    {\footnotesize \textbf{GridForming}: droop angle source;\ \ \textbf{GridSupporting}: PLL angle source; each block is a pluggable strategy (\textbf{GridFollowing} is a separate current-injecting chain)};
+  \node[lbl, text=ethgrey, align=center] at ($(angle.south)+(0,-0.75)$)
+    {\footnotesize \textbf{GridForming}: droop angle source;\ \ \textbf{GridSupporting}: PLL angle source; each block is a pluggable\\[-1pt]
+     \footnotesize strategy (\textbf{GridFollowing} is a separate current-injecting chain)};
 \end{tikzpicture}
 \end{document}

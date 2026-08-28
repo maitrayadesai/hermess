@@ -1,32 +1,34 @@
 \documentclass[tikz,border=6pt]{standalone}
 \input{style.tex}
 \begin{document}
-\begin{tikzpicture}[node distance=8mm and 12mm]
+\begin{tikzpicture}[x=1cm,y=1cm]
   % power path (identical to the voltage-mode figure)
-  \node[block, minimum width=16mm, minimum height=11mm] (vsc) {VSC\\[-1pt]{\footnotesize $v_{sw}$}};
-  \node[block, right=12mm of vsc, minimum width=26mm, minimum height=11mm] (lcl) {LCL filter\\[-1pt]{\footnotesize\texttt{filter =}\ \ $v_f,\ i_f,\ i_t$}};
-  \node[block, right=12mm of lcl, minimum width=18mm, minimum height=11mm, fill=ethpetrol!10, draw=ethpetrol] (grid) {network\\[-1pt]{\footnotesize bus $\bar v_n$}};
+  \node[block, minimum width=16mm, minimum height=11mm] (vsc) at (0,0) {VSC\\[-1pt]{\footnotesize $v_{sw}$}};
+  \node[block, minimum width=26mm, minimum height=11mm] (lcl) at (4.6,0) {LCL filter\\[-1pt]{\footnotesize\texttt{filter =}\ \ $v_f,\ i_f,\ i_t$}};
+  \node[block, minimum width=18mm, minimum height=11mm, fill=ethpetrol!10, draw=ethpetrol] (grid) at (9.2,0) {network\\[-1pt]{\footnotesize bus $\bar v_n$}};
   \draw[sig] (vsc) -- (lcl);
   \draw[sig] (lcl) -- (grid) node[midway, above, lbl] {$i_t$};
-  % measurement filter
-  \node[block, below=11mm of lcl, minimum width=26mm] (meas) {$\dfrac{\omega_f}{s + \omega_f}$\ \ {\footnotesize power filter}};
+  % measurement filter (narrower than the LCL block, so the feedback tap on
+  % the LCL underside drops past its left edge)
+  \node[block, minimum width=16mm] (meas) at (4.6,-2.4) {$\dfrac{\omega_f}{s + \omega_f}$\\[1pt]{\footnotesize power filter}};
   \draw[sig] (lcl) -- (meas) node[midway, right, lbl] {$p_c,\ q_c$};
   % current-mode inner loop
-  \node[block, below=11mm of vsc, minimum width=22mm] (inner) {current PI\\[-1pt]{\footnotesize\texttt{inner =}}};
+  \node[block, minimum width=24mm] (inner) at (0,-2.4) {$K_p^{c} + \dfrac{K_i^{c}}{s}$\\[1pt]{\footnotesize current PI\ \ \texttt{inner =}}};
   \draw[sig] (inner) -- (vsc) node[midway, left, lbl] {$v_{sw}^{*}$};
-  \draw[sig] ($(lcl.south)+(-1.5,0)$) |- ($(inner.east)+(0,0.25)$) node[pos=0.8, above, lbl] {$i_f,\ v_f$};
+  \draw[sig] ($(lcl.south)+(-1.05,0)$) |- ($(inner.east)+(0,0.25)$) node[pos=0.75, above, lbl] {$i_f,\ v_f$};
   % power PI outers
-  \node[block, below=10mm of inner, minimum width=22mm] (ppi) {active-power PI\\[-1pt]{\footnotesize\texttt{angle =}}};
-  \node[block, below=10mm of ppi, minimum width=22mm] (qpi) {reactive-power PI\\[-1pt]{\footnotesize\texttt{voltage =}}};
+  \node[block, minimum width=24mm] (ppi) at (0,-4.8) {$K_p^{p} + \dfrac{K_i^{p}}{s}$\\[1pt]{\footnotesize active-power PI\ \ \texttt{angle =}}};
+  \node[block, minimum width=24mm] (qpi) at (0,-7.0) {$K_p^{q} + \dfrac{K_i^{q}}{s}$\\[1pt]{\footnotesize reactive-power PI\ \ \texttt{voltage =}}};
   \draw[sig] (ppi) -- (inner) node[midway, left, lbl] {$i_d^{cmd}$};
-  \draw[sig] (qpi.west) -- ++(-0.55,0) |- ($(inner.west)+(0,-0.25)$) node[pos=0.25, left, lbl] {$i_q^{cmd}$};
-  \draw[sig] ($(meas.south)+(-0.4,0)$) |- ($(ppi.east)+(0,0.28)$) node[pos=0.85, above, lbl] {$\tilde p_c$};
-  \draw[sig] ($(meas.south)+(-0.9,0)$) |- (qpi.east) node[pos=0.85, above, lbl] {$\tilde q_c$};
-  % PLL fixes the frame
-  \node[block, right=26mm of qpi, minimum width=18mm] (pll) {PLL\\[-1pt]{\footnotesize\texttt{pll =}}};
-  \draw[sig] ($(grid.south)+(0,-0.1)$) |- (pll.east) node[pos=0.85, above, lbl] {$v_f$};
-  \draw[sig] (pll.north) |- ($(ppi.east)+(0,-0.28)$) node[pos=0.78, below, lbl] {$\delta_{pll},\ \omega_{pll}$};
-  \node[lbl, text=ethgrey] at ($(qpi.south)+(3.2,-0.6)$)
-    {\footnotesize \textbf{GridFollowing}: the converter frame is the PLL frame, $\delta_c = \delta_{pll}$, $\omega_c = \omega_{pll}$; each block is a pluggable strategy};
+  \draw[sig] (qpi.west) -- ++(-0.7,0) |- ($(inner.west)+(0,-0.25)$) node[pos=0.45, left, lbl] {$i_q^{cmd}$};
+  \draw[sig] ($(meas.south)+(-0.45,0)$) |- ($(ppi.east)+(0,0.25)$) node[pos=0.8, above, lbl] {$\tilde p_c$};
+  \draw[sig] ($(meas.south)+(0.45,0)$) |- ($(qpi.east)+(0,0.25)$) node[pos=0.85, above, lbl] {$\tilde q_c$};
+  % the PLL sits directly under the network block and fixes the frame
+  \node[block, minimum width=18mm] (pll) at (9.2,-2.4) {PLL\\[-1pt]{\footnotesize\texttt{pll =}}};
+  \draw[sig] (grid) -- (pll) node[midway, right, lbl] {$v_f$};
+  \draw[sig] (pll.west) -- ++(-1.6,0) |- ($(ppi.east)+(0,-0.25)$) node[pos=0.62, below, lbl] {$\delta_{pll},\ \omega_{pll}$};
+  \node[lbl, text=ethgrey, align=center] at (4.0,-8.3)
+    {\footnotesize \textbf{GridFollowing}: the converter frame is the PLL frame, $\delta_c = \delta_{pll}$, $\omega_c = \omega_{pll}$;\\[-1pt]
+     \footnotesize each block is a pluggable strategy};
 \end{tikzpicture}
 \end{document}

@@ -4,9 +4,9 @@
 \begin{tikzpicture}
   \node[block] (tr) {$\dfrac{1}{1 + sT_r}$};
   \node[sum, right=16mm of tr] (s) {};
-  \node[lbl] at ($(s)+(-0.32,0.30)$) {$-$};
-  \node[lbl] at ($(s)+(-0.02,0.44)$) {$+$};
-  \node[lbl] at ($(s)+(-0.02,-0.44)$) {$+$};
+  \node[lbl] at ($(s)+(-0.44,0.22)$) {$-$};
+  \node[lbl] at ($(s)+(0.28,0.34)$) {$+$};
+  \node[lbl] at ($(s)+(0.28,-0.34)$) {$+$};
   \node[block, right=of s] (ll1) {$\dfrac{1 + sT_C}{1 + sT_B}$};
   \node[block, right=10mm of ll1] (ll2) {$\dfrac{1 + sT_{C1}}{1 + sT_{B1}}$};
   \node[block, right=10mm of ll2] (reg) {$\dfrac{K_A}{1 + sT_A}$};
