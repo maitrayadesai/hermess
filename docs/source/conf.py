@@ -9,7 +9,12 @@
 project = "HERMESS"
 copyright = "2024-2026, ETH Zurich. Created by Milos Katanic and Maitraya Avadhut Desai"
 author = "Milos Katanic, Maitraya Avadhut Desai"
-release = "1.0.0"
+try:  # single-source the version from the installed package metadata
+    from importlib.metadata import version as _pkg_version
+
+    release = _pkg_version("hermess")
+except Exception:  # building docs without an installed hermess
+    release = "1.1.0"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration

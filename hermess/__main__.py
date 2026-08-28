@@ -23,7 +23,7 @@ from importlib.metadata import version, PackageNotFoundError
 try:
     __version__ = version("hermess")  # Must match the name in pyproject.toml
 except PackageNotFoundError:  # running from source without an install
-    __version__ = "1.0.0"
+    __version__ = "1.1.0"
 
 
 def cli():

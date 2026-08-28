@@ -25,6 +25,11 @@ Code is formatted with `black` and linted with `flake8` (see
 - New source files should carry the same copyright and license header as the
   existing ones.
 
+## Releases
+
+Versioning and the release procedure are documented in `RELEASING.md`; user
+visible changes should come with a `CHANGELOG.md` entry.
+
 ## Licensing of contributions
 
 HERMESS is released under the GNU General Public License v3.0 or later
