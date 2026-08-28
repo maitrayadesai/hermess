@@ -37,8 +37,19 @@ This repository is the **simulation-only** build of [`PowerDynamicEstimator`](ht
 
 ## Installation
 
-To get started with `hermess`, follow these steps:
-### Option 1: Install from Source (with `venv`)
+### From PyPI
+
+```bash
+pip install hermess
+```
+
+With the optional desktop GUI:
+
+```bash
+pip install "hermess[gui]"
+```
+
+### From source (with `venv`), for development
 
 1. **Clone the repository** and `cd` into it.
 2. **Create and activate a virtual environment**:
@@ -53,7 +64,7 @@ source venv/bin/activate # On Windows: venv\Scripts\activate
 ```bash
 pip install -e .
 ```
-### Option 2: Install from Source (with `conda`)
+### From source (with `conda`)
 
 1. **Clone the repository** and `cd` into it.
 
@@ -108,7 +119,7 @@ inspect the one-line diagram, the time-domain trajectories, the small-signal
 modes and the initial power flow. Results export as plot-ready CSV.
 
 ```bash
-pip install -e ".[gui]"   # or: uv sync --extra gui
+pip install "hermess[gui]"   # from source: pip install -e ".[gui]", or uv sync --extra gui
 hermess-gui
 ```
 

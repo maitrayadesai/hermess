@@ -11,10 +11,27 @@ Prerequisites
   is JIT-compiled, which speeds up long runs; without it the simulator falls back
   to the interpreted integrator automatically.
 
+Install from PyPI
+-----------------
+
+.. code-block:: bash
+
+   pip install hermess
+
+With the optional desktop GUI (PySide6, pyqtgraph; see :ref:`gui`):
+
+.. code-block:: bash
+
+   pip install "hermess[gui]"
+
+The dependencies (CasADi, NumPy, SciPy, pandas, matplotlib, pydantic, tabulate,
+tqdm) are installed with the package, and the shipped example systems come with
+the wheel, so ``hermess.simulate("3bus_loadstep", T_end=5.0)`` works right away.
+
 Install from source
 -------------------
 
-Clone the repository and install the package in editable mode:
+For development, clone the repository and install the package in editable mode:
 
 .. code-block:: bash
 
