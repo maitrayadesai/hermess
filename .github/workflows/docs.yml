@@ -22,13 +22,15 @@ concurrency:
 
 jobs:
   build:
+    # No MPLBACKEND override here: conf.py drops it anyway so the notebook
+    # kernels can use the inline backend, and a headless runner falls back to
+    # Agg on its own.
     runs-on: ubuntu-latest
-    env:
-      # Never pick an interactive matplotlib backend: the build imports the
-      # package, and a GUI backend makes it hang waiting for a window.
-      MPLBACKEND: Agg
     steps:
       - uses: actions/checkout@v4
+
+      - name: Install pandoc (nbsphinx converts notebook markdown with it)
+        run: sudo apt-get update && sudo apt-get install -y pandoc
 
       - name: Set up uv
         uses: astral-sh/setup-uv@v5
@@ -39,7 +41,7 @@ jobs:
         run: uv sync --locked --group docs
 
       - name: Build the HTML documentation
-        run: uv run sphinx-build -b html docs/source _site
+        run: uv run sphinx-build -W --keep-going -b html docs/source _site
 
       - name: Keep GitHub Pages from stripping the _static directory
         run: touch _site/.nojekyll
