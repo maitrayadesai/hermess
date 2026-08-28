@@ -106,14 +106,14 @@ The test suite is another check, and needs ``pytest``:
    pip install pytest
    pytest -q
 
-.. figure:: _static/voltage.png
+.. figure:: /_static/voltage.png
    :alt: Simulated bus voltage magnitudes
    :width: 620px
 
    Figure 1: Simulated bus voltage magnitudes of the shipped IEEE 39-bus
    converter scenario.
 
-.. figure:: _static/diffstates.png
+.. figure:: /_static/diffstates.png
    :alt: Simulated differential states of the synchronous machines
    :width: 680px
 

@@ -12,7 +12,7 @@ HERMESS
 
 .. container:: buttons
 
-   :doc:`Get started <installation>`
+   :doc:`Get started <getting_started/installation>`
    `GitHub <https://github.com/maitrayadesai/hermess>`_
    `PyPI <https://pypi.org/project/hermess/>`_
 
@@ -30,14 +30,14 @@ HERMESS
    :class-row: surface
 
    .. grid-item-card:: :octicon:`pulse` Hybrid EMT/RMS
-      :link: models_static
+      :link: models/network
       :link-type: doc
 
       Quasi-static or fully dynamic (electromagnetic) line models, selected
       per run, in one DAE formulation.
 
    .. grid-item-card:: :octicon:`sliders` Differentiable
-      :link: advanced_usage
+      :link: guide/sensitivities
       :link-type: doc
 
       Parametric sensitivities of full trajectories through CasADi, for
@@ -51,7 +51,7 @@ HERMESS
       PSCAD.
 
    .. grid-item-card:: :octicon:`stack` Model library
-      :link: models
+      :link: models/index
       :link-type: doc
 
       Machines, AVRs, governors, PSS and shafts, and grid-forming,
@@ -65,7 +65,7 @@ HERMESS
       ``hermess-gui``.
 
    .. grid-item-card:: :octicon:`beaker` Test systems
-      :link: cases
+      :link: systems
       :link-type: doc
 
       IEEE 39-bus with converter variants, Kundur two-area, and the
@@ -93,26 +93,44 @@ and :ref:`advanced_usage` for the system-file format and the analysis outputs.
    :caption: Getting started
    :hidden:
 
-   installation
-   usage
+   getting_started/installation
+   getting_started/quickstart
+   getting_started/cli
 
 .. toctree::
    :maxdepth: 1
    :caption: User guide
    :hidden:
 
-   advanced_usage
-   configuration
+   guide/simulating
+   guide/system_files
+   guide/disturbances
+   guide/results
+   guide/sensitivities
+   guide/custom_models
+   guide/configuration
    gui
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Model library
+   :hidden:
+
+   models/index
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Examples
+   :hidden:
+
+   examples/index
 
 .. toctree::
    :maxdepth: 1
    :caption: Reference
    :hidden:
 
-   models
-   models_static
-   cases
+   systems
    validation
 
 .. toctree::
@@ -128,4 +146,7 @@ and :ref:`advanced_usage` for the system-file format and the analysis outputs.
    :hidden:
 
    about
+   dev/contributing
+   dev/releasing
+   dev/changelog
    license
