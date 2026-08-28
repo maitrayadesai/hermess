@@ -15,6 +15,14 @@
 # Simulation-only fork of PowerDynamicEstimator
 # (https://doi.org/10.5905/ethz-1007-842); dynamic state estimation removed.
 # For inquiries, contact: mdesai@ethz.ch
+"""HERMESS, a hybrid EMT/RMS power system dynamics simulator.
+
+The public surface is small: :func:`simulate` runs a system and returns the
+finished :class:`~hermess.system.DaeSim`; :func:`list_systems` names what can
+be run; :func:`register`, :func:`registered` and :func:`unregister` manage
+user models; :func:`extract_results` and :class:`SimulationResults` post-
+process a run. Everything else is implementation.
+"""
 
 from importlib.metadata import version, PackageNotFoundError
 from pathlib import Path

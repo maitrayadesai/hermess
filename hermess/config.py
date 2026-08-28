@@ -15,6 +15,13 @@
 # Simulation-only fork of PowerDynamicEstimator
 # (https://doi.org/10.5905/ethz-1007-842); dynamic state estimation removed.
 # For inquiries, contact: mdesai@ethz.ch
+"""Simulation settings.
+
+:class:`Config` declares every knob of a run (horizon, step, solver, line
+model, reference frame, analyses) with validation; the module-level
+``config`` instance carries the shipped default scenario. Keyword arguments
+of :func:`hermess.simulate` map directly onto these fields.
+"""
 
 from pathlib import Path
 from typing import Any

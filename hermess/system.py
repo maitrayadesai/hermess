@@ -36,6 +36,18 @@ np.random.seed(30)
 
 
 class Grid:
+    """The static network model.
+
+    Holds the topology (buses, branches, transformer taps), builds the
+    admittance and incidence matrices from the ``Line`` table, and keeps the
+    per-bus and per-branch index maps that devices use to address their
+    entries of the algebraic equations. Fault and switching state
+    (``line_is_faulted``, ``line_is_open``, ``bus_is_faulted``) is applied by
+    rebuilding the affected matrices. After a run, ``yf`` maps each bus name
+    to its voltage trajectory in rectangular coordinates and ``sf`` to its
+    power injection.
+    """
+
     def __init__(self) -> None:
 
         self.y_adm_matrix: Optional[ca.SX] = None  # Admittance matrix
@@ -694,6 +706,15 @@ class Grid:
 
 
 class GridSim(Grid):
+    """The network model used in a simulation run.
+
+    Extends :class:`Grid` with the pieces a time-domain run needs: the
+    initializing power flow (:meth:`init_from_power_flow`, reported by
+    :meth:`power_flow_tables`), the nodal current-balance equations for
+    quasi-static or dynamic lines (:meth:`gcall`), and the branch-current
+    reconstruction used to fill ``dae.i_full`` after integration.
+    """
+
     def gcall(self, dae: DaeSim, **kwargs):
 
         if dae.line_dyn:
@@ -1365,6 +1386,20 @@ class GridSim(Grid):
 
 
 class Dae:
+    """The symbolic differential-algebraic model of one system.
+
+    Collects what the devices contribute during setup: the differential
+    states ``x`` with equations ``f``, the algebraic (or, with dynamic
+    lines, differential) network variables ``y`` with equations ``g``, the
+    switch vector ``s``, and the initial values. It also owns the
+    reference-frame machinery (``omega_mode``: center of inertia, single
+    machine, nominal or distributed) and executes scheduled disturbances by
+    rebuilding the equations at the event. ``grid`` points at the
+    :class:`GridSim` of the run and ``device_list`` at the instantiated
+    devices. With ``Config.parametric``, ``parametric_model`` keeps the
+    device parameters as CasADi symbols for sensitivity studies.
+    """
+
     def __init__(self) -> None:
 
         # Counters
@@ -2318,6 +2353,19 @@ class Dae:
 
 
 class DaeSim(Dae):
+    """The simulated model, as returned by :func:`hermess.simulate`.
+
+    Extends :class:`Dae` with the integration itself (:meth:`simulate`,
+    using the scheme selected in :class:`~hermess.config.Config`) and with
+    everything a finished run exposes: the time grid ``time_steps``, the
+    trajectories ``x_full``, ``y_full`` and ``i_full``, and, after a run
+    with ``small_signal_analysis=True``, the operating-point linearization
+    (``A``, ``eigenvalues``, ``state_names``) with its modal reports
+    (:meth:`print_modal_report`, :meth:`participation_table`,
+    :meth:`plot_eigenvalues`). See :ref:`results` in the documentation for
+    the reading guide.
+    """
+
     def __init__(self) -> None:
         super().__init__()
         self.int_scheme_sim = None
