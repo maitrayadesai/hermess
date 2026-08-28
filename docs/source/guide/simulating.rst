@@ -28,10 +28,10 @@ returned object; see :ref:`results`.
 Examples
 --------
 
-The notebooks in :ref:`examples` work through complete studies, including the
-IEEE 39-bus case with converters and a grid-forming converter example with a
-learned control. The systems that ship with the package are described in
-:ref:`test_cases`.
+The notebooks in :ref:`examples` each work through one aspect of the
+simulator: a first run, scheduled disturbances, the hybrid EMT/RMS network,
+small-signal analysis and parametric sensitivities. The systems that ship
+with the package are described in :ref:`test_cases`.
 
 Next steps
 ----------

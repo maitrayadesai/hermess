@@ -35,8 +35,9 @@ point and the one used by most of the test suite. Disturbance: a line opening.
 ``3bus_loadstep``
 ^^^^^^^^^^^^^^^^^^
 
-The same three-bus network with a single load step instead of the line opening.
-Used by the grid-forming control example in ``examples/neural_gfm_control``.
+The same three-bus network with a single small load step instead of the line
+opening: a minimal setpoint-style event that stays in the linear regime while
+still exciting the grid-forming converter's power and frequency response.
 
 .. _3bus_genrou:
 
