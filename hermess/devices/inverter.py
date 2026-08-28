@@ -661,81 +661,48 @@ class GridSupporting(Inverter):
 
     **Converter Voltage Dynamics**
 
-
     .. math::
 
-        \dot{v}_{fd_{ext}} = \frac{\omega_{b}}{c_{f}}(i_{fd_{ext}} - i_{td_{ext}}) + \omega_{net}\omega_{b}v_{fq_{ext}}
-
-    .. math::
-
-        \dot{v}_{fq_{ext}} = \frac{\omega_{b}}{c_{f}}(i_{fq_{ext}} - i_{tq_{ext}}) - \omega_{net}\omega_{b}v_{fd_{ext}}
+        \dot{v}_{fd_{ext}} &= \frac{\omega_{b}}{c_{f}}(i_{fd_{ext}} - i_{td_{ext}}) + \omega_{net}\omega_{b}v_{fq_{ext}} \\
+        \dot{v}_{fq_{ext}} &= \frac{\omega_{b}}{c_{f}}(i_{fq_{ext}} - i_{tq_{ext}}) - \omega_{net}\omega_{b}v_{fd_{ext}}
 
     **Converter Current Dynamics**
 
-
     .. math::
 
-        \dot{i}_{fd_{ext}} = \frac{\omega_{b}}{l_{f}}(v_{swd} - v_{fd_{ext}}) - \frac{\omega_{b}r_{f}}{l_{f}}i_{fd_{ext}} + \omega_{net}\omega_{b}i_{fq_{ext}}
-
-    .. math::
-
-        \dot{i}_{fq_{ext}} = \frac{\omega_{b}}{l_{f}}(v_{swq} - v_{fq_{ext}}) - \frac{\omega_{b}r_{f}}{l_{f}}i_{fq_{ext}} - \omega_{net}\omega_{b}i_{fd_{ext}}
+        \dot{i}_{fd_{ext}} &= \frac{\omega_{b}}{l_{f}}(v_{swd} - v_{fd_{ext}}) - \frac{\omega_{b}r_{f}}{l_{f}}i_{fd_{ext}} + \omega_{net}\omega_{b}i_{fq_{ext}} \\
+        \dot{i}_{fq_{ext}} &= \frac{\omega_{b}}{l_{f}}(v_{swq} - v_{fq_{ext}}) - \frac{\omega_{b}r_{f}}{l_{f}}i_{fq_{ext}} - \omega_{net}\omega_{b}i_{fd_{ext}}
 
     **Grid-Side Current Dynamics**
 
-
     .. math::
 
-        \dot{i}_{td_{ext}} = \frac{\omega_b}{l_t}(v_{fd_{ext}} - v_{n_{re}}) - \frac{\omega_b r_t}{l_t}i_{td_{ext}} + \omega_{net} \omega_b i_{tq_{ext}}
-
-    .. math::
-
-        \dot{i}_{tq_{ext}} = \frac{\omega_b}{l_t}(v_{fq_{ext}} - v_{n_{im}}) - \frac{\omega_b r_t}{l_t}i_{tq_{ext}} - \omega_{net} \omega_b i_{td_{ext}}
+        \dot{i}_{td_{ext}} &= \frac{\omega_b}{l_t}(v_{fd_{ext}} - v_{n_{re}}) - \frac{\omega_b r_t}{l_t}i_{td_{ext}} + \omega_{net} \omega_b i_{tq_{ext}} \\
+        \dot{i}_{tq_{ext}} &= \frac{\omega_b}{l_t}(v_{fq_{ext}} - v_{n_{im}}) - \frac{\omega_b r_t}{l_t}i_{tq_{ext}} - \omega_{net} \omega_b i_{td_{ext}}
 
     **Phase-Locked Loop (PLL) Dynamics**
 
-
     .. math::
 
-        \dot{\epsilon} = v_{fq_{pll}}
-
-    .. math::
-
-        \delta\dot{\theta}_{pll} = \omega_{b}\delta\omega_{pll}
+        \dot{\epsilon} &= v_{fq_{pll}} \\
+        \delta\dot{\theta}_{pll} &= \omega_{b}\delta\omega_{pll}
 
     **Power and Frequency Dynamics**
 
-
     .. math::
 
-        \dot{\tilde{p}}_{c} = \omega_{f}(p_{c} - \tilde{p}_{c})
-
-    .. math::
-
-        \delta\dot{\theta}_{c} = \omega_{b}\delta\omega_{c}
-
-    .. math::
-
-        \dot{\tilde{q}}_{c} = \omega_{f}(q_{c} - \tilde{q}_{c})
+        \dot{\tilde{p}}_{c} &= \omega_{f}(p_{c} - \tilde{p}_{c}) \\
+        \delta\dot{\theta}_{c} &= \omega_{b}\delta\omega_{c} \\
+        \dot{\tilde{q}}_{c} &= \omega_{f}(q_{c} - \tilde{q}_{c})
 
     **Control Dynamics**
 
-
     .. math::
 
-        \dot{\xi}_{d} = v_{fd^{*}} - v_{fd_{int}}
-
-    .. math::
-
-        \dot{\xi}_{q} = v_{fq^{*}} - v_{fq_{int}}
-
-    .. math::
-
-        \dot{\gamma}_{d} = i_{fd^{*}} - i_{fd_{int}}
-
-    .. math::
-
-        \dot{\gamma}_{q} = i_{fq^{*}} - i_{fq_{int}}
+        \dot{\xi}_{d} &= v_{fd^{*}} - v_{fd_{int}} \\
+        \dot{\xi}_{q} &= v_{fq^{*}} - v_{fq_{int}} \\
+        \dot{\gamma}_{d} &= i_{fd^{*}} - i_{fd_{int}} \\
+        \dot{\gamma}_{q} &= i_{fq^{*}} - i_{fq_{int}}
 
     """
 
@@ -788,70 +755,41 @@ class GridForming(Inverter):
 
     **Converter Voltage Dynamics**
 
-
     .. math::
 
-        \dot{v}_{fd_{ext}} = \frac{\omega_{b}}{c_{f}}(i_{fd_{ext}} - i_{td_{ext}}) + \omega_{net}\omega_{b}v_{fq_{ext}}
-
-    .. math::
-
-        \dot{v}_{fq_{ext}} = \frac{\omega_{b}}{c_{f}}(i_{fq_{ext}} - i_{tq_{ext}}) - \omega_{net}\omega_{b}v_{fd_{ext}}
+        \dot{v}_{fd_{ext}} &= \frac{\omega_{b}}{c_{f}}(i_{fd_{ext}} - i_{td_{ext}}) + \omega_{net}\omega_{b}v_{fq_{ext}} \\
+        \dot{v}_{fq_{ext}} &= \frac{\omega_{b}}{c_{f}}(i_{fq_{ext}} - i_{tq_{ext}}) - \omega_{net}\omega_{b}v_{fd_{ext}}
 
     **Converter Current Dynamics**
 
-
     .. math::
 
-        \dot{i}_{fd_{ext}} = \frac{\omega_{b}}{l_{f}}(v_{swd} - v_{fd_{ext}}) - \frac{\omega_{b}r_{f}}{l_{f}}i_{fd_{ext}} + \omega_{net}\omega_{b}i_{fq_{ext}}
-
-    .. math::
-
-        \dot{i}_{fq_{ext}} = \frac{\omega_{b}}{l_{f}}(v_{swq} - v_{fq_{ext}}) - \frac{\omega_{b}r_{f}}{l_{f}}i_{fq_{ext}} - \omega_{net}\omega_{b}i_{fd_{ext}}
+        \dot{i}_{fd_{ext}} &= \frac{\omega_{b}}{l_{f}}(v_{swd} - v_{fd_{ext}}) - \frac{\omega_{b}r_{f}}{l_{f}}i_{fd_{ext}} + \omega_{net}\omega_{b}i_{fq_{ext}} \\
+        \dot{i}_{fq_{ext}} &= \frac{\omega_{b}}{l_{f}}(v_{swq} - v_{fq_{ext}}) - \frac{\omega_{b}r_{f}}{l_{f}}i_{fq_{ext}} - \omega_{net}\omega_{b}i_{fd_{ext}}
 
     **Grid-Side Current Dynamics**
 
-
     .. math::
 
-        \dot{i}_{td_{ext}} = \frac{\omega_b}{l_t}(v_{fd_{ext}} - v_{n_{re}}) - \frac{\omega_b r_t}{l_t}i_{td_{ext}} + \omega_{net} \omega_b i_{tq_{ext}}
-
-    .. math::
-
-        \dot{i}_{tq_{ext}} = \frac{\omega_b}{l_t}(v_{fq_{ext}} - v_{n_{im}}) - \frac{\omega_b r_t}{l_t}i_{tq_{ext}} - \omega_{net} \omega_b i_{td_{ext}}
+        \dot{i}_{td_{ext}} &= \frac{\omega_b}{l_t}(v_{fd_{ext}} - v_{n_{re}}) - \frac{\omega_b r_t}{l_t}i_{td_{ext}} + \omega_{net} \omega_b i_{tq_{ext}} \\
+        \dot{i}_{tq_{ext}} &= \frac{\omega_b}{l_t}(v_{fq_{ext}} - v_{n_{im}}) - \frac{\omega_b r_t}{l_t}i_{tq_{ext}} - \omega_{net} \omega_b i_{td_{ext}}
 
     **Power and Frequency Dynamics**
 
-
     .. math::
 
-        \dot{\tilde{p}}_{c} = \omega_{f}(p_{c} - \tilde{p}_{c})
-
-    .. math::
-
-        \delta\dot{\theta}_{c} = \omega_{b}\delta\omega_{c}
-
-    .. math::
-
-        \dot{\tilde{q}}_{c} = \omega_{f}(q_{c} - \tilde{q}_{c})
+        \dot{\tilde{p}}_{c} &= \omega_{f}(p_{c} - \tilde{p}_{c}) \\
+        \delta\dot{\theta}_{c} &= \omega_{b}\delta\omega_{c} \\
+        \dot{\tilde{q}}_{c} &= \omega_{f}(q_{c} - \tilde{q}_{c})
 
     **Control Dynamics**
 
-
     .. math::
 
-        \dot{\xi}_{d} = v_{fd^{*}} - v_{fd_{int}}
-
-    .. math::
-
-        \dot{\xi}_{q} = v_{fq^{*}} - v_{fq_{int}}
-
-    .. math::
-
-        \dot{\gamma}_{d} = i_{fd^{*}} - i_{fd_{int}}
-
-    .. math::
-
-        \dot{\gamma}_{q} = i_{fq^{*}} - i_{fq_{int}}
+        \dot{\xi}_{d} &= v_{fd^{*}} - v_{fd_{int}} \\
+        \dot{\xi}_{q} &= v_{fq^{*}} - v_{fq_{int}} \\
+        \dot{\gamma}_{d} &= i_{fd^{*}} - i_{fd_{int}} \\
+        \dot{\gamma}_{q} &= i_{fq^{*}} - i_{fq_{int}}
 
     """
 
