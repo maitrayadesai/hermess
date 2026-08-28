@@ -13,8 +13,9 @@ in the repository.
   trajectories.
 - **Disturbances**: the scheduled-event machinery, read off the Kundur
   two-area inter-area oscillation.
-- **One system, RMS and EMT**: the same system file under the quasi-static
-  and the dynamic network model.
+- **One system, RMS and EMT**: a machine and a grid-forming converter under
+  the quasi-static and the dynamic network model, with the output filter
+  swapped to its quasi-static variant.
 - **Small-signal analysis**: eigenvalues, modal report and participation
   factors of the IEEE 39-bus system.
 - **Parametric sensitivities**: the gradient of a trajectory functional with
