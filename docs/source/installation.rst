@@ -42,7 +42,7 @@ If you use `uv <https://docs.astral.sh/uv/>`_, the pinned environment in
 .. code-block:: bash
 
    uv sync
-   uv run python -m hermess
+   uv run hermess list
 
 With conda
 ^^^^^^^^^^
@@ -59,17 +59,18 @@ dependency set.
 Verifying the installation
 --------------------------
 
-Run the shipped configuration:
+Run the demonstration scenario:
 
 .. code-block:: bash
 
-   python -m hermess
+   hermess run ieee39_conv --small-signal
 
-This simulates the system selected in ``hermess/config.py`` -- as shipped, ten
-seconds of the IEEE 39-bus converter system (:ref:`ieee39_conv`) with
-dynamic line models and a small-signal analysis at the operating point, so
-expect a runtime of a few minutes -- and plots the bus voltages and the
-internal states. If the two figures below appear, the installation works.
+This simulates ten seconds of the IEEE 39-bus converter system
+(:ref:`ieee39_conv`) with dynamic line models and a small-signal analysis at
+the operating point, so expect a runtime of a few minutes, and plots the bus
+voltages and the internal states. If the two figures below appear, the
+installation works. ``hermess list`` and ``hermess --version`` are quicker
+smoke tests.
 
 Alternatively, from Python:
 

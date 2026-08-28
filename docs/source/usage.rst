@@ -6,15 +6,19 @@ Usage
 From the command line
 ---------------------
 
-To run the simulation configured in ``hermess/config.py``, execute the package
-from the repository root:
+The package installs a ``hermess`` command (equivalently ``python -m hermess``):
 
 .. code-block:: bash
 
-   python -m hermess
+   hermess list                             # the systems that ship with the package
+   hermess run 3bus --t-end 5               # simulate one and plot the trajectories
+   hermess run ieee39_conv --small-signal   # the shipped demo scenario
 
-This simulates the selected system and plots the bus voltages and the internal
-states.
+``hermess run`` plots the bus voltages and the internal states unless
+``--no-plot`` is given, and takes ``--t-end``, ``--ts`` and, for systems of
+your own, ``--system-root``. Every other simulation setting of
+:class:`hermess.config.Config` is reachable with ``--set KEY=VALUE``, for
+example ``--set line_dyn=false --set omega_mode=coi``.
 
 From Python
 -----------

@@ -70,11 +70,17 @@ conda activate hermess
 
 ### Running a simulation
 
+The package installs a `hermess` command (equivalently `python -m hermess`):
+
 ```bash
-python -m hermess
+hermess list                                # the ready-made systems
+hermess run 3bus --t-end 5                  # simulate one and plot the trajectories
+hermess run ieee39_conv --small-signal      # the shipped demo scenario
 ```
 
-This runs the simulation defined by the configuration in `./hermess/config.py` and plots the resulting voltage and state trajectories.
+`hermess run` accepts `--t-end`, `--ts`, `--no-plot`, `--small-signal` and
+`--system-root` for systems of your own; any other simulation setting is
+reachable with `--set KEY=VALUE` (see `hermess run --help`).
 
 From Python, to run a system without editing `config.py`:
 
