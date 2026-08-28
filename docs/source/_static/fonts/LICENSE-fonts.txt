@@ -1,0 +1,8 @@
+The Latin Modern web fonts in this directory (LM-*.woff2) are the Latin Modern
+family by the GUST e-foundry (B. Jackowski and J. M. Nowacki), distributed
+under the GUST Font License (GFL), a free license based on the LaTeX Project
+Public License. See https://www.gust.org.pl/projects/e-foundry/latin-modern
+and https://ctan.org/pkg/lm.
+
+The woff2 conversions are taken from https://github.com/vincentdoerig/latex-css
+(MIT-licensed repository; the fonts themselves remain under the GFL).

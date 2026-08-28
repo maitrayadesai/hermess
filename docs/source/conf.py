@@ -18,41 +18,30 @@ except Exception:  # building docs without an installed hermess
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
-# Use the Read the Docs theme
-html_theme = "sphinx_rtd_theme"
-
-# Optional: Configure theme options
-html_theme_options = {
-    "collapse_navigation": False,  # Keep the navigation expanded
-    "sticky_navigation": True,  # Make the sidebar navigation sticky
-    "navigation_depth": 4,  # Depth of the navigation tree
-    "includehidden": True,  # Show hidden TOC entries
-    "titles_only": False,  # Show full titles instead of short titles
-}
-
-html_title = "HERMESS Documentation"
-napoleon_google_docstring = True
-autodoc_typehints = "both"  # 'signature' or 'description' or 'both'
-autosummary_generate = True
 
 extensions = [
     "sphinx.ext.autodoc",
     "autoapi.extension",
-    "sphinx.ext.autosummary",
     "sphinx_autodoc_typehints",
     "sphinx.ext.napoleon",
     "sphinx.ext.viewcode",
-    "sphinx_autodoc_typehints",
     "sphinx.ext.mathjax",
+    "sphinx_design",
+    "sphinx_copybutton",
     "nbsphinx",
 ]
+
+napoleon_google_docstring = True
+autodoc_typehints = "both"  # 'signature' or 'description' or 'both'
+
 autoapi_type = "python"
 autoapi_dirs = ["../../hermess"]
 # Hide methods, attributes, and functions by limiting the depth
 autoapi_depth = 2  # Show modules and classes only, no deeper levels
-# The test suite, the system-file folders and the benchmarks are not part of the
-# public API; keeping them out leaves a reference to the modules a user calls.
-autoapi_ignore = ["*/tests/*", "*/systems/*", "*/benchmarks/*"]
+# The test suite, the system-file folders, the benchmarks and the internal
+# utils are not part of the public API; keeping them out leaves a reference to
+# the modules a user calls.
+autoapi_ignore = ["*/tests/*", "*/systems/*", "*/benchmarks/*", "*/utils/*"]
 # Default autoapi options minus "private-members": underscore-prefixed helpers are
 # implementation detail and do not belong in the published reference.
 autoapi_options = [
@@ -63,19 +52,53 @@ autoapi_options = [
     "imported-members",
 ]
 autoapi_keep_files = True  # Optional: keeps generated files in 'autoapi'
-
-# Optional: customize the output for the tree (e.g., you might want to adjust this)
-autoapi_add_toctree_entry = True  # Auto add to the table of contents
+# The API reference is placed in the toctree by hand (index.rst), so its
+# position in the sidebar is controlled.
+autoapi_add_toctree_entry = False
 
 templates_path = ["_templates"]
 exclude_patterns = []
 
-language = "EN"
+language = "en"
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
+html_theme = "shibuya"
+html_title = "HERMESS"
+html_baseurl = "https://maitrayadesai.github.io/hermess/"
+
+html_theme_options = {
+    "accent_color": "blue",  # radix preset; the ETH Blue scale lives in hermess.css
+    "color_mode": "light",  # light default, the toggle stays available
+    "light_logo": "_static/schematics/logo_light.svg",
+    "dark_logo": "_static/schematics/logo_dark.svg",
+    "github_url": "https://github.com/maitrayadesai/hermess",
+    "show_ai_links": False,
+    "nav_links": [
+        {"title": "Install", "url": "installation"},
+        {"title": "Models", "url": "models"},
+        {"title": "Validation", "url": "validation"},
+        {
+            "title": "PyPI",
+            "url": "https://pypi.org/project/hermess/",
+            "external": True,
+        },
+    ],
+}
+
+# "Edit this page" links in the right sidebar.
+html_context = {
+    "source_type": "github",
+    "source_user": "maitrayadesai",
+    "source_repo": "hermess",
+    "source_version": "main",
+    "source_docs_path": "/docs/source/",
+}
+
 html_static_path = ["_static"]
+html_css_files = ["hermess.css"]
+html_favicon = "_static/schematics/logo_light.svg"
 
 
 latex_elements = {

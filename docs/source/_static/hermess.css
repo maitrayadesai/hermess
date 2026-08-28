@@ -1,0 +1,105 @@
+/* HERMESS documentation stylesheet: Latin Modern typography and the ETH Blue
+ * accent on top of the Shibuya theme. The fonts are self-hosted (see
+ * fonts/LICENSE-fonts.txt). */
+
+@font-face {
+  font-family: "Latin Modern Roman";
+  src: url("fonts/LM-regular.woff2") format("woff2");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Latin Modern Roman";
+  src: url("fonts/LM-bold.woff2") format("woff2");
+  font-weight: bold;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Latin Modern Roman";
+  src: url("fonts/LM-italic.woff2") format("woff2");
+  font-weight: normal;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Latin Modern Roman";
+  src: url("fonts/LM-bold-italic.woff2") format("woff2");
+  font-weight: bold;
+  font-style: italic;
+  font-display: swap;
+}
+
+:root {
+  /* Prose and headings in the LaTeX serif; code keeps the theme monospace
+   * stack (--sy-f-mono untouched). */
+  --sy-f-text: "Latin Modern Roman", "Latin Modern", Georgia, "Times New Roman", serif;
+  --sy-f-heading: "Latin Modern Roman", "Latin Modern", Georgia, "Times New Roman", serif;
+}
+
+/* Latin Modern is optically sized for print and reads small on screen. */
+.yue {
+  font-size: 1.0625rem;
+}
+
+/* ETH Blue accent scale (seed #215CAF, hue 215). Shibuya resolves its accent
+ * from the radix "blue" scale; these overrides replace that scale's role with
+ * an ETH Blue ramp for both color modes. */
+html[data-accent-color="blue"] {
+  --accent-1: #fbfcfe;
+  --accent-2: #f4f8fc;
+  --accent-3: #e7effa;
+  --accent-4: #d7e5f6;
+  --accent-5: #c3d8f1;
+  --accent-6: #aac7ea;
+  --accent-7: #88b0e0;
+  --accent-8: #5c92d2;
+  --accent-9: #215caf;
+  --accent-10: #1d53a0;
+  --accent-11: #1a4a8f;
+  --accent-12: #12294e;
+  --accent-a1: rgba(33, 92, 175, 0.02);
+  --accent-a2: rgba(33, 92, 175, 0.04);
+  --accent-a3: rgba(33, 92, 175, 0.09);
+  --accent-a4: rgba(33, 92, 175, 0.16);
+  --accent-a5: rgba(33, 92, 175, 0.24);
+  --accent-a6: rgba(33, 92, 175, 0.33);
+  --accent-a7: rgba(33, 92, 175, 0.46);
+  --accent-a8: rgba(33, 92, 175, 0.63);
+  --accent-a9: rgba(33, 92, 175, 0.95);
+  --accent-a10: rgba(25, 74, 143, 0.95);
+  --accent-a11: rgba(21, 62, 122, 0.97);
+  --accent-a12: rgba(14, 33, 63, 0.98);
+  --accent-contrast: #ffffff;
+  --color-surface-accent: rgba(238, 244, 251, 0.8);
+}
+
+html.dark[data-accent-color="blue"] {
+  --accent-1: #0d1420;
+  --accent-2: #101a29;
+  --accent-3: #142340;
+  --accent-4: #172c52;
+  --accent-5: #1d3763;
+  --accent-6: #244373;
+  --accent-7: #2d5289;
+  --accent-8: #3765a4;
+  --accent-9: #3a6cb8;
+  --accent-10: #4a7cc6;
+  --accent-11: #91b6ea;
+  --accent-12: #d6e4f9;
+  --accent-a1: rgba(58, 108, 184, 0.05);
+  --accent-a2: rgba(58, 108, 184, 0.1);
+  --accent-a3: rgba(58, 108, 184, 0.18);
+  --accent-a4: rgba(58, 108, 184, 0.26);
+  --accent-a5: rgba(64, 114, 190, 0.34);
+  --accent-a6: rgba(72, 122, 196, 0.42);
+  --accent-a7: rgba(82, 132, 202, 0.53);
+  --accent-a8: rgba(94, 144, 210, 0.66);
+  --accent-a9: rgba(88, 138, 214, 0.95);
+  --accent-a10: rgba(106, 154, 222, 0.95);
+  --accent-a11: rgba(145, 182, 234, 0.97);
+  --accent-a12: rgba(214, 228, 249, 0.98);
+  --accent-contrast: #ffffff;
+  --color-surface-accent: rgba(17, 32, 54, 0.5);
+}
