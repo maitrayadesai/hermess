@@ -15,6 +15,7 @@
 # Simulation-only fork of PowerDynamicEstimator
 # (https://doi.org/10.5905/ethz-1007-842); dynamic state estimation removed.
 # For inquiries, contact: mdesai@ethz.ch
+"""Script entry point: run the shipped default scenario from ``config``."""
 
 from hermess.run import run
 from hermess.config import config

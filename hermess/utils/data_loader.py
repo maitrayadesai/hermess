@@ -15,6 +15,9 @@
 # Simulation-only fork of PowerDynamicEstimator
 # (https://doi.org/10.5905/ethz-1007-842); dynamic state estimation removed.
 # For inquiries, contact: mdesai@ethz.ch
+"""Parsing of the system files (``sim_param.txt``, ``sim_dist.txt``) into
+device instances; internal.
+"""
 
 import importlib
 import os

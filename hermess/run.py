@@ -15,6 +15,13 @@
 # Simulation-only fork of PowerDynamicEstimator
 # (https://doi.org/10.5905/ethz-1007-842); dynamic state estimation removed.
 # For inquiries, contact: mdesai@ethz.ch
+"""Top-level run orchestration.
+
+:func:`run` takes a :class:`~hermess.config.Config`, loads the system files,
+instantiates the devices, initializes from the power flow, integrates, and
+returns the finished :class:`~hermess.system.DaeSim`; the built-in plotting
+of the command-line entry point lives here as well.
+"""
 
 from matplotlib import cm
 
