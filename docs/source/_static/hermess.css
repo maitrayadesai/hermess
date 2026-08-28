@@ -131,16 +131,6 @@ button[aria-controls="lside"] {
 .sy-page main > .flex > div {
   max-width: 100%;
 }
-.sy-page article.yue {
-  max-width: 47rem;
-  margin-left: auto;
-  margin-right: auto;
-}
-.sy-page .sy-breadcrumbs-inner {
-  max-width: 47rem;
-  margin-left: auto;
-  margin-right: auto;
-}
 /* The theme treats breadcrumbs as a mobile-only bar; in the book layout they
  * are the wayfinding on every width, like a running head. */
 @media (min-width: 1280px) {
@@ -183,6 +173,27 @@ nav.page-contents a {
 }
 nav.page-contents a:hover {
   text-decoration: underline;
+}
+
+/* Even vertical rhythm for display equations. The theme puts every equation
+ * in a .math-wrapper with 2rem margins, so docstrings written as one
+ * directive per equation get far more air than a single aligned block; a
+ * moderate margin plus a collapsed gap between successive equations makes
+ * both patterns read the same. */
+.yue .math-wrapper {
+  margin-top: 0.9rem;
+  margin-bottom: 0.9rem;
+}
+/* The wrapper is its own formatting context (overflow-x), so the MathJax
+ * margins sit inside it and need reducing as well. */
+.yue .math-wrapper mjx-container[jax="CHTML"][display="true"] {
+  margin: 0.35em 0;
+}
+.yue .math-wrapper + .math-wrapper {
+  margin-top: 0.15rem;
+}
+.yue .math-wrapper:has(+ .math-wrapper) {
+  margin-bottom: 0.15rem;
 }
 
 /* ETH Blue accent scale (seed #215CAF, hue 215). Shibuya resolves its accent
