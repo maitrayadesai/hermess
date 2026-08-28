@@ -1,0 +1,13 @@
+% Header logo mark for the documentation site (light mode): a damped
+% oscillation, the step response the simulator computes. The wordmark itself is
+% the site title text, so the logo stays an icon.
+\documentclass[tikz,border=1pt]{standalone}
+\input{style.tex}
+\begin{document}
+\begin{tikzpicture}[x=1cm,y=1cm]
+  \draw[line width=1.1pt, ethgrey!60] (-0.12,0) -- (2.42,0);
+  \draw[line width=2.4pt, ethblue, line cap=round]
+    plot[domain=0:2.3, samples=160, smooth]
+    (\x, {0.62*exp(-0.85*\x)*cos(5.2*\x r)});
+\end{tikzpicture}
+\end{document}
