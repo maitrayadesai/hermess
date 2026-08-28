@@ -24,7 +24,10 @@ in the same style as :func:`hermess.run.fplot`:
 
 - ``docs/source/_static/voltage.png`` — bus voltage magnitudes,
 - ``docs/source/_static/diffstates.png`` — the differential states of the
-  synchronous machines.
+  synchronous machines,
+- ``docs/source/_static/hero.png`` — the landing-page figure: the same bus
+  voltages in the documentation style (serif labels, sequential blues,
+  transparent background).
 
 Run from the repository root::
 
@@ -101,6 +104,43 @@ def plot_voltage(data: dict) -> None:
     plt.close()
 
 
+def plot_hero(data: dict) -> None:
+    """Landing-page figure: bus voltages through the fault and its clearing,
+    styled to match the site (Computer Modern mathtext, sequential blues on a
+    transparent background that works in light and dark mode)."""
+    with plt.rc_context(
+        {
+            "font.family": "serif",
+            "mathtext.fontset": "cm",
+            "axes.edgecolor": "#9a9a9a",
+            "axes.labelcolor": "#6F6F6F",
+            "xtick.color": "#6F6F6F",
+            "ytick.color": "#6F6F6F",
+            "axes.spines.top": False,
+            "axes.spines.right": False,
+        }
+    ):
+        fig, ax = plt.subplots(figsize=(8.4, 3.9))
+        blues = plt.get_cmap("Blues")
+        n = len(data["buses"])
+        for i, node in enumerate(data["buses"]):
+            y = data["yf"][node]
+            v = np.sqrt(y[0, :] ** 2 + y[1, :] ** 2)
+            # Keep the ramp inside the readable half of the colormap.
+            ax.plot(data["t"], v, color=blues(0.35 + 0.6 * i / max(n - 1, 1)),
+                    linewidth=0.8, alpha=0.9)
+        ax.set_xlabel("$t$ [s]", fontsize=11)
+        ax.set_ylabel(r"$|\bar v_n|$ [p.u.]", fontsize=11)
+        # Frame the disturbance (applied at t = 4 s in the shipped scenario)
+        # instead of the long pre-fault steady state.
+        ax.set_ylim(0.5, 1.15)
+        ax.set_xlim(3.9, 6.0)
+        ax.tick_params(labelsize=9)
+        fig.tight_layout()
+        fig.savefig(OUT / "hero.png", dpi=180, transparent=True)
+        plt.close(fig)
+
+
 def plot_diffstates(data: dict) -> None:
     """Differential states of the synchronous machines, one row per machine,
     one column per state, in the style of hermess.run.fplot."""
@@ -138,5 +178,9 @@ if __name__ == "__main__":
     else:
         data = collect()
     plot_voltage(data)
+    plot_hero(data)
     plot_diffstates(data)
-    print(f"wrote {OUT / 'voltage.png'} and {OUT / 'diffstates.png'}")
+    print(
+        f"wrote {OUT / 'voltage.png'}, {OUT / 'hero.png'} and "
+        f"{OUT / 'diffstates.png'}"
+    )
