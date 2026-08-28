@@ -16,42 +16,58 @@
 # (https://doi.org/10.5905/ethz-1007-842); dynamic state estimation removed.
 # For inquiries, contact: mdesai@ethz.ch
 
-"""One-line diagram of the selected system (read-only, draggable nodes).
+"""One-line diagram of the selected system, with an edit mode for building.
 
-Built from the parsed text files, so it works before any simulation; after a
-run of the same system the buses are annotated with the initial power flow
-(voltage magnitude and angle). Node positions come from
-:mod:`hermess.gui.graphlayout` and can be adjusted by dragging. Double
-clicking a bus or a device glyph opens its detail pop-up
-(:mod:`hermess.gui.info_dialog`).
+In view mode the diagram is read-only: draggable nodes, double-click detail
+pop-ups (:mod:`hermess.gui.info_dialog`), power-flow annotation after a run.
+Edit mode adds a tool palette on the same canvas: place buses, connect lines,
+attach devices (with forms generated from the model classes), delete, edit
+the disturbance sequence, undo/redo. The edits live in a
+:class:`~hermess.gui.sysdoc.SystemDocument` that serializes back to ordinary
+system files; saving is owned by the main window.
+
+Node positions come from :mod:`hermess.gui.graphlayout`, are keyed by bus
+name, and survive edits; a bus placed by clicking keeps its click position.
 """
 
 from __future__ import annotations
 
+import copy
+
 import numpy as np
 import pyqtgraph as pg
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
+    QButtonGroup,
     QHBoxLayout,
     QLabel,
+    QMenu,
     QPushButton,
+    QToolButton,
     QVBoxLayout,
     QWidget,
 )
 
-from hermess.gui import device_info, theme
+from hermess.gui import device_info, param_meta, theme
+from hermess.gui.disturbance_editor import DisturbanceManagerDialog
 from hermess.gui.graphlayout import spring_layout
 from hermess.gui.info_dialog import InfoDialog
+from hermess.gui.param_form import DeviceFormDialog, SimpleFormDialog
+from hermess.gui.sysdoc import SystemDocument
 
 _NODE_SIZE = 18
 _GLYPH_OFFSET = 0.11  # distance of a device glyph from its bus
+_HIT_FRACTION = 0.03  # click tolerance, as a fraction of the visible x-range
 
 # Glyph (symbol, color, caption) per device family, matched on the class name.
 _GLYPHS = [
     ("Synchronous", "o", theme.ETH_PETROL, "synchronous machine"),
+    ("GENROU", "o", theme.ETH_PETROL, "synchronous machine"),
+    ("GENSAL", "o", theme.ETH_PETROL, "synchronous machine"),
+    ("Marconato", "o", theme.ETH_PETROL, "synchronous machine"),
     ("Grid", "s", theme.ETH_RED, "inverter"),
+    ("StaticInfiniteBus", "star", "#000000", "infinite bus"),
     ("Static", "t", theme.ETH_GREY, "load"),
-    ("Infinite", "star", "#000000", "infinite bus"),
 ]
 _GLYPH_OTHER = ("d", theme.ETH_PURPLE, "other device")
 
@@ -68,6 +84,16 @@ def _is_transformer(entry) -> bool:
         return abs(float(entry.get("trafo", "1") or "1") - 1.0) > 1e-9
     except ValueError:
         return False
+
+
+def _segment_distance(p, a, b) -> float:
+    """Distance of point p to the segment a-b (all 2-arrays)."""
+    span = b - a
+    length2 = float(span @ span)
+    if length2 < 1e-12:
+        return float(np.linalg.norm(p - a))
+    t = float(np.clip((p - a) @ span / length2, 0.0, 1.0))
+    return float(np.linalg.norm(p - (a + t * span)))
 
 
 class _OneLineGraph(pg.GraphItem):
@@ -129,23 +155,38 @@ class _ClickableScatter(pg.ScatterPlotItem):
 
 
 class TopologyTab(QWidget):
+    #: Emitted after every change to the edited document (edit mode only).
+    documentChanged = Signal()
+    #: Emitted when edit mode is entered (True) or left (False).
+    editModeChanged = Signal(bool)
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self._desc = None
-        self._pos = None  # (n_buses, 2)
+        self._doc: "SystemDocument | None" = None
+        self._pos = np.zeros((0, 2))  # (n_buses, 2), aligned with desc.buses()
+        self._pos_by_name: "dict[str, np.ndarray]" = {}
         self._graph_kwargs = {}  # full setData kwargs; setData replaces, not merges
         self._annotations = {}  # bus -> (vmag, vdeg)
         self._bus_labels = []
-        self._device_items = []  # (bus_index, angle, scatter, label, connector)
+        self._device_items = []  # (bus_index, angle, scatter, label, connector, entry)
+        self._validator = None  # callable(desc) -> list[Issue], set by the main window
+        self._pending_device_kind: "str | None" = None
+        self._pending_line_bus: "str | None" = None
 
         self._view = pg.PlotWidget()
         self._view.setAspectLocked(True)
         self._view.hideAxis("bottom")
         self._view.hideAxis("left")
         self._view.setMenuEnabled(False)
+        self._view.scene().sigMouseClicked.connect(self._on_scene_click)
 
-        self._graph = _OneLineGraph(self._node_moved, self._show_bus_info)
+        self._graph = _OneLineGraph(self._node_moved, self._bus_double_clicked)
         self._view.addItem(self._graph)
+
+        self._edit_toggle = QPushButton("Edit")
+        self._edit_toggle.setCheckable(True)
+        self._edit_toggle.toggled.connect(self._on_edit_toggled)
 
         relayout = QPushButton("Re-layout")
         relayout.clicked.connect(self._relayout)
@@ -156,34 +197,331 @@ class TopologyTab(QWidget):
             f'<span style="color:{theme.ETH_GREY}">▼</span> load   '
             "★ infinite bus   "
             f'<span style="color:{theme.ETH_BRONZE}">—</span> transformer   '
-            f'<span style="color:{theme.ETH_GREY}">(double-click a component '
-            "for details, drag buses to arrange)</span>"
+            f'<span style="color:{theme.ETH_GREY}">(double-click for details, '
+            "drag buses to arrange)</span>"
         )
 
         bar = QHBoxLayout()
         bar.addWidget(caption)
         bar.addStretch(1)
         bar.addWidget(relayout)
+        bar.addWidget(self._edit_toggle)
+
+        self._edit_bar = self._build_edit_bar()
+        self._edit_bar.setVisible(False)
+
+        self._status = QLabel("")
+        self._status.setWordWrap(True)
+        self._status.setVisible(False)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(4, 4, 4, 4)
         layout.addLayout(bar)
+        layout.addWidget(self._edit_bar)
         layout.addWidget(self._view)
+        layout.addWidget(self._status)
+
+    def _build_edit_bar(self) -> QWidget:
+        bar = QWidget()
+        row = QHBoxLayout(bar)
+        row.setContentsMargins(0, 0, 0, 0)
+
+        self._tools = QButtonGroup(self)
+        self._tools.setExclusive(True)
+        self._tool_buttons: "dict[str, QToolButton]" = {}
+        for tool, label, tip in [
+            ("move", "Move", "Drag buses, double-click to edit an element"),
+            ("bus", "+ Bus", "Click on the canvas to place a bus"),
+            ("line", "+ Line", "Click two buses to connect them"),
+            ("delete", "Delete", "Click a bus, device or line to remove it"),
+        ]:
+            button = QToolButton()
+            button.setText(label)
+            button.setToolTip(tip)
+            button.setCheckable(True)
+            self._tools.addButton(button)
+            self._tool_buttons[tool] = button
+            row.addWidget(button)
+        self._tool_buttons["move"].setChecked(True)
+
+        device_button = QToolButton()
+        device_button.setText("+ Device ▾")
+        device_button.setToolTip("Pick a model, then click the bus to attach it to")
+        device_button.setCheckable(True)
+        device_button.setPopupMode(QToolButton.InstantPopup)
+        menu = QMenu(device_button)
+        for kind in param_meta.buildable_device_kinds():
+            menu.addAction(kind, lambda kind=kind: self._pick_device_kind(kind))
+        device_button.setMenu(menu)
+        self._tools.addButton(device_button)
+        self._tool_buttons["device"] = device_button
+        row.addWidget(device_button)
+
+        row.addSpacing(12)
+        disturbances = QPushButton("Disturbances…")
+        disturbances.clicked.connect(self._edit_disturbances)
+        row.addWidget(disturbances)
+
+        undo = QPushButton("Undo")
+        undo.clicked.connect(self._undo)
+        redo = QPushButton("Redo")
+        redo.clicked.connect(self._redo)
+        row.addWidget(undo)
+        row.addWidget(redo)
+        row.addStretch(1)
+        return bar
 
     # ---- public --------------------------------------------------------------
 
+    @property
+    def document(self) -> "SystemDocument | None":
+        """The edited document, while edit mode is active (else None)."""
+        return self._doc
+
+    @property
+    def editing(self) -> bool:
+        return self._doc is not None
+
+    def set_validator(self, validator) -> None:
+        """Callable(desc) -> list of validation Issues, for the live status."""
+        self._validator = validator
+
     def set_system(self, desc) -> None:
-        """Show a parsed system (may be None to clear)."""
+        """Show a parsed system read-only (leaves edit mode; may be None)."""
+        if self.editing:
+            self._leave_edit()
         self._desc = desc
         self._annotations = {}
-        if desc is None or not desc.buses():
-            self._clear_items()
-            self._graph_kwargs = {}
-            self._graph.setData(pos=np.zeros((0, 2)), adj=np.zeros((0, 2), dtype=int))
+        self._pos_by_name = {}
+        self._render()
+        if desc is not None and desc.buses():
+            self._view.autoRange(padding=0.15)
+
+    def begin_edit(self, document: "SystemDocument | None" = None) -> None:
+        """Enter edit mode, on a copy of the shown system or a given document
+        (e.g. a blank one for File > New system)."""
+        if document is None:
+            document = (
+                SystemDocument(copy.deepcopy(self._desc))
+                if self._desc is not None
+                else SystemDocument.blank()
+            )
+        self._doc = document
+        self._desc = document.desc
+        self._annotations = {}
+        self._edit_toggle.blockSignals(True)
+        self._edit_toggle.setChecked(True)
+        self._edit_toggle.blockSignals(False)
+        self._edit_bar.setVisible(True)
+        self._status.setVisible(True)
+        self._render()
+        self._update_status()
+        self.editModeChanged.emit(True)
+
+    # ---- edit-mode plumbing --------------------------------------------------
+
+    def _on_edit_toggled(self, checked: bool) -> None:
+        if checked and not self.editing:
+            self.begin_edit()
+        elif not checked and self.editing:
+            self._leave_edit()
+            self.editModeChanged.emit(False)
+
+    def _leave_edit(self) -> None:
+        # The document (saved or not) keeps being shown read-only; the main
+        # window owns the save/discard decision.
+        self._doc = None
+        self._pending_line_bus = None
+        self._edit_toggle.blockSignals(True)
+        self._edit_toggle.setChecked(False)
+        self._edit_toggle.blockSignals(False)
+        self._edit_bar.setVisible(False)
+        self._status.setVisible(False)
+
+    def _active_tool(self) -> str:
+        for tool, button in self._tool_buttons.items():
+            if button.isChecked():
+                return tool
+        return "move"
+
+    def _pick_device_kind(self, kind: str) -> None:
+        self._pending_device_kind = kind
+        button = self._tool_buttons["device"]
+        button.setText(f"+ {kind} ▾")
+        button.setChecked(True)
+
+    def _changed(self, new_bus_positions: "dict[str, tuple] | None" = None) -> None:
+        """Re-render after a document mutation and announce it."""
+        for name, position in (new_bus_positions or {}).items():
+            self._pos_by_name[name] = np.asarray(position, dtype=float)
+        self._desc = self._doc.desc
+        self._render()
+        self._update_status()
+        self.documentChanged.emit()
+
+    def _undo(self) -> None:
+        if self.editing and self._doc.can_undo():
+            self._doc.undo()
+            self._changed()
+
+    def _redo(self) -> None:
+        if self.editing and self._doc.can_redo():
+            self._doc.redo()
+            self._changed()
+
+    def _edit_disturbances(self) -> None:
+        if self.editing:
+            DisturbanceManagerDialog(self._doc, parent=self).exec()
+            self._changed()
+
+    def _update_status(self) -> None:
+        if not self.editing:
             return
-        self._layout_positions()
-        self._rebuild()
-        self._view.autoRange(padding=0.15)
+        desc = self._desc
+        counts = (
+            f"{len(desc.buses())} buses, {len(desc.lines)} lines, "
+            f"{len(desc.devices)} devices, {len(desc.disturbances)} disturbances."
+        )
+        issues = self._validator(desc) if self._validator is not None else []
+        shown = []
+        for issue in issues[:3]:
+            color = theme.ETH_RED if issue.severity == "error" else theme.ETH_BRONZE
+            shown.append(f'<span style="color:{color}">{issue.message}</span>')
+        if len(issues) > 3:
+            shown.append(f"… and {len(issues) - 3} more")
+        self._status.setText("<br>".join([counts] + shown))
+
+    # ---- canvas interaction --------------------------------------------------
+
+    def _hit_threshold(self) -> float:
+        (x0, x1), _ = self._view.getPlotItem().vb.viewRange()
+        return max((x1 - x0) * _HIT_FRACTION, 1e-6)
+
+    def _nearest_bus(self, point) -> "str | None":
+        buses = self._desc.buses() if self._desc is not None else []
+        if not buses:
+            return None
+        distances = np.linalg.norm(self._pos - point, axis=1)
+        i = int(np.argmin(distances))
+        return buses[i] if distances[i] <= self._hit_threshold() else None
+
+    def _nearest_device(self, point):
+        best, best_distance = None, self._hit_threshold()
+        for i, angle, _s, _l, _c, entry in self._device_items:
+            glyph = self._pos[i] + _GLYPH_OFFSET * np.array(
+                [np.cos(angle), np.sin(angle)]
+            )
+            distance = float(np.linalg.norm(glyph - point))
+            if distance <= best_distance:
+                best, best_distance = entry, distance
+        return best
+
+    def _nearest_line(self, point):
+        index = {bus: i for i, bus in enumerate(self._desc.buses())}
+        best, best_distance = None, self._hit_threshold()
+        for entry in self._desc.lines:
+            i, j = index.get(entry.get("bus_i")), index.get(entry.get("bus_j"))
+            if i is None or j is None:
+                continue
+            distance = _segment_distance(point, self._pos[i], self._pos[j])
+            if distance <= best_distance:
+                best, best_distance = entry, distance
+        return best
+
+    def _on_scene_click(self, ev) -> None:
+        if not self.editing or ev.button() != Qt.LeftButton:
+            return
+        tool = self._active_tool()
+        if tool == "move":
+            return
+        vb = self._view.getPlotItem().vb
+        p = vb.mapSceneToView(ev.scenePos())
+        point = np.array([p.x(), p.y()])
+
+        if tool == "bus":
+            if self._nearest_bus(point) is None:
+                name = self._doc.add_bus()
+                self._changed({name: point})
+        elif tool == "line":
+            self._line_tool_click(point)
+        elif tool == "device":
+            bus = self._nearest_bus(point)
+            if bus is not None and self._pending_device_kind:
+                self._add_device_at(self._pending_device_kind, bus)
+        elif tool == "delete":
+            self._delete_at(point)
+
+    def _line_tool_click(self, point) -> None:
+        bus = self._nearest_bus(point)
+        if bus is None or bus == self._pending_line_bus:
+            self._pending_line_bus = None
+            self._status.setText("Line: cancelled.")
+            return
+        if self._pending_line_bus is None:
+            self._pending_line_bus = bus
+            self._status.setText(
+                f"Line: from bus {bus} — click the second bus."
+            )
+            return
+        self._doc.add_line(self._pending_line_bus, bus)
+        self._pending_line_bus = None
+        self._changed()
+
+    def _add_device_at(self, kind: str, bus: str) -> None:
+        dialog = DeviceFormDialog(kind, bus, parent=self)
+        if dialog.exec():
+            self._doc.add_device(kind, bus, dialog.values())
+            self._changed()
+
+    def _delete_at(self, point) -> None:
+        device = self._nearest_device(point)
+        if device is not None:
+            self._doc.remove_entry(device)
+            self._changed()
+            return
+        bus = self._nearest_bus(point)
+        if bus is not None:
+            self._doc.remove_bus(bus)
+            self._changed()
+            return
+        line = self._nearest_line(point)
+        if line is not None:
+            self._doc.remove_entry(line)
+            self._changed()
+
+    # ---- edit dialogs --------------------------------------------------------
+
+    def _bus_double_clicked(self, node_index: int) -> None:
+        if not self.editing:
+            self._show_bus_info(node_index)
+            return
+        bus = self._desc.buses()[node_index]
+        init = next(
+            (e for e in self._desc.bus_inits if e.get("bus") == bus), None
+        )
+        params = {k: v for k, v in (init.params if init else {}).items() if k != "bus"}
+        dialog = SimpleFormDialog(
+            f"Bus {bus} initialization",
+            param_meta.businit_meta(),
+            params=params,
+            combos={"type": ["slack", "PV", "PQ"]},
+            parent=self,
+        )
+        if dialog.exec():
+            self._doc.set_businit(bus, dialog.values())
+            self._changed()
+
+    def _device_double_clicked(self, entry) -> None:
+        if not self.editing:
+            self._show_device_info(entry)
+            return
+        bus = entry.get("bus")
+        dialog = DeviceFormDialog(entry.kind, bus, params=entry.params, parent=self)
+        if dialog.exec():
+            self._doc.update_entry(entry, {"bus": bus, **dialog.values()})
+            self._changed()
+
+    # ---- rendering -----------------------------------------------------------
 
     def set_results(self, results) -> None:
         """Annotate the buses with a finished run's initial power flow."""
@@ -201,25 +539,52 @@ class TopologyTab(QWidget):
                     float(row["V Magnitude (pu)"]),
                     float(row["V Phase (deg)"]),
                 )
-        if self._desc is not None:
+        if self._desc is not None and self._bus_labels:
             self._update_labels()
 
-    # ---- construction --------------------------------------------------------
+    def _render(self) -> None:
+        if self._desc is None or not self._desc.buses():
+            self._clear_items()
+            self._graph_kwargs = {}
+            self._graph.setData(pos=np.zeros((0, 2)), adj=np.zeros((0, 2), dtype=int))
+            return
+        self._ensure_positions()
+        self._rebuild()
 
-    def _layout_positions(self) -> None:
+    def _ensure_positions(self) -> None:
+        """Positions for every bus: keep known ones, lay out the new ones."""
         buses = self._desc.buses()
-        index = {bus: i for i, bus in enumerate(buses)}
-        edges = [
-            (index[e.get("bus_i")], index[e.get("bus_j")])
-            for e in self._desc.lines
-            if e.get("bus_i") in index and e.get("bus_j") in index
-        ]
-        self._pos = spring_layout(len(buses), edges)
+        unknown = [b for b in buses if b not in self._pos_by_name]
+        if unknown:
+            if len(unknown) == len(buses):
+                index = {bus: i for i, bus in enumerate(buses)}
+                edges = [
+                    (index[e.get("bus_i")], index[e.get("bus_j")])
+                    for e in self._desc.lines
+                    if e.get("bus_i") in index and e.get("bus_j") in index
+                ]
+                layout = spring_layout(len(buses), edges)
+                for bus, position in zip(buses, layout):
+                    self._pos_by_name[bus] = position
+            else:
+                # New buses normally arrive with a click position; this is the
+                # fallback (e.g. after undo of a deletion): fan out near the
+                # centroid of the existing ones.
+                known = np.array(
+                    [self._pos_by_name[b] for b in buses if b in self._pos_by_name]
+                )
+                base = known.mean(axis=0)
+                for k, bus in enumerate(unknown):
+                    self._pos_by_name[bus] = base + np.array(
+                        [0.18 * (k + 1), 0.12 * (k + 1)]
+                    )
+        self._pos_by_name = {b: self._pos_by_name[b] for b in buses}
+        self._pos = np.array([self._pos_by_name[b] for b in buses])
 
     def _clear_items(self) -> None:
         for label in self._bus_labels:
             self._view.removeItem(label)
-        for _bus, _angle, scatter, label, connector in self._device_items:
+        for _bus, _angle, scatter, label, connector, _entry in self._device_items:
             self._view.removeItem(scatter)
             self._view.removeItem(label)
             self._view.removeItem(connector)
@@ -284,7 +649,7 @@ class TopologyTab(QWidget):
                 symbol, color, _caption = _glyph_for(entry.kind)
                 connector = pg.PlotDataItem(pen=pg.mkPen("#B0B3B8", width=1))
                 scatter = _ClickableScatter(
-                    lambda entry=entry: self._show_device_info(entry),
+                    lambda entry=entry: self._device_double_clicked(entry),
                     symbol=symbol,
                     size=13,
                     pen=pg.mkPen(color),
@@ -294,7 +659,7 @@ class TopologyTab(QWidget):
                 label = pg.TextItem(name, anchor=(0.5, -0.35), color=color)
                 for item in (connector, scatter, label):
                     self._view.addItem(item)
-                self._device_items.append((i, angle, scatter, label, connector))
+                self._device_items.append((i, angle, scatter, label, connector, entry))
 
         self._update_positions()
         self._update_labels()
@@ -303,12 +668,14 @@ class TopologyTab(QWidget):
 
     def _node_moved(self, node_index: int, position) -> None:
         self._pos[node_index] = position
+        self._pos_by_name[self._desc.buses()[node_index]] = np.asarray(position)
         self._update_positions()
 
     def _relayout(self) -> None:
-        if self._desc is None:
+        if self._desc is None or not self._desc.buses():
             return
-        self._layout_positions()
+        self._pos_by_name = {}
+        self._ensure_positions()
         self._update_positions()
         self._view.autoRange(padding=0.15)
 
@@ -316,7 +683,7 @@ class TopologyTab(QWidget):
         self._graph.setData(pos=self._pos.copy(), **self._graph_kwargs)
         for i, label in enumerate(self._bus_labels):
             label.setPos(*self._pos[i])
-        for i, angle, scatter, label, connector in self._device_items:
+        for i, angle, scatter, label, connector, _entry in self._device_items:
             glyph = self._pos[i] + _GLYPH_OFFSET * np.array(
                 [np.cos(angle), np.sin(angle)]
             )
@@ -326,7 +693,7 @@ class TopologyTab(QWidget):
                 [self._pos[i][0], glyph[0]], [self._pos[i][1], glyph[1]]
             )
 
-    # ---- detail pop-ups ------------------------------------------------------
+    # ---- detail pop-ups (view mode) ------------------------------------------
 
     def _show_device_info(self, entry) -> None:
         import html as _html

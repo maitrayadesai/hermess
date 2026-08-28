@@ -40,6 +40,7 @@ from PySide6.QtWidgets import (
 
 import hermess
 from hermess.gui import export, sysparse, validation
+from hermess.gui.sysdoc import SystemDocument
 from hermess.gui.logpanel import LogPanel
 from hermess.gui.options_dialog import OptionsDialog
 from hermess.gui.powerflow_tab import PowerFlowTab
@@ -62,6 +63,8 @@ class MainWindow(QMainWindow):
 
         self._overrides: dict = {}
         self._runs: list = []  # (label, SimulationResults)
+        self._last_selection = None  # (name, root) for reverting a selection
+        self._reverting = False
         self._runner = SimulationRunner(self)
 
         # Central viewer tabs
@@ -106,6 +109,16 @@ class MainWindow(QMainWindow):
         open_action = QAction("Open system folder…", self)
         open_action.setShortcut(QKeySequence.Open)
         open_action.triggered.connect(self._systems.open_folder)
+        new_action = QAction("New system", self)
+        new_action.setShortcut(QKeySequence.New)
+        new_action.triggered.connect(self._new_system)
+        self._save_action = QAction("Save system", self)
+        self._save_action.setShortcut(QKeySequence.Save)
+        self._save_action.setEnabled(False)
+        self._save_action.triggered.connect(self._save_system)
+        self._save_as_action = QAction("Save system as…", self)
+        self._save_as_action.setEnabled(False)
+        self._save_as_action.triggered.connect(lambda: self._save_system(save_as=True))
         quit_action = QAction("Quit", self)
         quit_action.setShortcut(QKeySequence.Quit)
         quit_action.triggered.connect(self.close)
@@ -117,7 +130,11 @@ class MainWindow(QMainWindow):
         about_action.triggered.connect(self._about)
 
         file_menu = self.menuBar().addMenu("File")
+        file_menu.addAction(new_action)
         file_menu.addAction(open_action)
+        file_menu.addAction(self._save_action)
+        file_menu.addAction(self._save_as_action)
+        file_menu.addSeparator()
         file_menu.addAction(export_action)
         file_menu.addAction(figure_action)
         file_menu.addSeparator()
@@ -153,6 +170,11 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage("Select a system and press Run (F5).")
 
         # Wiring
+        self._topology.set_validator(
+            lambda desc: validation.validate(desc, self._overrides)
+        )
+        self._topology.documentChanged.connect(self._on_document_changed)
+        self._topology.editModeChanged.connect(self._on_edit_mode_changed)
         self._systems.systemSelected.connect(self._on_system_selected)
         self._runner.stateChanged.connect(self._on_state_changed)
         self._runner.progressed.connect(self._on_progress)
@@ -167,13 +189,15 @@ class MainWindow(QMainWindow):
     # ---- run control ---------------------------------------------------------
 
     def _start_run(self) -> None:
+        if self._runner.running:
+            return
+        if self._topology.editing and not self._resolve_edited_system():
+            return
         selected = self._systems.current_system
         if selected is None:
             QMessageBox.information(
                 self, "No system selected", "Select a system in the Systems panel first."
             )
-            return
-        if self._runner.running:
             return
         name, root = selected
         if not self._preflight():
@@ -279,13 +303,135 @@ class MainWindow(QMainWindow):
             else "Run stopped at the unstable operating point."
         )
 
-    def _on_system_selected(self, name: str, _root) -> None:
+    def _on_system_selected(self, name: str, root) -> None:
+        if self._reverting:
+            return
+        if self._topology.editing and self._topology.document.dirty:
+            if not self._confirm_discard():
+                self._reverting = True
+                if self._last_selection is not None:
+                    self._systems.select_system(*self._last_selection)
+                self._reverting = False
+                return
+        self._last_selection = (name, root)
         folder = self._systems.system_folder()
         self._topology.set_system(
             sysparse.parse_system(folder) if folder is not None else None
         )
         self._topology.set_results(self._current_results())
         self.statusBar().showMessage(f"System: {name}. Press Run (F5).")
+
+    # ---- system building -----------------------------------------------------
+
+    def _new_system(self) -> None:
+        if self._topology.editing and self._topology.document.dirty:
+            if not self._confirm_discard():
+                return
+        self.centralWidget().setCurrentWidget(self._topology)
+        self._topology.begin_edit(SystemDocument.blank())
+        self.statusBar().showMessage(
+            "Building a new system: place buses, connect lines, attach devices; "
+            "Save writes an ordinary system folder."
+        )
+
+    def _on_edit_mode_changed(self, active: bool) -> None:
+        self._save_action.setEnabled(active)
+        self._save_as_action.setEnabled(active)
+        if active:
+            self.statusBar().showMessage(
+                "Edit mode: use the palette above the diagram; double-click "
+                "elements to edit their parameters."
+            )
+
+    def _on_document_changed(self) -> None:
+        self._save_action.setEnabled(True)
+
+    def _inside_shipped(self, folder: Path) -> bool:
+        try:
+            return Path(folder).resolve().is_relative_to(
+                hermess.SYSTEMS_DIR.resolve()
+            )
+        except (OSError, ValueError):
+            return False
+
+    def _save_system(self, save_as: bool = False) -> bool:
+        """Save the edited system; returns True when it was written."""
+        if not self._topology.editing:
+            return False
+        doc = self._topology.document
+        folder = doc.desc.folder
+        needs_dialog = (
+            save_as
+            or folder is None
+            or not Path(folder).is_absolute()
+            or self._inside_shipped(folder)
+        )
+        if needs_dialog:
+            path, _filter = QFileDialog.getSaveFileName(
+                self,
+                "Save system as (a folder of this name is created)",
+                str(Path.home() / doc.desc.name),
+            )
+            if not path:
+                return False
+            folder = Path(path)
+            if self._inside_shipped(folder):
+                QMessageBox.warning(
+                    self,
+                    "Read-only location",
+                    "The systems shipped with the package cannot be "
+                    "overwritten; choose a folder of your own.",
+                )
+                return False
+        doc.save(folder)
+        self._log.append_notice(f"Saved system to {folder}.")
+        # Registering the folder selects it, which shows the saved system
+        # read-only; Edit re-opens it.
+        self._systems.add_folder(folder, select=True)
+        return True
+
+    def _resolve_edited_system(self) -> bool:
+        """Before running while editing: make sure the document is saved and
+        selected; returns False when the run must not start."""
+        doc = self._topology.document
+        folder = doc.desc.folder
+        saved = (
+            not doc.dirty
+            and folder is not None
+            and (Path(folder) / "sim_param.txt").exists()
+        )
+        if saved:
+            self._systems.add_folder(folder, select=True)
+            return True
+        box = QMessageBox(
+            QMessageBox.Question,
+            "Save before running",
+            "The edited system must be saved before it can run.",
+            parent=self,
+        )
+        save_button = box.addButton("Save…", QMessageBox.AcceptRole)
+        box.addButton("Cancel", QMessageBox.RejectRole)
+        box.exec()
+        if box.clickedButton() is not save_button:
+            return False
+        return self._save_system()
+
+    def _confirm_discard(self) -> bool:
+        """Unsaved edits stand in the way; returns True when it is safe to
+        proceed (saved or deliberately discarded)."""
+        box = QMessageBox(
+            QMessageBox.Warning,
+            "Unsaved system",
+            "The edited system has unsaved changes.",
+            parent=self,
+        )
+        save_button = box.addButton("Save…", QMessageBox.AcceptRole)
+        discard_button = box.addButton("Discard", QMessageBox.DestructiveRole)
+        box.addButton("Cancel", QMessageBox.RejectRole)
+        box.exec()
+        if box.clickedButton() is save_button:
+            return self._save_system()
+        return box.clickedButton() is discard_button
 
     def _on_state_changed(self, running: bool) -> None:
         self._run_action.setEnabled(not running)
@@ -447,6 +593,10 @@ class MainWindow(QMainWindow):
             self._overrides = {}
 
     def closeEvent(self, event) -> None:
+        if self._topology.editing and self._topology.document.dirty:
+            if not self._confirm_discard():
+                event.ignore()
+                return
         settings = QSettings()
         settings.setValue("window/geometry", self.saveGeometry())
         settings.setValue("window/state", self.saveState())

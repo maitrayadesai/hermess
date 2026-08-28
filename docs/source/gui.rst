@@ -106,6 +106,35 @@ diagrams as in :ref:`models`) and the parameters from the system file; for a
 bus, its initialization, the connected branches and devices, and the
 initialized voltage of the shown run.
 
+Building systems
+^^^^^^^^^^^^^^^^
+
+The *Edit* toggle above the diagram turns the topology view into a builder.
+A palette provides the tools: *+ Bus* places a bus where you click (the
+first one becomes the slack), *+ Line* connects two clicked buses,
+*+ Device* offers every available model, shipped or registered through
+:func:`hermess.register`, and attaches the chosen one to a clicked bus,
+*Delete* removes what you click, and *Disturbances…* edits the event
+sequence. Double-clicking an element in edit mode opens its parameter form
+instead of the detail pop-up. *File > New system* starts from a blank
+canvas; entering edit mode on a selected system edits a copy of it.
+
+The parameter forms are generated from the model classes themselves: every
+parameter appears with its default greyed in and its meaning as a tooltip,
+and the control strategies (AVR, governor, PSS, shaft; filter, angle,
+voltage, inner control, PLL) are chosen from dropdowns that regenerate the
+form. Fields left empty use the model defaults and are not written to the
+file, so generated files stay as terse as hand-written ones.
+
+While editing, the status line below the canvas shows the live validation of
+the pre-flight checks (connectivity, slack bus, solver compatibility, shunt
+susceptance under dynamic lines), and every change is undoable. Saving
+writes an ordinary system folder (``sim_param.txt`` + ``sim_dist.txt``) to a
+location of your choice, never into the installed package; the saved system
+appears in the browser and runs, exports and versions like any other.
+Re-saving a hand-written system rewrites its files without preserving
+comments, so editing an imported system defaults to *Save as*.
+
 .. image:: _static/gui_topology_ieee39.png
    :width: 100%
    :alt: One-line diagram of the IEEE 39-bus system with converters.

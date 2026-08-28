@@ -274,6 +274,92 @@ def test_preflight_blocks_on_errors(app, monkeypatch):
     window.close()
 
 
+def test_device_form_dialog(app):
+    from hermess.gui.param_form import DeviceFormDialog
+
+    dialog = DeviceFormDialog("GENROU", bus="1")
+    # A pristine form is all model defaults: nothing explicit is emitted
+    # (the document generates the idx when the device is added).
+    assert dialog.values() == {}
+    dialog._grid._edits["H"].setText("6.5")
+    combo = dialog._strategy_combos["pss"]
+    combo.setCurrentIndex(combo.findData("PSSKundur"))
+    values = dialog.values()
+    assert values["H"] == "6.5"  # explicit value survives the strategy change
+    assert values["pss"] == "PSSKundur"
+    assert "Sn" not in values  # untouched fields stay on model defaults
+
+
+def test_simple_form_dialog_businit(app):
+    from hermess.gui import param_meta
+    from hermess.gui.param_form import SimpleFormDialog
+
+    dialog = SimpleFormDialog(
+        "Bus 1",
+        param_meta.businit_meta(),
+        params={"type": "PV", "p": "-50"},
+        combos={"type": ["slack", "PV", "PQ"]},
+    )
+    values = dialog.values()
+    assert values["type"] == "PV"
+    assert values["p"] == "-50"
+
+
+def test_disturbance_form_dialog(app):
+    from hermess.gui.disturbance_editor import DisturbanceFormDialog, summarize
+    from hermess.gui.sysparse import Entry
+
+    dialog = DisturbanceFormDialog(
+        ["1", "2"], params={"type": "LOAD", "time": "1.0", "bus": "2"}
+    )
+    assert set(dialog._fields) == {"time", "bus", "p_delta", "q_delta"}
+    dialog._type.setCurrentText("OPEN_LINE")
+    assert set(dialog._fields) == {"time", "bus_i", "bus_j"}
+    assert "t = 1.0" in summarize(Entry("Disturbance", {"time": "1.0", "type": "LOAD"}))
+
+
+def test_topology_edit_mode(app):
+    import numpy as np
+
+    from hermess.gui.sysdoc import SystemDocument
+    from hermess.gui.topology_tab import TopologyTab
+
+    tab = TopologyTab()
+    tab.begin_edit(SystemDocument.blank())
+    assert tab.editing
+    doc = tab.document
+
+    name = doc.add_bus()
+    tab._changed({name: (0.2, 0.3)})
+    assert len(tab._bus_labels) == 1
+    assert np.allclose(tab._pos_by_name["1"], [0.2, 0.3])
+
+    second = doc.add_bus()
+    tab._changed({second: (0.8, 0.3)})
+    doc.add_line("1", "2")
+    doc.add_device("StaticZIP", "2")
+    tab._changed()
+    assert len(tab._device_items) == 1
+    # The click position survives re-renders.
+    assert np.allclose(tab._pos_by_name["1"], [0.2, 0.3])
+
+    # Hit testing: the delete tool finds and removes the device, then the bus.
+    tab._view.getPlotItem().vb.setRange(xRange=(0, 1), yRange=(0, 1))
+    glyph_entry = tab._nearest_device(
+        tab._pos[1] + 0.11 * np.array([1.0, 0.0])
+    ) or tab._device_items[0][5]
+    tab._doc.remove_entry(glyph_entry)
+    tab._changed()
+    assert tab._desc.devices == []
+    tab._delete_at(np.array([0.2, 0.3]))
+    assert tab._desc.buses() == ["2"]
+
+    # Leaving edit mode keeps the (unsaved) system on display.
+    tab._edit_toggle.setChecked(False)
+    assert not tab.editing
+    assert tab._desc.buses() == ["2"]
+
+
 def test_settings_roundtrip(app, tmp_path):
     import hermess
     from hermess.gui.main_window import MainWindow
