@@ -259,7 +259,11 @@ class Grid:
         b = self.line.b.copy()
         trafo = self.line.trafo.copy()
 
-        z_inv = 1 / (r**2 + x**2)
+        # An opened branch carries a huge finite impedance: its square
+        # overflows to inf and the inverse underflows to the intended zero
+        # admittance, so the overflow is expected.
+        with np.errstate(over="ignore"):
+            z_inv = 1 / (r**2 + x**2)
         gs = r * z_inv * 0
         bs = -x * z_inv * 0
 
@@ -338,7 +342,11 @@ class Grid:
                 )
 
         # Calculate Y matrix values
-        z_inv = 1 / (r**2 + x**2)
+        # An opened branch carries a huge finite impedance: its square
+        # overflows to inf and the inverse underflows to the intended zero
+        # admittance, so the overflow is expected.
+        with np.errstate(over="ignore"):
+            z_inv = 1 / (r**2 + x**2)
 
         y_off_diag_real = -r * z_inv / trafo
         y_off_diag_imag = -x * z_inv / trafo
@@ -553,7 +561,11 @@ class Grid:
         tau_abs = self.tau**2
         # tau_inv_r = self.tau_r / tau_abs
         # tau_inv_i = -self.tau_i / tau_abs
-        z_inv = 1 / (r**2 + x**2)
+        # An opened branch carries a huge finite impedance: its square
+        # overflows to inf and the inverse underflows to the intended zero
+        # admittance, so the overflow is expected.
+        with np.errstate(over="ignore"):
+            z_inv = 1 / (r**2 + x**2)
 
         # Off-diagonal admittance: y_ij = -y_series / T
         # y_off_diag_real = -((r * z_inv) * tau_inv_r - (-x * z_inv) * tau_inv_i)
