@@ -4,6 +4,16 @@ Notable changes to HERMESS. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/) as spelled out in `RELEASING.md`.
 
+## [1.2.2] - 2026-08-29
+
+### Fixed
+- Running with `line_dyn=True` on a system file without line charging now
+  fails at setup with the names of the buses that lack shunt susceptance
+  and the remedy, instead of an opaque integrator error at the first step.
+  With dynamic lines the charging `b` acts as the bus capacitance, so every
+  bus needs a connected branch with `b > 0`; the system-file guide states
+  the requirement.
+
 ## [1.2.1] - 2026-08-29
 
 ### Added
