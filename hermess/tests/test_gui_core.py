@@ -77,8 +77,8 @@ def test_validate_clean_shipped_system():
 
 def test_validate_flags_disconnected_network(tmp_path):
     (tmp_path / "sim_param.txt").write_text(
-        'Line, bus_i = "1", bus_j = "2", r = 0.01, x = 0.1\n'
-        'Line, bus_i = "3", bus_j = "4", r = 0.01, x = 0.1\n'
+        'Line, bus_i = "1", bus_j = "2", r = 0.01, x = 0.1, b = 0.02\n'
+        'Line, bus_i = "3", bus_j = "4", r = 0.01, x = 0.1, b = 0.02\n'
         'BusInit, bus = "1", p = 0, v = 1.0, type = "slack"\n'
     )
     desc = sysparse.parse_system(tmp_path)
