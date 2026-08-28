@@ -43,6 +43,82 @@
   font-size: 1.0625rem;
 }
 
+/* Front page, set like the title page of a technical report: centered title
+ * and subtitle, justified abstract, a quiet link row, a numbered-figure
+ * look, and capabilities as a two-column list rather than cards. */
+section.front-page > h1 {
+  text-align: center;
+  font-size: 3.4rem;
+  letter-spacing: 0.02em;
+  margin: 1.2rem 0 0.4rem;
+}
+section.front-page > h1::after {
+  content: "";
+  display: block;
+  width: 5.5rem;
+  border-bottom: 2px solid var(--accent-9);
+  margin: 1rem auto 0;
+}
+p.front-subtitle {
+  text-align: center;
+  font-size: 1.2rem;
+  margin: 0 0 2.2rem;
+}
+p.front-abstract {
+  max-width: 44rem;
+  margin: 0 auto 1.5rem;
+  text-align: justify;
+  hyphens: auto;
+}
+p.front-links {
+  text-align: center;
+  font-size: 1.05rem;
+  margin: 0 0 2.4rem;
+}
+figure.front-figure {
+  margin: 0 auto 1.5rem;
+}
+figure.front-figure figcaption {
+  max-width: 40rem;
+  margin: 0.4rem auto 0;
+  font-size: 0.92rem;
+}
+dl.front-capabilities {
+  display: grid;
+  grid-template-columns: minmax(9rem, 13rem) 1fr;
+  column-gap: 1.4rem;
+  row-gap: 0.55rem;
+}
+dl.front-capabilities dt {
+  font-weight: bold;
+  text-align: right;
+}
+dl.front-capabilities dd {
+  margin: 0;
+}
+dl.front-capabilities dd p {
+  margin: 0;
+}
+@media (max-width: 640px) {
+  dl.front-capabilities {
+    grid-template-columns: 1fr;
+    row-gap: 0.2rem;
+  }
+  dl.front-capabilities dt {
+    text-align: left;
+  }
+  dl.front-capabilities dd {
+    margin-bottom: 0.6rem;
+  }
+}
+p.front-cite {
+  font-size: 0.95rem;
+  opacity: 0.8;
+  border-top: 1px solid var(--accent-a3);
+  padding-top: 1.1rem;
+  margin-top: 2.6rem;
+}
+
 /* ETH Blue accent scale (seed #215CAF, hue 215). Shibuya resolves its accent
  * from the radix "blue" scale; these overrides replace that scale's role with
  * an ETH Blue ramp for both color modes. */

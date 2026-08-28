@@ -32,7 +32,6 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.viewcode",
     "sphinx.ext.mathjax",
-    "sphinx_design",
     "sphinx_copybutton",
     "sphinx_reredirects",
     "sphinxarg.ext",
