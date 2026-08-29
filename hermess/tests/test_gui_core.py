@@ -151,6 +151,17 @@ def test_spring_layout_deterministic_and_bounded():
     assert spring_layout(1, []).shape == (1, 2)
 
 
+def test_spring_layout_keeps_minimum_spacing():
+    # Labels are drawn at fixed pixel size, so dense graphs must keep a
+    # minimum pairwise distance relative to the mean spacing.
+    n = 40
+    edges = [(i, (i + 1) % n) for i in range(n)] + [(i, (i + 7) % n) for i in range(0, n, 3)]
+    pos = spring_layout(n, edges)
+    d = np.linalg.norm(pos[:, None] - pos[None, :], axis=-1)
+    np.fill_diagonal(d, np.inf)
+    assert d.min() >= 0.6 / np.sqrt(n)
+
+
 def test_spring_layout_separates_non_neighbors():
     # In a path 0-1-2-3, adjacent nodes must end up closer than the endpoints.
     pos = spring_layout(4, [(0, 1), (1, 2), (2, 3)])

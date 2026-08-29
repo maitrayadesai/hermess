@@ -169,6 +169,17 @@ def series_color(i: int) -> str:
     return SERIES[i % len(SERIES)]
 
 
+def style_plot(plot_widget) -> None:
+    """Soften a pyqtgraph plot to match the chrome: light axis lines, muted
+    tick labels. Purely cosmetic."""
+    import pyqtgraph as pg
+
+    for side in ("left", "bottom"):
+        axis = plot_widget.getPlotItem().getAxis(side)
+        axis.setPen(pg.mkPen(BORDER))
+        axis.setTextPen(pg.mkPen(MUTED))
+
+
 _ICONS: dict = {}
 
 

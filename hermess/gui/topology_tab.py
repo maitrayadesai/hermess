@@ -58,7 +58,9 @@ from hermess.gui.param_form import DeviceFormDialog, SimpleFormDialog
 from hermess.gui.sysdoc import SystemDocument
 
 _NODE_SIZE = 18
-_GLYPH_OFFSET = 0.11  # distance of a device glyph from its bus
+# Distance of a device glyph from its bus; shrunk adaptively on dense
+# layouts, where a fixed offset would exceed the bus spacing itself.
+_GLYPH_OFFSET = 0.11
 _HIT_FRACTION = 0.03  # click tolerance, as a fraction of the visible x-range
 
 # Cursor per edit tool, so the pointer shows what a click will do.
@@ -185,6 +187,7 @@ class TopologyTab(QWidget):
         self._save_handler = None  # callable() -> bool, set by the main window
         self._pending_device_kind: "str | None" = None
         self._pending_line_bus: "str | None" = None
+        self._glyph_offset = _GLYPH_OFFSET
 
         self._view = pg.PlotWidget()
         self._view.setAspectLocked(True)
@@ -200,7 +203,24 @@ class TopologyTab(QWidget):
         self._edit_toggle.setCheckable(True)
         self._edit_toggle.toggled.connect(self._on_edit_toggled)
 
+        fit = QPushButton("Fit")
+        fit.setToolTip("Fit the diagram to the view (Space), keeping your arrangement")
+        fit.clicked.connect(self._fit_view)
+        QShortcut(
+            QKeySequence(Qt.Key_Space),
+            self,
+            self._fit_view,
+            context=Qt.WidgetWithChildrenShortcut,
+        )
+
+        self._labels_toggle = QPushButton("Labels")
+        self._labels_toggle.setCheckable(True)
+        self._labels_toggle.setChecked(True)
+        self._labels_toggle.setToolTip("Show or hide the device labels (dense systems)")
+        self._labels_toggle.toggled.connect(self._set_device_labels_visible)
+
         relayout = QPushButton("Re-layout")
+        relayout.setToolTip("Recompute the automatic layout, discarding manual positions")
         relayout.clicked.connect(self._relayout)
 
         caption = QLabel(
@@ -216,6 +236,8 @@ class TopologyTab(QWidget):
         bar = QHBoxLayout()
         bar.addWidget(caption)
         bar.addStretch(1)
+        bar.addWidget(fit)
+        bar.addWidget(self._labels_toggle)
         bar.addWidget(relayout)
         bar.addWidget(self._edit_toggle)
 
@@ -526,7 +548,7 @@ class TopologyTab(QWidget):
     def _nearest_device(self, point):
         best, best_distance = None, self._hit_threshold()
         for i, angle, _s, _l, _c, entry in self._device_items:
-            glyph = self._pos[i] + _GLYPH_OFFSET * np.array(
+            glyph = self._pos[i] + self._glyph_offset * np.array(
                 [np.cos(angle), np.sin(angle)]
             )
             distance = float(np.linalg.norm(glyph - point))
@@ -762,6 +784,19 @@ class TopologyTab(QWidget):
         self._pos_by_name = {b: self._pos_by_name[b] for b in buses}
         self._pos = np.array([self._pos_by_name[b] for b in buses])
 
+        # Glyphs sit at a fixed data-space offset; on dense layouts shrink it
+        # below the typical bus spacing so devices stay next to their bus.
+        if len(buses) > 1:
+            delta = self._pos[:, None, :] - self._pos[None, :, :]
+            distances = np.linalg.norm(delta, axis=-1)
+            np.fill_diagonal(distances, np.inf)
+            spacing = float(np.median(distances.min(axis=1)))
+            self._glyph_offset = float(
+                np.clip(0.45 * spacing, 0.02, _GLYPH_OFFSET)
+            )
+        else:
+            self._glyph_offset = _GLYPH_OFFSET
+
     def _clear_items(self) -> None:
         for label in self._bus_labels:
             self._view.removeItem(label)
@@ -838,6 +873,7 @@ class TopologyTab(QWidget):
                 )
                 name = entry.get("idx") or entry.kind
                 label = pg.TextItem(name, anchor=(0.5, -0.35), color=color)
+                label.setVisible(self._labels_toggle.isChecked())
                 for item in (connector, scatter, label):
                     self._view.addItem(item)
                 self._device_items.append((i, angle, scatter, label, connector, entry))
@@ -852,6 +888,14 @@ class TopologyTab(QWidget):
         self._pos_by_name[self._desc.buses()[node_index]] = np.asarray(position)
         self._update_positions()
 
+    def _fit_view(self) -> None:
+        if self._desc is not None and self._desc.buses():
+            self._view.autoRange(padding=0.15)
+
+    def _set_device_labels_visible(self, visible: bool) -> None:
+        for _i, _angle, _scatter, label, _connector, _entry in self._device_items:
+            label.setVisible(visible)
+
     def _relayout(self) -> None:
         if self._desc is None or not self._desc.buses():
             return
@@ -865,7 +909,7 @@ class TopologyTab(QWidget):
         for i, label in enumerate(self._bus_labels):
             label.setPos(*self._pos[i])
         for i, angle, scatter, label, connector, _entry in self._device_items:
-            glyph = self._pos[i] + _GLYPH_OFFSET * np.array(
+            glyph = self._pos[i] + self._glyph_offset * np.array(
                 [np.cos(angle), np.sin(angle)]
             )
             scatter.setData([glyph[0]], [glyph[1]])

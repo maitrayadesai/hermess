@@ -61,6 +61,7 @@ class SmallSignalTab(QWidget):
         self._plot.setLabel("bottom", "Re(λ) [1/s]")
         self._plot.setLabel("left", "Im(λ) [rad/s]")
         self._plot.showGrid(x=True, y=True, alpha=0.2)
+        theme.style_plot(self._plot)
 
         self._scatter = pg.ScatterPlotItem(
             size=9,
@@ -83,6 +84,7 @@ class SmallSignalTab(QWidget):
         self._part_plot.showGrid(x=True, alpha=0.2)
         self._part_plot.getViewBox().invertY(True)  # largest participation on top
         self._part_plot.setMouseEnabled(x=False, y=False)
+        theme.style_plot(self._part_plot)
         self._part_bars = None
 
         self._placeholder = QLabel(

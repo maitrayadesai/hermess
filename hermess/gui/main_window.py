@@ -193,6 +193,18 @@ class MainWindow(QMainWindow):
         self._runner.cancelled.connect(self._on_cancelled)
 
         self._restore_settings()
+        self._update_title()
+
+    def _update_title(self) -> None:
+        """Window title = what is shown, with the unsaved marker while editing."""
+        if self._topology.editing:
+            doc = self._topology.document
+            name = doc.desc.name or "untitled"
+            self.setWindowTitle(f"HERMESS — {name}{'*' if doc.dirty else ''}")
+        elif self._systems.current_system is not None:
+            self.setWindowTitle(f"HERMESS — {self._systems.current_system[0]}")
+        else:
+            self.setWindowTitle("HERMESS")
 
     # ---- run control ---------------------------------------------------------
 
@@ -211,7 +223,9 @@ class MainWindow(QMainWindow):
         if not self._preflight():
             return
         self._log.append_notice(f"Running {name} …")
-        self._progress.setValue(0)
+        # Busy (indeterminate) until the first progress message arrives: the
+        # model build can take a while and reports nothing.
+        self._progress.setRange(0, 0)
         self._progress.setVisible(True)
         self.statusBar().showMessage(f"Building and initializing {name} …")
         self._runner.start(
@@ -331,6 +345,7 @@ class MainWindow(QMainWindow):
         self._save_action.setEnabled(self._topology.editing)
         self._save_as_action.setEnabled(self._topology.editing)
         self.statusBar().showMessage(f"System: {name}. Press Run (F5).")
+        self._update_title()
 
     # ---- system building -----------------------------------------------------
 
@@ -348,6 +363,7 @@ class MainWindow(QMainWindow):
     def _on_edit_mode_changed(self, active: bool) -> None:
         self._save_action.setEnabled(active)
         self._save_as_action.setEnabled(active)
+        self._update_title()
         if active:
             # The browser must not point at a stale system while a document
             # is being edited.
@@ -369,6 +385,7 @@ class MainWindow(QMainWindow):
 
     def _on_document_changed(self) -> None:
         self._save_action.setEnabled(True)
+        self._update_title()
 
     def _inside_shipped(self, folder: Path) -> bool:
         try:
@@ -495,8 +512,11 @@ class MainWindow(QMainWindow):
         self._stop_action.setEnabled(running)
         if not running:
             self._progress.setVisible(False)
+            self._progress.setRange(0, 1000)
 
     def _on_progress(self, fraction: float) -> None:
+        if self._progress.maximum() == 0:
+            self._progress.setRange(0, 1000)
         self._progress.setValue(round(fraction * 1000))
         self.statusBar().showMessage(f"Simulating … {fraction:.0%}")
 

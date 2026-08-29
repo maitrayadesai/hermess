@@ -69,4 +69,29 @@ def spring_layout(
     # Normalize into the unit box, preserving the aspect ratio.
     pos -= pos.min(axis=0)
     extent = max(pos.max(), 1e-6)
-    return pos / extent
+    pos /= extent
+
+    # Even out the packing: FR leaves dense clusters in large graphs, and the
+    # labels and device glyphs are drawn at fixed pixel size, so any pair
+    # closer than a fraction of the mean spacing is pushed apart until the
+    # whole layout keeps air. Runs in the final (normalized) units and skips
+    # the rescale afterwards, so the separation is not squeezed away again.
+    # Deterministic (no randomness involved).
+    d_min = 0.65 / np.sqrt(n)
+    with np.errstate(invalid="ignore"):
+        for _ in range(150):
+            delta = pos[:, None, :] - pos[None, :, :]
+            dist = np.linalg.norm(delta, axis=-1)
+            np.fill_diagonal(dist, np.inf)
+            close = dist < d_min
+            if not close.any():
+                break
+            safe = np.maximum(dist, 1e-9)
+            push = np.where(
+                close[:, :, None],
+                delta / safe[:, :, None] * (d_min - dist)[:, :, None] * 0.5,
+                0.0,
+            )
+            pos += push.sum(axis=1)
+
+    return pos - pos.min(axis=0)

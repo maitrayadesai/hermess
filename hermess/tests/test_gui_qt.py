@@ -116,7 +116,10 @@ def test_timedomain_tab(app, results):
     from hermess.gui.timedomain_tab import TimeDomainTab
 
     tab = TimeDomainTab()
+    assert tab._placeholder.isVisibleTo(tab)  # empty state before any run
     tab.set_results(results)
+    assert not tab._placeholder.isVisibleTo(tab)
+    assert tab._splitter.isVisibleTo(tab)
     # Check the first voltage signal programmatically and expect one curve.
     tree = tab._tree
     voltage_item = tree.topLevelItem(0).child(0)
@@ -126,6 +129,10 @@ def test_timedomain_tab(app, results):
     assert label == "|V| 1"
     assert trajectory.shape == results.t.shape
     assert len(tab._plot.getPlotItem().listDataItems()) == 1
+    # The checked signal carries a color chip; unchecked ones do not.
+    assert not voltage_item.icon(0).isNull()
+    voltage_item.setCheckState(0, Qt.Unchecked)
+    assert voltage_item.icon(0).isNull()
 
 
 def test_smallsignal_tab(app, results):
@@ -595,6 +602,24 @@ def test_save_as_refuses_to_clobber_another_system(app, tmp_path, monkeypatch):
     )
     assert window._save_system() is True
     assert 'bus = "1"' in (victim / "sim_param.txt").read_text()
+    window._runner.shutdown()
+    window.close()
+
+
+def test_window_title_tracks_state(app):
+    from hermess.gui.main_window import MainWindow
+    from hermess.gui.sysdoc import SystemDocument
+
+    window = MainWindow()
+    shipped = window._systems._tree.topLevelItem(0)
+    window._systems._tree.setCurrentItem(shipped.child(0))
+    selected = window._systems.current_system[0]
+    assert window.windowTitle() == f"HERMESS — {selected}"
+    window._topology.begin_edit(SystemDocument.blank("untitled"))
+    window._topology.document.add_bus()
+    window._topology._changed()
+    assert window.windowTitle() == "HERMESS — untitled*"
+    window._topology.document.dirty = False
     window._runner.shutdown()
     window.close()
 

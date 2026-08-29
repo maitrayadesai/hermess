@@ -102,6 +102,31 @@ def validate_overrides(overrides: dict) -> None:
     Config.model_validate({**default_config.model_dump(), **overrides})
 
 
+_TOOLTIPS = {
+    "T_end": "End time of the simulation [s].",
+    "ts": "Output time step [s]; the variable-step solvers step internally as needed.",
+    "fn": "Nominal system frequency.",
+    "Sb": "Base power of the grid [MW]; line parameters are given on this base.",
+    "int_scheme_sim": "idas/cvodes are the SUNDIALS variable-step solvers "
+    "(idas handles DAEs); collocation and rk are fixed-step, rk is ODE-only.",
+    "int_scheme_sim_options": "Extra CasADi integrator options, e.g. "
+    '{"abstol": 1e-8, "reltol": 1e-8, "jit": true}.',
+    "omega_mode": "Reference frequency: center of inertia, a single device, "
+    "nominal, or distributed.",
+    "omega_single_idx": "Reference device idx for single mode (empty: the slack bus).",
+    "line_dyn": "Model the lines with differential equations (EMT network) "
+    "instead of quasi-static phasors.",
+    "incl_lim": "Enforce state limiters during the integration; noticeably slower.",
+    "skip_disturance": "Ignore sim_dist.txt and simulate the undisturbed system.",
+    "small_signal_analysis": "Eigenvalue and participation analysis at the "
+    "operating point, shown in the Small signal tab (and gating unstable runs).",
+    "debug_check_init": "Verify the DAE initialization residuals in detail.",
+    "parametric": "Also build the equations with device parameters as symbols "
+    "(for sensitivity studies); the run itself is unchanged.",
+    "log_level": "Verbosity of the log panel.",
+}
+
+
 def _literal_choices(annotation):
     """The Literal[...] choices of an annotation, unwrapping Optional; or None."""
     for candidate in (annotation, *typing.get_args(annotation)):
@@ -137,14 +162,14 @@ class OptionsDialog(QDialog):
             form = QFormLayout(page)
             for name in names:
                 if name in fields:
-                    form.addRow(_LABELS.get(name, name), self._make_widget(name, fields[name]))
+                    self._add_row(form, name, fields[name])
             tabs.addTab(page, title)
         leftover = [name for name in fields if name not in grouped]
         if leftover:
             page = QWidget()
             form = QFormLayout(page)
             for name in leftover:
-                form.addRow(_LABELS.get(name, name), self._make_widget(name, fields[name]))
+                self._add_row(form, name, fields[name])
             tabs.addTab(page, "Other")
 
         buttons = QDialogButtonBox(
@@ -157,6 +182,17 @@ class OptionsDialog(QDialog):
         layout = QVBoxLayout(self)
         layout.addWidget(tabs)
         layout.addWidget(buttons)
+
+    def _add_row(self, form, name: str, field) -> None:
+        from PySide6.QtWidgets import QLabel
+
+        widget = self._make_widget(name, field)
+        label = QLabel(_LABELS.get(name, name))
+        tip = _TOOLTIPS.get(name, "")
+        if tip:
+            label.setToolTip(tip)
+            widget.setToolTip(tip)
+        form.addRow(label, widget)
 
     def overrides(self) -> dict:
         """The edited overrides (only values differing from the defaults)."""
