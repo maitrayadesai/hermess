@@ -45,6 +45,10 @@ class DeviceTrajectories:
     unit: str  #: unit identifier from the system file, e.g. ``"GFMI2"``
     bus: str  #: bus the unit is connected to
     states: "dict[str, np.ndarray]"  #: state name -> trajectory, shape (nts,)
+    #: Private algebraic variables (e.g. the quasi-static filter quantities)
+    #: plus derived outputs the model exposes symbolically (the converter
+    #: frequency ``omega_c`` / ``omega_pll``), name -> trajectory.
+    algebraics: "dict[str, np.ndarray]" = field(default_factory=dict)
 
 
 @dataclass
@@ -83,6 +87,76 @@ class SimulationResults:
         return list(self.voltage.keys())
 
 
+#: Symbolic per-unit outputs a device may expose; evaluated over the stored
+#: trajectories when present (grid-forming converters set ``omega_c``,
+#: PLL-based ones ``omega_pll``).
+_DERIVED_OUTPUTS = ("omega_c", "omega_pll")
+
+
+def _derived_outputs(dae, item) -> "dict[str, np.ndarray]":
+    """Evaluate the symbolic outputs of one device over the saved run.
+
+    Runs in the process that built the model (extraction happens right after
+    the simulation), so the CasADi expressions are still alive; the returned
+    arrays are plain numpy, shape (n_units, nts). Limiter switch trajectories
+    are not stored, so an expression is evaluated at their initial values
+    (exact whenever ``incl_lim`` is off). Anything that cannot be replayed
+    from the stored data is skipped silently.
+    """
+    import casadi as ca
+
+    outputs: dict[str, np.ndarray] = {}
+    substitution = None
+    for name in _DERIVED_OUTPUTS:
+        expr = getattr(item, name, None)
+        if not isinstance(expr, ca.SX) or expr.numel() != item.n:
+            continue
+        try:
+            if substitution is None:
+                substitution = (
+                    ca.vertcat(
+                        dae.omega_ref, dae.omega_ref_buses, dae.omega_ref_lines
+                    ),
+                    ca.vertcat(
+                        dae.omega_ref_expr,
+                        dae.omega_ref_buses_expr,
+                        dae.omega_ref_lines_expr,
+                    ),
+                )
+            resolved = ca.substitute(expr, *substitution)
+            line_states = getattr(dae, "xl", None)
+            if (
+                line_states is not None
+                and line_states.numel()
+                and ca.depends_on(resolved, line_states)
+            ):
+                continue  # line-current trajectories are not stored
+            function = ca.Function("out", [dae.x, dae.y, dae.s], [resolved])
+            nts = dae.x_full.shape[1]
+            s_traj = np.repeat(np.asarray(dae.sinit).reshape(-1, 1), nts, axis=1)
+            outputs[name] = np.asarray(
+                function.map(nts)(dae.x_full, dae.y_full, s_traj)
+            ).reshape(item.n, nts)
+        except Exception:
+            logging.warning(
+                "Derived output %s of %s could not be evaluated.", name, item._name
+            )
+    return outputs
+
+
+def _unit_algebraics(dae, item, row: int, derived: dict) -> "dict[str, np.ndarray]":
+    """Private algebraic and derived trajectories of one device unit."""
+    algebraics: dict[str, np.ndarray] = {}
+    for name in getattr(item, "_algebs_int", []):
+        indices = item.__dict__.get(name)
+        if indices is None or row >= len(indices):
+            continue
+        algebraics[name] = np.asarray(dae.y_full[int(indices[row]), :])
+    for name, values in derived.items():
+        algebraics[name] = values[row]
+    return algebraics
+
+
 def extract_results(dae, config=None) -> SimulationResults:
     """Build a :class:`SimulationResults` from a finished
     :class:`~hermess.system.DaeSim`.
@@ -109,6 +183,7 @@ def extract_results(dae, config=None) -> SimulationResults:
     for item in dae.device_list:
         if not item.properties.get("save_data") or not item.xf:
             continue
+        derived = _derived_outputs(dae, item)
         for unit, row in item.int.items():
             devices.append(
                 DeviceTrajectories(
@@ -120,6 +195,7 @@ def extract_results(dae, config=None) -> SimulationResults:
                         for state in item.states
                         if state in item.xf
                     },
+                    algebraics=_unit_algebraics(dae, item, row, derived),
                 )
             )
 

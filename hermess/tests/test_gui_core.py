@@ -347,6 +347,33 @@ def test_extract_results_from_simulate():
     machine = next(d for d in results.devices if d.unit == "SG1")
     assert "omega" in machine.states
     assert machine.states["omega"].shape == (dae.nts,)
+    # The grid-forming converter's frequency is a symbolic output, evaluated
+    # over the stored trajectories; the machine has none (its omega is a state).
+    converter = next(d for d in results.devices if d.unit == "GFMI2")
+    assert "omega_c" in converter.algebraics
+    assert np.allclose(converter.algebraics["omega_c"], 1.0, atol=0.05)
+    assert machine.algebraics == {}
+
+
+def test_extract_results_private_algebraics(tmp_path):
+    # A quasi-static filter turns the six filter quantities into private
+    # algebraic variables; they must come out as plottable trajectories.
+    source = hermess.SYSTEMS_DIR / "3bus_loadstep"
+    target = tmp_path / "3bus_static"
+    target.mkdir()
+    text = (source / "sim_param.txt").read_text()
+    text = text.replace('GridForming, idx = "GFMI2"', 'GridForming, filter = "LCL_static", idx = "GFMI2"')
+    (target / "sim_param.txt").write_text(text)
+    (target / "sim_dist.txt").write_text((source / "sim_dist.txt").read_text())
+
+    dae = hermess.simulate("3bus_static", system_root=tmp_path, T_end=0.3, line_dyn=False)
+    results = extract_results(dae)
+    converter = next(d for d in results.devices if d.unit == "GFMI2")
+    private = {k: v for k, v in converter.algebraics.items() if k != "omega_c"}
+    assert len(private) >= 6  # the LCL quantities
+    for values in private.values():
+        assert values.shape == (dae.nts,)
+        assert np.isfinite(values).all()
 
 
 # ---- CSV export -------------------------------------------------------------

@@ -173,9 +173,15 @@ unsaved changes and restores the previously shown system.
 Time domain
 ^^^^^^^^^^^
 
-The trajectories of the shown run: bus voltage magnitudes, bus injections and
-every device's differential states, selected in the tree and overlaid in one
-interactive plot (zoom, pan, automatic downsampling for long records).
+The trajectories of the shown run: bus voltage magnitudes, bus injections,
+every device's differential states, and the device-level algebraic signals,
+marked "(algebraic)" in the tree. The latter cover the private algebraic
+variables (e.g. the quasi-static filter quantities) and the outputs the
+models expose symbolically, such as a grid-forming converter's frequency
+``omega_c``, evaluated over the stored trajectories. Everything is selected
+in the tree and overlaid in one interactive plot (zoom, pan, automatic
+downsampling for long records); the panes are resized by dragging the
+divider between them.
 
 Small signal
 ^^^^^^^^^^^^

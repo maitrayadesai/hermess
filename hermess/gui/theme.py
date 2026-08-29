@@ -135,7 +135,12 @@ QGroupBox::title {{
     subcontrol-origin: margin; left: 10px; padding: 0 4px; color: {MUTED};
 }}
 QStatusBar {{ background: {PANEL}; border-top: 1px solid {BORDER}; }}
-QSplitter::handle {{ background: transparent; }}
+
+/* Visible, grabbable splitter handles: the panes are meant to be resized. */
+QSplitter::handle {{ background: {BORDER_SOFT}; }}
+QSplitter::handle:hover {{ background: #A9C3E4; }}
+QSplitter::handle:horizontal {{ width: 5px; }}
+QSplitter::handle:vertical {{ height: 5px; }}
 
 /* Context menus (the macOS menu bar itself stays native). */
 QMenu {{

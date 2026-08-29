@@ -154,6 +154,44 @@ def test_timedomain_tab(app, results):
     assert curve.opts["antialias"] is False
 
 
+def test_algebraic_signals_in_tree(app, results):
+    from PySide6.QtCore import Qt
+
+    from hermess.gui.timedomain_tab import TimeDomainTab
+
+    results.devices[0].algebraics = {"omega_c": 1.0 + 0.001 * results.t}
+    tab = TimeDomainTab()
+    tab.set_results(results)
+    root = tab._tree.invisibleRootItem()
+    device_group = next(
+        root.child(i)
+        for i in range(root.childCount())
+        if root.child(i).text(0).startswith("SG1")
+    )
+    algebraic_item = next(
+        device_group.child(i)
+        for i in range(device_group.childCount())
+        if "omega_c" in device_group.child(i).text(0)
+    )
+    assert "(algebraic)" in algebraic_item.text(0)
+    algebraic_item.setCheckState(0, Qt.Checked)
+    label, values = tab.signal_array(algebraic_item.data(0, 0x0100))
+    assert label == "SG1:omega_c"
+    assert values.shape == results.t.shape
+
+
+def test_eigenvalue_click_with_empty_selection(app, results):
+    import numpy as np
+
+    from hermess.gui.smallsignal_tab import SmallSignalTab
+
+    tab = SmallSignalTab()
+    tab.set_results(results)
+    # pyqtgraph hands the clicked spots over as a numpy array; an empty one
+    # must not raise (plain truthiness on arrays does).
+    tab._select_from_plot(tab._scatter, np.array([]))
+
+
 def test_smallsignal_tab(app, results):
     from hermess.gui.smallsignal_tab import SmallSignalTab
 

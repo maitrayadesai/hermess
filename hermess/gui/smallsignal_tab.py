@@ -199,7 +199,7 @@ class SmallSignalTab(QWidget):
         )
 
     def _select_from_plot(self, _scatter, points) -> None:
-        if not points:
+        if len(points) == 0:  # a numpy array; plain truthiness raises
             return
         mode = points[0].data()
         if mode is None:

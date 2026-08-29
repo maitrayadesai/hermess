@@ -142,6 +142,8 @@ class TimeDomainTab(QWidget):
         if kind == "Q":
             return f"Q {sid[1]}", np.imag(res.power[sid[1]])
         dev = res.devices[sid[1]]
+        if kind == "alg":
+            return f"{dev.unit}:{sid[2]}", dev.algebraics[sid[2]]
         return f"{dev.unit}:{sid[2]}", dev.states[sid[2]]
 
     # ---- internals -----------------------------------------------------------
@@ -180,6 +182,8 @@ class TimeDomainTab(QWidget):
             group = add_group(f"{dev.unit} @ bus {dev.bus} ({model})")
             for state in dev.states:
                 add_signal(group, state, ("dev", i, state))
+            for name in dev.algebraics:
+                add_signal(group, f"{name} (algebraic)", ("alg", i, name))
 
         self._tree.blockSignals(False)
 
