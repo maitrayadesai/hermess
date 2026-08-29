@@ -134,6 +134,25 @@ def test_timedomain_tab(app, results):
     voltage_item.setCheckState(0, Qt.Unchecked)
     assert voltage_item.icon(0).isNull()
 
+    # Long records render with the fast pen (no antialiasing), short ones
+    # keep the antialiased stroke.
+    assert results.t.shape[0] <= 20_000
+    voltage_item.setCheckState(0, Qt.Checked)
+    curve = tab._plot.getPlotItem().listDataItems()[0]
+    assert curve.opts["antialias"] is True
+    long_t = np.linspace(0.0, 10.0, 100_001)
+    tab.set_results(
+        SimulationResults(
+            system="long",
+            t=long_t,
+            voltage={"1": np.exp(1j * 0.01 * long_t)},
+            power={},
+        )
+    )
+    tab._tree.topLevelItem(0).child(0).setCheckState(0, Qt.Checked)
+    curve = tab._plot.getPlotItem().listDataItems()[0]
+    assert curve.opts["antialias"] is False
+
 
 def test_smallsignal_tab(app, results):
     from hermess.gui.smallsignal_tab import SmallSignalTab

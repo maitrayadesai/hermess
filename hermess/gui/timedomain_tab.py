@@ -206,15 +206,24 @@ class TimeDomainTab(QWidget):
         if self._results is None:
             return
         t = self._results.t
+        # Antialiased stroking costs time proportional to the covered pixel
+        # area, which makes zooming on long large-amplitude records (EMT
+        # oscillations) unusably slow: measured ~600 ms per zoom step against
+        # ~2 ms with a thin aliased pen. Dense traces are a solid band on
+        # screen anyway, so nothing visible is lost.
+        dense = len(t) > 20_000
         colors = {}
         for i, sid in enumerate(self.selected_signals()):
             label, trajectory = self.signal_array(sid)
             colors[sid] = theme.series_color(i)
             n = min(len(t), len(trajectory))
+            values = trajectory[:n]
             self._plot.plot(
                 t[:n],
-                trajectory[:n],
-                pen=pg.mkPen(colors[sid], width=1.5),
+                values,
+                pen=pg.mkPen(colors[sid], width=1.0 if dense else 1.5),
+                antialias=not dense,
+                skipFiniteCheck=bool(np.isfinite(values).all()),
                 name=label,
             )
         self._update_chips(colors)
