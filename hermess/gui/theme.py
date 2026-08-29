@@ -43,23 +43,180 @@ TEXT = "#222222"
 BACKGROUND = "#FFFFFF"
 PANEL = "#F2F3F6"
 BORDER = "#D5D8DD"
+BORDER_SOFT = "#E3E5EA"
 DISABLED = "#9AA0A6"
+HOVER = "#EDF2FA"  # a light tint of ETH Blue for hover states
+PRESSED = "#DDE7F5"
+MUTED = "#5A5E66"  # secondary text (dock titles, tab labels, group titles)
 
-# Accents only; all base coloring comes from the palette below.
+# The complete look: base colors come from the palette, everything visual
+# (borders, radii, hover/focus states) from this sheet. Purely cosmetic; no
+# rule may hide or resize a control in a way behavior depends on.
 _QSS = f"""
-QToolBar {{ border-bottom: 1px solid {BORDER}; spacing: 4px; }}
-QDockWidget::title {{ padding: 4px 8px; }}
+QMainWindow, QDialog {{ background: {PANEL}; }}
+
+/* Tabs: underline style instead of boxes. */
+QTabWidget::pane {{
+    border: 1px solid {BORDER_SOFT}; border-radius: 6px;
+    background: {BACKGROUND}; top: -1px;
+}}
+QTabBar::tab {{
+    background: transparent; border: none; color: {MUTED};
+    padding: 6px 14px; margin-right: 2px;
+    border-bottom: 2px solid transparent;
+}}
+QTabBar::tab:selected {{
+    color: {ETH_BLUE}; border-bottom: 2px solid {ETH_BLUE}; font-weight: 600;
+}}
+QTabBar::tab:hover:!selected {{ color: {TEXT}; }}
+
+/* Buttons. */
+QPushButton, QToolButton {{
+    background: {BACKGROUND}; border: 1px solid #C9CCD1;
+    border-radius: 5px; padding: 4px 12px;
+}}
+QPushButton:hover, QToolButton:hover {{
+    background: {HOVER}; border-color: #A9C3E4;
+}}
+QPushButton:pressed, QToolButton:pressed {{ background: {PRESSED}; }}
+QPushButton:disabled, QToolButton:disabled {{
+    color: {DISABLED}; background: {PANEL}; border-color: {BORDER_SOFT};
+}}
+QToolButton:checked, QPushButton:checked {{
+    background: {ETH_BLUE}; color: white; border-color: {ETH_BLUE};
+}}
+QToolButton::menu-indicator {{ image: none; }}
+
+/* Toolbar: flat buttons that light up on hover. */
+QToolBar {{
+    background: {BACKGROUND}; border-bottom: 1px solid {BORDER};
+    spacing: 4px; padding: 3px 6px;
+}}
+QToolBar QToolButton {{
+    background: transparent; border: 1px solid transparent; padding: 4px 10px;
+}}
+QToolBar QToolButton:hover {{ background: {HOVER}; border-color: {BORDER_SOFT}; }}
+QToolBar QToolButton:pressed {{ background: {PRESSED}; }}
+QToolBar QToolButton:disabled {{ background: transparent; }}
+
+/* Inputs. */
+QLineEdit, QComboBox, QPlainTextEdit, QTextEdit, QSpinBox, QDoubleSpinBox {{
+    background: {BACKGROUND}; border: 1px solid #C9CCD1;
+    border-radius: 4px; padding: 3px 7px;
+    selection-background-color: {ETH_BLUE}; selection-color: white;
+}}
+QLineEdit:focus, QComboBox:focus, QPlainTextEdit:focus, QTextEdit:focus {{
+    border-color: {ETH_BLUE};
+}}
+QLineEdit:disabled, QComboBox:disabled {{ background: {PANEL}; color: {DISABLED}; }}
+QComboBox::drop-down {{ border: none; width: 22px; }}
+
+/* Item views. */
+QTreeWidget, QTreeView, QTableWidget, QTableView, QListWidget {{
+    background: {BACKGROUND}; border: 1px solid {BORDER_SOFT};
+    border-radius: 6px; alternate-background-color: #F7F8FA;
+}}
+QHeaderView::section {{
+    background: {PANEL}; color: {MUTED}; font-weight: 600;
+    border: none; border-bottom: 1px solid {BORDER}; padding: 5px 8px;
+}}
+QTreeView::item, QListWidget::item {{ padding: 2px; }}
+
+/* Panels. */
+QDockWidget::title {{
+    background: {PANEL}; color: {MUTED}; font-weight: 600;
+    padding: 5px 10px; border-bottom: 1px solid {BORDER};
+}}
+QGroupBox {{
+    border: 1px solid {BORDER_SOFT}; border-radius: 6px;
+    margin-top: 10px; padding-top: 8px;
+}}
+QGroupBox::title {{
+    subcontrol-origin: margin; left: 10px; padding: 0 4px; color: {MUTED};
+}}
+QStatusBar {{ background: {PANEL}; border-top: 1px solid {BORDER}; }}
+QSplitter::handle {{ background: transparent; }}
+
+/* Context menus (the macOS menu bar itself stays native). */
+QMenu {{
+    background: {BACKGROUND}; border: 1px solid {BORDER};
+    border-radius: 6px; padding: 4px;
+}}
+QMenu::item {{ padding: 5px 24px 5px 12px; border-radius: 4px; }}
+QMenu::item:selected {{ background: {ETH_BLUE}; color: white; }}
+QMenu::separator {{ height: 1px; background: {BORDER_SOFT}; margin: 4px 8px; }}
+
+/* Slim scrollbars. */
+QScrollBar:vertical {{ background: transparent; width: 10px; margin: 2px; }}
+QScrollBar:horizontal {{ background: transparent; height: 10px; margin: 2px; }}
+QScrollBar::handle {{ background: #C4C8CE; border-radius: 3px; }}
+QScrollBar::handle:hover {{ background: #A8ADB5; }}
+QScrollBar::handle:vertical {{ min-height: 30px; }}
+QScrollBar::handle:horizontal {{ min-width: 30px; }}
+QScrollBar::add-line, QScrollBar::sub-line {{ width: 0; height: 0; }}
+QScrollBar::add-page, QScrollBar::sub-page {{ background: transparent; }}
+
 QProgressBar {{
-    border: 1px solid {BORDER}; border-radius: 2px; background: {PANEL};
+    border: 1px solid {BORDER}; border-radius: 5px; background: {PANEL};
     height: 12px; text-align: center; font-size: 10px;
 }}
-QProgressBar::chunk {{ background: {ETH_BLUE}; }}
+QProgressBar::chunk {{ background: {ETH_BLUE}; border-radius: 4px; }}
 """
 
 
 def series_color(i: int) -> str:
     """Color of the i-th plot series (cycles through the ETH order)."""
     return SERIES[i % len(SERIES)]
+
+
+_ICONS: dict = {}
+
+
+def icon(name: str):
+    """Small vector icons drawn in code (no asset files): 'run', 'stop',
+    'options', 'export'. Cached; requires a running QApplication."""
+    from PySide6.QtCore import QPointF, QRectF, Qt
+    from PySide6.QtGui import QColor, QIcon, QPainter, QPen, QPixmap, QPolygonF
+
+    if name in _ICONS:
+        return _ICONS[name]
+    pixmap = QPixmap(32, 32)
+    pixmap.fill(Qt.transparent)
+    painter = QPainter(pixmap)
+    painter.setRenderHint(QPainter.Antialiasing)
+    line_pen = QPen(QColor(MUTED), 3)
+    line_pen.setCapStyle(Qt.RoundCap)
+
+    if name == "run":
+        painter.setPen(Qt.NoPen)
+        painter.setBrush(QColor(ETH_BLUE))
+        painter.drawPolygon(
+            QPolygonF([QPointF(10, 6), QPointF(10, 26), QPointF(27, 16)])
+        )
+    elif name == "stop":
+        painter.setPen(Qt.NoPen)
+        painter.setBrush(QColor(ETH_RED))
+        painter.drawRoundedRect(QRectF(8, 8, 16, 16), 3, 3)
+    elif name == "options":
+        # Three slider rails with knobs.
+        painter.setPen(line_pen)
+        knobs = [(9, 21), (16, 12), (23, 24)]
+        for y, _x in knobs:
+            painter.drawLine(6, y, 26, y)
+        painter.setPen(Qt.NoPen)
+        painter.setBrush(QColor(ETH_BLUE))
+        for y, x in knobs:
+            painter.drawEllipse(QPointF(x, y), 3.4, 3.4)
+    elif name == "export":
+        # An arrow into a tray.
+        painter.setPen(line_pen)
+        painter.drawLine(16, 6, 16, 18)
+        painter.drawLine(10, 13, 16, 19)
+        painter.drawLine(22, 13, 16, 19)
+        painter.drawLine(7, 24, 25, 24)
+    painter.end()
+    _ICONS[name] = QIcon(pixmap)
+    return _ICONS[name]
 
 
 def _light_palette():

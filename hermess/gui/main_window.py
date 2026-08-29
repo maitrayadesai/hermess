@@ -25,7 +25,7 @@ import json
 import logging
 from pathlib import Path
 
-from PySide6.QtCore import QSettings, Qt, QUrl
+from PySide6.QtCore import QSettings, QSize, Qt, QUrl
 from PySide6.QtGui import QAction, QDesktopServices, QKeySequence
 from PySide6.QtWidgets import (
     QComboBox,
@@ -39,7 +39,7 @@ from PySide6.QtWidgets import (
 )
 
 import hermess
-from hermess.gui import export, sysparse, validation
+from hermess.gui import export, sysparse, theme, validation
 from hermess.gui.sysdoc import SystemDocument
 from hermess.gui.logpanel import LogPanel
 from hermess.gui.options_dialog import OptionsDialog
@@ -148,9 +148,16 @@ class MainWindow(QMainWindow):
         help_menu.addAction(docs_action)
         help_menu.addAction(about_action)
 
+        self._run_action.setIcon(theme.icon("run"))
+        self._stop_action.setIcon(theme.icon("stop"))
+        options_action.setIcon(theme.icon("options"))
+        export_action.setIcon(theme.icon("export"))
+
         toolbar = self.addToolBar("Main")
         toolbar.setObjectName("mainToolbar")
         toolbar.setMovable(False)
+        toolbar.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
+        toolbar.setIconSize(QSize(15, 15))
         toolbar.addAction(self._run_action)
         toolbar.addAction(self._stop_action)
         toolbar.addAction(options_action)
