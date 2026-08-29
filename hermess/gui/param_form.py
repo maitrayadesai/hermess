@@ -44,7 +44,10 @@ from PySide6.QtWidgets import (
 
 from hermess.gui import param_meta
 
-_MODEL_DEFAULT = "(model default)"
+def _default_label(meta, axis: str) -> str:
+    """Combo label of the default choice, naming what it resolves to."""
+    name = meta.strategy_defaults.get(axis) if meta else None
+    return f"(model default: {name or 'none'})"
 
 # Keys whose values are names, not numbers; exempt from the float check.
 _TEXT_KEYS = {"idx", "name", "type", "device", "param", "bus", "bus_i", "bus_j"}
@@ -101,7 +104,14 @@ class DeviceFormDialog(QDialog):
     """Add or edit one device entry: strategy dropdowns plus the parameter
     grid regenerated for the current strategy selection."""
 
-    def __init__(self, kind: str, bus: str, params: "dict[str, str] | None" = None, parent=None):
+    def __init__(
+        self,
+        kind: str,
+        bus: str,
+        params: "dict[str, str] | None" = None,
+        suggested_idx: str = "",
+        parent=None,
+    ):
         super().__init__(parent)
         self._kind = kind
         params = dict(params or {})
@@ -116,7 +126,7 @@ class DeviceFormDialog(QDialog):
 
         top = QFormLayout()
         self._idx_edit = QLineEdit(self._idx)
-        self._idx_edit.setPlaceholderText("generated")
+        self._idx_edit.setPlaceholderText(suggested_idx or "generated on save")
         top.addRow("idx", self._idx_edit)
         strategies_box = None
         if axes:
@@ -124,7 +134,7 @@ class DeviceFormDialog(QDialog):
             form = QFormLayout(strategies_box)
             for axis in axes:
                 combo = QComboBox()
-                combo.addItem(_MODEL_DEFAULT, "")
+                combo.addItem(_default_label(meta, axis), "")
                 for choice in param_meta.strategy_choices(axis):
                     combo.addItem(choice, choice)
                 if params.get(axis):

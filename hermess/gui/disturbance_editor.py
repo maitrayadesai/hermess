@@ -35,7 +35,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
-from hermess.gui.param_meta import DISTURBANCE_FIELDS
+from hermess.gui.param_meta import DISTURBANCE_FIELDS, disturbance_defaults
 from hermess.gui.sysparse import Entry
 
 _BUS_FIELDS = {"bus", "bus_i", "bus_j"}
@@ -105,6 +105,9 @@ class DisturbanceFormDialog(QDialog):
                     widget.setCurrentIndex(-1)
             else:
                 widget = QLineEdit(current.get(name, ""))
+                default = disturbance_defaults().get(name, "")
+                if default:
+                    widget.setPlaceholderText(f"default: {default}")
             self._form.addRow(name, widget)
             self._fields[name] = widget
 

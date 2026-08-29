@@ -50,6 +50,19 @@ STRATEGY_AXES = {
 _SM_AXES = ("avr", "governor", "pss", "shaft")
 _INVERTER_AXES = ("filter", "angle", "voltage", "inner", "pll")
 
+#: Instance attribute holding each axis's strategy object.
+_AXIS_ATTRS = {
+    "avr": "_avr",
+    "governor": "_governor",
+    "pss": "_pss",
+    "shaft": "_shaft",
+    "filter": "_filter",
+    "angle": "_angle",
+    "voltage": "_voltage",
+    "inner": "_inner",
+    "pll": "_pll",
+}
+
 
 @dataclass
 class ParamMeta:
@@ -61,6 +74,9 @@ class ParamMeta:
     mandatory: "list[str]" = field(default_factory=list)
     sentinels: "dict[str, str]" = field(default_factory=dict)  #: NaN param -> fallback
     strategy_axes: "list[str]" = field(default_factory=list)  #: applicable axes
+    #: axis -> registry name of the strategy the model uses when none is
+    #: selected; an axis that defaults to no strategy at all is absent.
+    strategy_defaults: "dict[str, str]" = field(default_factory=dict)
 
 
 def format_default(value) -> str:
@@ -133,6 +149,33 @@ def _instantiable(cls) -> bool:
     return "bus" in getattr(instance, "_mand", [])
 
 
+def _registry_key(axis: str, strategy) -> str:
+    """The registry name of a strategy instance (its class name as fallback)."""
+    module_name, registry_name = STRATEGY_AXES[axis]
+    registry = getattr(importlib.import_module(module_name), registry_name)
+    cls = type(strategy)
+    if registry.get(cls.__name__) is cls:
+        return cls.__name__
+    for key, value in registry.items():
+        if value is cls:
+            return key
+    return cls.__name__
+
+
+def _strategy_defaults(cls, axes: "list[str]") -> "dict[str, str]":
+    """What each axis resolves to when nothing is selected on the file line."""
+    try:
+        instance = cls()
+    except Exception:
+        return {}
+    defaults = {}
+    for axis in axes:
+        strategy = getattr(instance, _AXIS_ATTRS[axis], None)
+        if strategy is not None:
+            defaults[axis] = _registry_key(axis, strategy)
+    return defaults
+
+
 def _axes_for(instance) -> "list[str]":
     if hasattr(instance, "_filter"):
         return list(_INVERTER_AXES)
@@ -170,13 +213,15 @@ def device_meta(kind: str, strategies: "dict[str, str] | None" = None) -> "Param
     defaults = {**instance._params, **instance._setpoints}
     defaults.pop("bus_i", None)  # line-style keys never apply to a device
     defaults.pop("bus_j", None)
+    axes = _axes_for(instance)
     return ParamMeta(
         kind=kind,
         params={name: format_default(value) for name, value in defaults.items()},
         descriptions=dict(instance._descr),
         mandatory=[m for m in instance._mand if m != "bus"],  # bus set by the canvas
         sentinels=dict(getattr(instance, "_param_sentinels", {})),
-        strategy_axes=_axes_for(instance),
+        strategy_axes=axes,
+        strategy_defaults=_strategy_defaults(cls, axes),
     )
 
 

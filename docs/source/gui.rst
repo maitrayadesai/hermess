@@ -132,7 +132,10 @@ The parameter forms are generated from the model classes themselves: every
 parameter appears with its default greyed in and its meaning as a tooltip,
 and the control strategies (AVR, governor, PSS, shaft; filter, angle,
 voltage, inner control, PLL) are chosen from dropdowns that regenerate the
-form. Fields left empty use the model defaults and are not written to the
+form and name what the model default resolves to. The unit identifier shows
+the name that will be generated when left empty. After placing a line or a
+device, or deleting something, the active tool falls back to *Move* so stray
+clicks stay inert, and the mouse cursor indicates the active tool. Fields left empty use the model defaults and are not written to the
 file, so generated files stay as terse as hand-written ones.
 
 .. image:: _static/gui_builder_canvas.png
@@ -156,8 +159,11 @@ comments, so editing an imported system defaults to *Save as*.
 No saving is needed while composing. Because a run executes from the files
 on disk (the same ones scripts and the CLI use, so every run stays
 reproducible), Run asks for a save location the first time; from then on,
-running an edited system saves it automatically, and the usual save
-shortcut works at any time.
+running an edited system saves it automatically, and the *Save…* button in
+the palette (or the usual shortcut) works at any time. While a document is
+being edited, the systems browser is deselected and its inspector emptied,
+so the left column never shows a stale system; leaving edit mode asks about
+unsaved changes and restores the previously shown system.
 
 Time domain
 ^^^^^^^^^^^

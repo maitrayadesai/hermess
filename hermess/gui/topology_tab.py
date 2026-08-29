@@ -61,6 +61,15 @@ _NODE_SIZE = 18
 _GLYPH_OFFSET = 0.11  # distance of a device glyph from its bus
 _HIT_FRACTION = 0.03  # click tolerance, as a fraction of the visible x-range
 
+# Cursor per edit tool, so the pointer shows what a click will do.
+_TOOL_CURSORS = {
+    "move": Qt.ArrowCursor,
+    "bus": Qt.CrossCursor,
+    "line": Qt.CrossCursor,
+    "device": Qt.PointingHandCursor,
+    "delete": Qt.ForbiddenCursor,
+}
+
 # Glyph (symbol, color, caption) per device family, matched on the class name.
 _GLYPHS = [
     ("Synchronous", "o", theme.ETH_PETROL, "synchronous machine"),
@@ -173,6 +182,7 @@ class TopologyTab(QWidget):
         self._bus_labels = []
         self._device_items = []  # (bus_index, angle, scatter, label, connector, entry)
         self._validator = None  # callable(desc) -> list[Issue], set by the main window
+        self._save_handler = None  # callable() -> bool, set by the main window
         self._pending_device_kind: "str | None" = None
         self._pending_line_bus: "str | None" = None
 
@@ -259,13 +269,18 @@ class TopologyTab(QWidget):
         self._tool_buttons["device"] = device_button
         row.addWidget(device_button)
 
-        # Switching tools abandons a half-drawn line.
-        self._tools.buttonClicked.connect(lambda _b: self._cancel_pending_line())
+        # Switching tools abandons a half-drawn line and updates the cursor.
+        self._tools.buttonClicked.connect(self._on_tool_switched)
 
         row.addSpacing(12)
         disturbances = QPushButton("Disturbances…")
         disturbances.clicked.connect(self._edit_disturbances)
         row.addWidget(disturbances)
+
+        save = QPushButton("Save…")
+        save.setToolTip("Write the system files (also on the File menu)")
+        save.clicked.connect(self._request_save)
+        row.addWidget(save)
 
         self._undo_button = QPushButton("Undo")
         self._undo_button.clicked.connect(self._undo)
@@ -300,6 +315,10 @@ class TopologyTab(QWidget):
         """Callable(desc) -> list of validation Issues, for the live status."""
         self._validator = validator
 
+    def set_save_handler(self, handler) -> None:
+        """Callable() -> bool that saves the edited document (main window)."""
+        self._save_handler = handler
+
     def set_system(self, desc) -> None:
         """Show a parsed system read-only (leaves edit mode; may be None)."""
         if self.editing:
@@ -330,6 +349,7 @@ class TopologyTab(QWidget):
         self._status.setVisible(True)
         self._render()
         self._update_status()
+        self._apply_cursor()
         self.editModeChanged.emit(True)
 
     # ---- edit-mode plumbing --------------------------------------------------
@@ -337,13 +357,38 @@ class TopologyTab(QWidget):
     def _on_edit_toggled(self, checked: bool) -> None:
         if checked and not self.editing:
             self.begin_edit()
-        elif not checked and self.editing:
-            self._leave_edit()
-            self.editModeChanged.emit(False)
+            return
+        if checked or not self.editing:
+            return
+        # Leaving edit mode with unsaved changes must not lose them silently.
+        if self._doc.dirty:
+            box = QMessageBox(
+                QMessageBox.Warning,
+                "Unsaved system",
+                "The edited system has unsaved changes.",
+                parent=self,
+            )
+            save_button = box.addButton("Save…", QMessageBox.AcceptRole)
+            discard_button = box.addButton("Discard", QMessageBox.DestructiveRole)
+            box.addButton("Keep editing", QMessageBox.RejectRole)
+            box.exec()
+            if box.clickedButton() is save_button:
+                if self._save_handler is not None and self._save_handler():
+                    return  # the save flow selected the saved system and left
+                # Save failed or was cancelled: stay in edit mode.
+                self._edit_toggle.blockSignals(True)
+                self._edit_toggle.setChecked(True)
+                self._edit_toggle.blockSignals(False)
+                return
+            if box.clickedButton() is not discard_button:
+                self._edit_toggle.blockSignals(True)
+                self._edit_toggle.setChecked(True)
+                self._edit_toggle.blockSignals(False)
+                return
+        self._leave_edit()
+        self.editModeChanged.emit(False)
 
     def _leave_edit(self) -> None:
-        # The document (saved or not) keeps being shown read-only; the main
-        # window owns the save/discard decision.
         self._doc = None
         self._pending_line_bus = None
         self._edit_toggle.blockSignals(True)
@@ -351,6 +396,11 @@ class TopologyTab(QWidget):
         self._edit_toggle.blockSignals(False)
         self._edit_bar.setVisible(False)
         self._status.setVisible(False)
+        self._view.unsetCursor()
+
+    def _request_save(self) -> None:
+        if self.editing and self._save_handler is not None:
+            self._save_handler()
 
     def _active_tool(self) -> str:
         for tool, button in self._tool_buttons.items():
@@ -358,11 +408,25 @@ class TopologyTab(QWidget):
                 return tool
         return "move"
 
+    def _apply_cursor(self) -> None:
+        self._view.setCursor(_TOOL_CURSORS.get(self._active_tool(), Qt.ArrowCursor))
+
+    def _on_tool_switched(self, _button) -> None:
+        self._cancel_pending_line()
+        self._apply_cursor()
+
+    def _reset_tool(self) -> None:
+        """Back to Move after a completed action, so stray clicks are inert."""
+        self._tool_buttons["move"].setChecked(True)
+        self._cancel_pending_line()
+        self._apply_cursor()
+
     def _pick_device_kind(self, kind: str) -> None:
         self._pending_device_kind = kind
         button = self._tool_buttons["device"]
         button.setText(f"+ {kind} ▾")
         button.setChecked(True)
+        self._apply_cursor()
 
     def _changed(self, new_bus_positions: "dict[str, tuple] | None" = None) -> None:
         """Re-render after a document mutation and announce it."""
@@ -526,28 +590,35 @@ class TopologyTab(QWidget):
         self._doc.add_line(self._pending_line_bus, bus)
         self._pending_line_bus = None
         self._changed()
+        self._reset_tool()
 
     def _add_device_at(self, kind: str, bus: str) -> None:
-        dialog = DeviceFormDialog(kind, bus, parent=self)
+        dialog = DeviceFormDialog(
+            kind, bus, suggested_idx=self._doc.next_idx(kind), parent=self
+        )
         if dialog.exec():
             self._doc.add_device(kind, bus, dialog.values())
             self._changed()
+        self._reset_tool()
 
     def _delete_at(self, point) -> None:
         device = self._nearest_device(point)
         if device is not None:
             self._doc.remove_entry(device)
             self._changed()
+            self._reset_tool()
             return
         bus = self._nearest_bus(point)
         if bus is not None:
             self._doc.remove_bus(bus)
             self._changed()
+            self._reset_tool()
             return
         line = self._nearest_line(point)
         if line is not None:
             self._doc.remove_entry(line)
             self._changed()
+            self._reset_tool()
 
     # ---- edit dialogs --------------------------------------------------------
 

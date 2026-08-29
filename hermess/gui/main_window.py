@@ -173,6 +173,7 @@ class MainWindow(QMainWindow):
         self._topology.set_validator(
             lambda desc: validation.validate(desc, self._overrides)
         )
+        self._topology.set_save_handler(self._save_system)
         self._topology.documentChanged.connect(self._on_document_changed)
         self._topology.editModeChanged.connect(self._on_edit_mode_changed)
         self._systems.systemSelected.connect(self._on_system_selected)
@@ -319,6 +320,9 @@ class MainWindow(QMainWindow):
             sysparse.parse_system(folder) if folder is not None else None
         )
         self._topology.set_results(self._current_results())
+        # Selecting a system leaves edit mode without the toggle signal.
+        self._save_action.setEnabled(self._topology.editing)
+        self._save_as_action.setEnabled(self._topology.editing)
         self.statusBar().showMessage(f"System: {name}. Press Run (F5).")
 
     # ---- system building -----------------------------------------------------
@@ -338,10 +342,23 @@ class MainWindow(QMainWindow):
         self._save_action.setEnabled(active)
         self._save_as_action.setEnabled(active)
         if active:
+            # The browser must not point at a stale system while a document
+            # is being edited.
+            self._systems.deselect()
             self.statusBar().showMessage(
                 "Edit mode: use the palette above the diagram; double-click "
                 "elements to edit their parameters."
             )
+            return
+        # Edit mode was toggled off (changes saved or discarded): restore the
+        # previously shown system, or an empty view for an abandoned new one.
+        # The browser was deselected on entering edit mode, so re-selecting
+        # fires the normal selection flow.
+        if self._last_selection is None or not self._systems.select_system(
+            *self._last_selection
+        ):
+            self._topology.set_system(None)
+            self._systems.clear_inspector()
 
     def _on_document_changed(self) -> None:
         self._save_action.setEnabled(True)

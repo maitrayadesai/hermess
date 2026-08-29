@@ -224,6 +224,23 @@ def test_device_meta_reflects_strategies():
     assert param_meta.device_meta("NoSuchDevice") is None
 
 
+def test_strategy_defaults_are_named():
+    gfm = param_meta.device_meta("GridForming")
+    # Values are the registry names selectable in a system file, not class
+    # names (the DroopAngle class registers as "Droop"); the PLL axis
+    # defaults to none and is absent.
+    assert gfm.strategy_defaults == {
+        "filter": "LCL",
+        "angle": "Droop",
+        "voltage": "QVDroop",
+        "inner": "Cascaded",
+    }
+    machine = param_meta.device_meta("GENROU")
+    assert machine.strategy_defaults["avr"] == "IEEEDC1A"
+    assert machine.strategy_defaults["governor"] == "TGOV1"
+    assert "pss" not in machine.strategy_defaults
+
+
 def test_meta_defaults_and_sentinels():
     meta = param_meta.device_meta("GridForming")
     assert meta.params["Sn"] == "100"

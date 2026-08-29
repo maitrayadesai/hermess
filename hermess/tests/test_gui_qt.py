@@ -354,10 +354,97 @@ def test_topology_edit_mode(app):
     tab._delete_at(np.array([0.2, 0.3]))
     assert tab._desc.buses() == ["2"]
 
-    # Leaving edit mode keeps the (unsaved) system on display.
+    # Leaving edit mode with a clean document needs no confirmation.
+    tab.document.dirty = False
     tab._edit_toggle.setChecked(False)
     assert not tab.editing
     assert tab._desc.buses() == ["2"]
+
+
+def test_form_labels_show_actual_defaults(app):
+    from hermess.gui.param_form import DeviceFormDialog
+
+    dialog = DeviceFormDialog("GENROU", bus="1", suggested_idx="SG3")
+    assert dialog._idx_edit.placeholderText() == "SG3"
+    avr = dialog._strategy_combos["avr"]
+    assert avr.itemText(0) == "(model default: IEEEDC1A)"
+    pss = dialog._strategy_combos["pss"]
+    assert pss.itemText(0) == "(model default: none)"
+
+
+def test_tool_resets_to_move_after_actions(app, monkeypatch):
+    import numpy as np
+
+    from hermess.gui.param_form import DeviceFormDialog
+    from hermess.gui.sysdoc import SystemDocument
+    from hermess.gui.topology_tab import TopologyTab
+
+    tab = TopologyTab()
+    tab.begin_edit(SystemDocument.blank())
+    doc = tab.document
+    tab._changed({doc.add_bus(): (0.0, 0.0)})
+    tab._changed({doc.add_bus(): (1.0, 0.0)})
+    tab._view.getPlotItem().vb.setRange(xRange=(0, 1), yRange=(-0.5, 0.5))
+
+    # Completing a line drops back to the Move tool.
+    tab._tool_buttons["line"].setChecked(True)
+    tab._line_tool_click(np.array([0.0, 0.0]))
+    tab._line_tool_click(np.array([1.0, 0.0]))
+    assert tab._active_tool() == "move"
+    assert len(tab._desc.lines) == 1
+
+    # So does attaching a device, even when the dialog is cancelled.
+    monkeypatch.setattr(DeviceFormDialog, "exec", lambda self: False)
+    tab._tool_buttons["device"].setChecked(True)
+    tab._pending_device_kind = "StaticZIP"
+    tab._add_device_at("StaticZIP", "2")
+    assert tab._active_tool() == "move"
+
+    # And deleting something.
+    tab._tool_buttons["delete"].setChecked(True)
+    tab._delete_at(np.array([1.0, 0.0]))  # removes bus 2
+    assert tab._active_tool() == "move"
+    assert tab._desc.buses() == ["1"]
+
+
+def test_toggle_off_with_dirty_document_confirms(app, monkeypatch):
+    from PySide6.QtWidgets import QMessageBox
+
+    from hermess.gui.sysdoc import SystemDocument
+    from hermess.gui.topology_tab import TopologyTab
+
+    tab = TopologyTab()
+    tab.begin_edit(SystemDocument.blank())
+    tab.document.add_bus()
+    tab._changed()
+
+    # "Keep editing" leaves edit mode active.
+    monkeypatch.setattr(QMessageBox, "exec", lambda self: 0)
+    monkeypatch.setattr(
+        QMessageBox,
+        "clickedButton",
+        lambda self: next(
+            b
+            for b in self.buttons()
+            if self.buttonRole(b) == QMessageBox.RejectRole
+        ),
+    )
+    tab._edit_toggle.setChecked(False)
+    assert tab.editing
+    assert tab._edit_toggle.isChecked()
+
+    # "Discard" leaves edit mode.
+    monkeypatch.setattr(
+        QMessageBox,
+        "clickedButton",
+        lambda self: next(
+            b
+            for b in self.buttons()
+            if self.buttonRole(b) == QMessageBox.DestructiveRole
+        ),
+    )
+    tab._edit_toggle.setChecked(False)
+    assert not tab.editing
 
 
 def test_line_double_click_edits(app, monkeypatch):

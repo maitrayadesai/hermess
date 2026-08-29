@@ -119,6 +119,16 @@ class SystemsPanel(QWidget):
         base = Path(root) if root is not None else hermess.SYSTEMS_DIR
         return base / name
 
+    def clear_inspector(self) -> None:
+        self._devices_tree.clear()
+        self._files_text.clear()
+
+    def deselect(self) -> None:
+        """Drop the visual selection (e.g. while a document is being edited,
+        so the browser does not point at a stale system)."""
+        self._tree.setCurrentItem(None)
+        self.clear_inspector()
+
     def refresh_inspector(self) -> None:
         self._devices_tree.clear()
         self._files_text.clear()
