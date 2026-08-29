@@ -360,6 +360,30 @@ def test_topology_edit_mode(app):
     assert tab._desc.buses() == ["2"]
 
 
+def test_run_saves_silently_once_folder_known(app, tmp_path, monkeypatch):
+    from PySide6.QtWidgets import QMessageBox
+
+    from hermess.gui.main_window import MainWindow
+    from hermess.gui.sysdoc import SystemDocument
+
+    # Any dialog would mean the silent path was not taken.
+    monkeypatch.setattr(
+        QMessageBox, "exec", lambda self: (_ for _ in ()).throw(AssertionError)
+    )
+    window = MainWindow()
+    window._topology.begin_edit(SystemDocument.blank())
+    doc = window._topology.document
+    doc.add_bus()
+    doc.save(tmp_path / "mysys")
+    doc.add_bus()  # dirty again, but the target folder is known
+    assert doc.dirty
+    assert window._resolve_edited_system() is True
+    assert 'bus = "2"' in (tmp_path / "mysys" / "sim_param.txt").read_text()
+    assert window._systems.current_system == ("mysys", str(tmp_path))
+    window._runner.shutdown()
+    window.close()
+
+
 def test_settings_roundtrip(app, tmp_path):
     import hermess
     from hermess.gui.main_window import MainWindow

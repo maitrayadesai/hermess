@@ -135,6 +135,12 @@ appears in the browser and runs, exports and versions like any other.
 Re-saving a hand-written system rewrites its files without preserving
 comments, so editing an imported system defaults to *Save as*.
 
+No saving is needed while composing. Because a run executes from the files
+on disk (the same ones scripts and the CLI use, so every run stays
+reproducible), Run asks for a save location the first time; from then on,
+running an edited system saves it automatically, and the usual save
+shortcut works at any time.
+
 .. image:: _static/gui_topology_ieee39.png
    :width: 100%
    :alt: One-line diagram of the IEEE 39-bus system with converters.

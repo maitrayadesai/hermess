@@ -392,29 +392,37 @@ class MainWindow(QMainWindow):
 
     def _resolve_edited_system(self) -> bool:
         """Before running while editing: make sure the document is saved and
-        selected; returns False when the run must not start."""
+        selected; returns False when the run must not start.
+
+        Once the document has its own folder, Run saves silently (the IDE
+        convention: running implies saving); only the very first save asks,
+        because a target folder must be chosen."""
         doc = self._topology.document
         folder = doc.desc.folder
-        saved = (
-            not doc.dirty
-            and folder is not None
-            and (Path(folder) / "sim_param.txt").exists()
+        has_target = (
+            folder is not None
+            and Path(folder).is_absolute()
+            and not self._inside_shipped(folder)
         )
-        if saved:
-            self._systems.add_folder(folder, select=True)
-            return True
-        box = QMessageBox(
-            QMessageBox.Question,
-            "Save before running",
-            "The edited system must be saved before it can run.",
-            parent=self,
-        )
-        save_button = box.addButton("Save…", QMessageBox.AcceptRole)
-        box.addButton("Cancel", QMessageBox.RejectRole)
-        box.exec()
-        if box.clickedButton() is not save_button:
-            return False
-        return self._save_system()
+        if doc.dirty and not has_target:
+            box = QMessageBox(
+                QMessageBox.Question,
+                "Save before running",
+                "The system runs from its files, so it must be saved once "
+                "to a folder of your choice; afterwards Run saves "
+                "automatically.",
+                parent=self,
+            )
+            save_button = box.addButton("Save…", QMessageBox.AcceptRole)
+            box.addButton("Cancel", QMessageBox.RejectRole)
+            box.exec()
+            if box.clickedButton() is not save_button:
+                return False
+            return self._save_system()
+        if doc.dirty or not (Path(folder) / "sim_param.txt").exists():
+            return self._save_system()  # silent: the target is already known
+        self._systems.add_folder(folder, select=True)
+        return True
 
     def _confirm_discard(self) -> bool:
         """Unsaved edits stand in the way; returns True when it is safe to
