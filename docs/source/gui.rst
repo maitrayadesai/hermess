@@ -75,8 +75,9 @@ surface as one dialog instead of a failed run. Hard errors block the start: a
 network that is not fully connected (with the detached bus groups named), an
 ODE-only integration scheme (``cvodes``, ``rk``) applied to a model with
 algebraic variables, a ``single`` reference frame pointing at a device that
-does not exist in the file, or a time step that is non-positive or larger
-than the end time. Questionable but runnable settings, such as a quasi-static
+does not exist in the file, more than one injector on a bus, duplicate unit
+identifiers, or a time step that is non-positive or larger than the end
+time. Questionable but runnable settings, such as a quasi-static
 inverter filter on a dynamic network or a very large number of output steps,
 are listed as warnings and ask for confirmation.
 
@@ -104,7 +105,8 @@ Double-clicking any component opens a detail pop-up: for a device, a short
 model description with the matching control schematics (the same block
 diagrams as in :ref:`models`) and the parameters from the system file; for a
 bus, its initialization, the connected branches and devices, and the
-initialized voltage of the shown run.
+initialized voltage of the shown run; for a line, its parameters and the
+pi-section schematic.
 
 .. image:: _static/gui_topology_ieee39.png
    :width: 100%
@@ -119,9 +121,12 @@ first one becomes the slack), *+ Line* connects two clicked buses,
 *+ Device* offers every available model, shipped or registered through
 :func:`hermess.register`, and attaches the chosen one to a clicked bus,
 *Delete* removes what you click, and *Disturbances…* edits the event
-sequence. Double-clicking an element in edit mode opens its parameter form
-instead of the detail pop-up. *File > New system* starts from a blank
-canvas; entering edit mode on a selected system edits a copy of it.
+sequence. Double-clicking an element in edit mode, lines included, opens its
+parameter form instead of the detail pop-up. *File > New system* starts from
+a blank canvas, *Clear canvas* empties the current one after a confirmation
+(and stays undoable), and entering edit mode on a selected system edits a
+copy of it. The usual undo/redo shortcuts work, and Escape abandons a
+half-drawn line.
 
 The parameter forms are generated from the model classes themselves: every
 parameter appears with its default greyed in and its meaning as a tooltip,
@@ -140,7 +145,8 @@ file, so generated files stay as terse as hand-written ones.
 
 While editing, the status line below the canvas shows the live validation of
 the pre-flight checks (connectivity, slack bus, solver compatibility, shunt
-susceptance under dynamic lines), and every change is undoable. Saving
+susceptance under dynamic lines, one injector per bus, unique unit
+identifiers), and every change is undoable. Saving
 writes an ordinary system folder (``sim_param.txt`` + ``sim_dist.txt``) to a
 location of your choice, never into the installed package; the saved system
 appears in the browser and runs, exports and versions like any other.

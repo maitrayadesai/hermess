@@ -37,11 +37,13 @@ import copy
 import numpy as np
 import pyqtgraph as pg
 from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QButtonGroup,
     QHBoxLayout,
     QLabel,
     QMenu,
+    QMessageBox,
     QPushButton,
     QToolButton,
     QVBoxLayout,
@@ -257,18 +259,30 @@ class TopologyTab(QWidget):
         self._tool_buttons["device"] = device_button
         row.addWidget(device_button)
 
+        # Switching tools abandons a half-drawn line.
+        self._tools.buttonClicked.connect(lambda _b: self._cancel_pending_line())
+
         row.addSpacing(12)
         disturbances = QPushButton("Disturbances…")
         disturbances.clicked.connect(self._edit_disturbances)
         row.addWidget(disturbances)
 
-        undo = QPushButton("Undo")
-        undo.clicked.connect(self._undo)
-        redo = QPushButton("Redo")
-        redo.clicked.connect(self._redo)
-        row.addWidget(undo)
-        row.addWidget(redo)
+        self._undo_button = QPushButton("Undo")
+        self._undo_button.clicked.connect(self._undo)
+        self._redo_button = QPushButton("Redo")
+        self._redo_button.clicked.connect(self._redo)
+        row.addWidget(self._undo_button)
+        row.addWidget(self._redo_button)
+
+        clear = QPushButton("Clear canvas")
+        clear.setToolTip("Remove every element and start fresh (undoable)")
+        clear.clicked.connect(self._clear_canvas)
+        row.addWidget(clear)
         row.addStretch(1)
+
+        QShortcut(QKeySequence.Undo, self, self._undo)
+        QShortcut(QKeySequence.Redo, self, self._redo)
+        QShortcut(QKeySequence(Qt.Key_Escape), self, self._cancel_pending_line)
         return bar
 
     # ---- public --------------------------------------------------------------
@@ -374,10 +388,42 @@ class TopologyTab(QWidget):
             DisturbanceManagerDialog(self._doc, parent=self).exec()
             self._changed()
 
+    def _cancel_pending_line(self) -> None:
+        if self._pending_line_bus is not None:
+            self._pending_line_bus = None
+            self._update_status()
+
+    def _clear_canvas(self) -> None:
+        if not self.editing:
+            return
+        box = QMessageBox(
+            QMessageBox.Warning,
+            "Clear the canvas",
+            "Remove every bus, line, device and disturbance from the edited "
+            "system? Undo can bring them back.",
+            parent=self,
+        )
+        clear_button = box.addButton("Clear", QMessageBox.DestructiveRole)
+        box.addButton("Cancel", QMessageBox.RejectRole)
+        box.exec()
+        if box.clickedButton() is clear_button:
+            self._doc.clear()
+            self._pos_by_name = {}
+            self._pending_line_bus = None
+            self._changed()
+
     def _update_status(self) -> None:
         if not self.editing:
             return
+        self._undo_button.setEnabled(self._doc.can_undo())
+        self._redo_button.setEnabled(self._doc.can_redo())
         desc = self._desc
+        if not desc.buses():
+            self._status.setText(
+                "The canvas is empty. Select + Bus and click to place the "
+                "first bus (it becomes the slack)."
+            )
+            return
         counts = (
             f"{len(desc.buses())} buses, {len(desc.lines)} lines, "
             f"{len(desc.devices)} devices, {len(desc.disturbances)} disturbances."
@@ -429,14 +475,28 @@ class TopologyTab(QWidget):
         return best
 
     def _on_scene_click(self, ev) -> None:
-        if not self.editing or ev.button() != Qt.LeftButton:
-            return
-        tool = self._active_tool()
-        if tool == "move":
+        if ev.button() != Qt.LeftButton or self._desc is None:
             return
         vb = self._view.getPlotItem().vb
         p = vb.mapSceneToView(ev.scenePos())
         point = np.array([p.x(), p.y()])
+
+        if ev.double():
+            # Buses and device glyphs handle their own double clicks (the
+            # event arrives here accepted); what is left to catch are lines.
+            if ev.isAccepted() or not self._desc.buses():
+                return
+            if self._nearest_bus(point) is None and self._nearest_device(point) is None:
+                line = self._nearest_line(point)
+                if line is not None:
+                    self._line_double_clicked(line)
+            return
+
+        if not self.editing:
+            return
+        tool = self._active_tool()
+        if tool == "move":
+            return
 
         if tool == "bus":
             if self._nearest_bus(point) is None:
@@ -510,6 +570,48 @@ class TopologyTab(QWidget):
         if dialog.exec():
             self._doc.set_businit(bus, dialog.values())
             self._changed()
+
+    def _line_double_clicked(self, entry) -> None:
+        endpoints = f"{entry.get('bus_i')} – {entry.get('bus_j')}"
+        if self.editing:
+            params = {
+                k: v
+                for k, v in entry.params.items()
+                if k not in ("bus_i", "bus_j")
+            }
+            dialog = SimpleFormDialog(
+                f"Line {endpoints}",
+                param_meta.line_meta(),
+                params=params,
+                parent=self,
+            )
+            if dialog.exec():
+                self._doc.update_entry(
+                    entry,
+                    {
+                        "bus_i": entry.get("bus_i"),
+                        "bus_j": entry.get("bus_j"),
+                        **dialog.values(),
+                    },
+                )
+                self._changed()
+            return
+        root = device_info.schematics_dir()
+        diagrams = []
+        if root is not None:
+            caption, filename = device_info.line_schematic()
+            if (root / filename).exists():
+                diagrams = [(caption, root / filename)]
+        title = ("Transformer " if _is_transformer(entry) else "Line ") + endpoints
+        InfoDialog(
+            title,
+            "A pi-section branch; with dynamic lines its series current is a "
+            "differential state and the charging acts as bus capacitance.",
+            params=entry.params,
+            diagrams=diagrams,
+            doc_link=False,
+            parent=self,
+        ).show()
 
     def _device_double_clicked(self, entry) -> None:
         if not self.editing:

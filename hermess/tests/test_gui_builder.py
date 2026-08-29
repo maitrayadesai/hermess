@@ -81,6 +81,71 @@ def test_set_businit_creates_and_updates():
     assert doc.desc.bus_inits[-1].get("bus") == "9"
 
 
+def test_clear_is_undoable():
+    doc = SystemDocument.blank()
+    doc.add_bus()
+    doc.add_bus()
+    doc.add_line("1", "2")
+    doc.add_device("StaticZIP", "2")
+    doc.clear()
+    assert doc.desc.buses() == [] and doc.desc.devices == []
+    doc.undo()
+    assert doc.desc.buses() == ["1", "2"]
+    assert len(doc.desc.devices) == 1
+
+
+# ---- devices per bus --------------------------------------------------------
+
+
+def test_validate_one_injector_per_bus():
+    doc = SystemDocument.blank()
+    doc.add_bus()
+    doc.add_bus()
+    doc.add_line("1", "2")
+    doc.add_device("GENROU", "1")
+    doc.add_device("GridForming", "1")
+    issues = validation.validate(doc.desc, {})
+    assert any(
+        i.severity == "error" and "one injector per node" in i.message
+        for i in issues
+    )
+
+
+def test_validate_injector_load_pairing_warns():
+    doc = SystemDocument.blank()
+    doc.add_bus()
+    doc.add_bus()
+    doc.add_line("1", "2")
+    doc.add_device("GENROU", "1")
+    doc.add_device("StaticZIP", "1")
+    issues = validation.validate(doc.desc, {})
+    assert any(
+        i.severity == "warning" and "Bus 1" in i.message for i in issues
+    )
+    # The SVC + load pairing the SEA systems use stays clean.
+    svc_doc = SystemDocument.blank()
+    svc_doc.add_bus()
+    svc_doc.add_bus()
+    svc_doc.add_line("1", "2")
+    svc_doc.add_device("SVC", "2")
+    svc_doc.add_device("StaticZIP", "2")
+    issues = validation.validate(svc_doc.desc, {})
+    assert not any("Bus 2 carries" in i.message for i in issues)
+
+
+def test_validate_duplicate_idx():
+    doc = SystemDocument.blank()
+    doc.add_bus()
+    doc.add_bus()
+    doc.add_line("1", "2")
+    doc.add_device("GENROU", "1", {"idx": "U1"})
+    doc.add_device("StaticZIP", "2", {"idx": "U1"})
+    issues = validation.validate(doc.desc, {})
+    assert any(
+        i.severity == "error" and 'idx "U1"' in i.message for i in issues
+    )
+
+
 # ---- serialization ----------------------------------------------------------
 
 

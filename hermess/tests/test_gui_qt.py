@@ -360,6 +360,58 @@ def test_topology_edit_mode(app):
     assert tab._desc.buses() == ["2"]
 
 
+def test_line_double_click_edits(app, monkeypatch):
+    import numpy as np
+
+    from hermess.gui.param_form import SimpleFormDialog
+    from hermess.gui.sysdoc import SystemDocument
+    from hermess.gui.topology_tab import TopologyTab
+
+    tab = TopologyTab()
+    tab.begin_edit(SystemDocument.blank())
+    doc = tab.document
+    tab._changed({doc.add_bus(): (0.0, 0.0)})
+    tab._changed({doc.add_bus(): (1.0, 0.0)})
+    line = doc.add_line("1", "2")
+    tab._changed()
+    tab._view.getPlotItem().vb.setRange(xRange=(0, 1), yRange=(-0.5, 0.5))
+
+    # The midpoint of the segment hits the line, not a bus or glyph.
+    assert tab._nearest_line(np.array([0.5, 0.0])) is line
+    monkeypatch.setattr(SimpleFormDialog, "exec", lambda self: True)
+    monkeypatch.setattr(SimpleFormDialog, "values", lambda self: {"r": "0.05"})
+    tab._line_double_clicked(line)
+    assert line.params["r"] == "0.05"
+    assert line.get("bus_i") == "1" and line.get("bus_j") == "2"  # endpoints kept
+
+
+def test_clear_canvas_confirms(app, monkeypatch):
+    from PySide6.QtWidgets import QMessageBox
+
+    from hermess.gui.sysdoc import SystemDocument
+    from hermess.gui.topology_tab import TopologyTab
+
+    tab = TopologyTab()
+    tab.begin_edit(SystemDocument.blank())
+    tab.document.add_bus()
+    tab._changed()
+    # Auto-click the destructive (Clear) button of the confirmation.
+    monkeypatch.setattr(QMessageBox, "exec", lambda self: 0)
+    monkeypatch.setattr(
+        QMessageBox,
+        "clickedButton",
+        lambda self: next(
+            b
+            for b in self.buttons()
+            if self.buttonRole(b) == QMessageBox.DestructiveRole
+        ),
+    )
+    tab._clear_canvas()
+    assert tab._desc.buses() == []
+    assert "canvas is empty" in tab._status.text().lower()
+    assert tab._undo_button.isEnabled()  # the clear is undoable
+
+
 def test_run_saves_silently_once_folder_known(app, tmp_path, monkeypatch):
     from PySide6.QtWidgets import QMessageBox
 

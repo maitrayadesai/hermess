@@ -185,6 +185,14 @@ class SystemDocument:
         self.desc.devices.append(entry)
         return entry
 
+    def clear(self) -> None:
+        """Empty the canvas: every bus, line, device and disturbance (undoable)."""
+        self._checkpoint()
+        self.desc.devices = []
+        self.desc.lines = []
+        self.desc.bus_inits = []
+        self.desc.disturbances = []
+
     def set_businit(self, bus: str, params: dict) -> Entry:
         """Update the BusInit of ``bus``, creating it when missing."""
         self._checkpoint()

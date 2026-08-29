@@ -35,6 +35,27 @@ from hermess.config import config as default_config
 #: Output-step count above which a run is flagged as very large.
 _MANY_STEPS = 2_000_000
 
+# Injectors set the bus operating point at initialization; the platform
+# supports one per node (see the README limitation). SVCs and loads are not
+# injectors in this sense: the shipped SEA systems pair an SVC with a load on
+# one bus and run.
+_INJECTOR_PREFIXES = (
+    "Synchronous",
+    "GENROU",
+    "GENSAL",
+    "Marconato",
+    "Grid",
+    "StaticInfiniteBus",
+)
+
+
+def _role(kind: str) -> str:
+    if kind.startswith(_INJECTOR_PREFIXES):
+        return "injector"
+    if kind.startswith("Static"):
+        return "load"
+    return "other"
+
 
 @dataclass
 class Issue:
@@ -148,6 +169,59 @@ def validate(desc, overrides: dict) -> "list[Issue]":
                         "\"idas\" or \"collocation\"."
                     )
                 )
+
+    # ---- devices per bus and unit identifiers -------------------------------
+    per_bus: dict[str, list] = {}
+    for entry in desc.devices:
+        if entry.get("bus"):
+            per_bus.setdefault(entry.get("bus"), []).append(entry)
+    for bus, entries in sorted(per_bus.items()):
+        labels = {
+            role: [e.get("idx") or e.kind for e in entries if _role(e.kind) == role]
+            for role in ("injector", "load")
+        }
+        if len(labels["injector"]) > 1:
+            issues.append(
+                _error(
+                    f"Bus {bus} carries {len(labels['injector'])} injectors "
+                    f"({', '.join(labels['injector'])}), but the platform "
+                    "supports one injector per node. Put the second one on a "
+                    "new bus connected through a low-impedance line."
+                )
+            )
+        elif labels["injector"] and labels["load"]:
+            issues.append(
+                _warning(
+                    f"Bus {bus} carries an injector ({labels['injector'][0]}) "
+                    f"and a load ({', '.join(labels['load'])}) together; no "
+                    "shipped system does this and the initialization may be "
+                    "ambiguous. Consider a separate load bus connected "
+                    "through a low-impedance line."
+                )
+            )
+        elif len(labels["load"]) > 1:
+            issues.append(
+                _warning(
+                    f"Bus {bus} carries {len(labels['load'])} loads "
+                    f"({', '.join(labels['load'])}); consider merging them "
+                    "into one."
+                )
+            )
+
+    seen_idx: dict[str, str] = {}
+    for entry in desc.devices:
+        idx = entry.get("idx")
+        if not idx:
+            continue
+        if idx in seen_idx:
+            issues.append(
+                _error(
+                    f"Two devices share the idx \"{idx}\" ({seen_idx[idx]} "
+                    f"and {entry.kind}); unit identifiers must be unique."
+                )
+            )
+        else:
+            seen_idx[idx] = entry.kind
 
     # ---- shunt susceptance under dynamic lines ------------------------------
     # With line_dyn the line charging b is the bus capacitance of the dynamic
