@@ -160,7 +160,10 @@ No saving is needed while composing. Because a run executes from the files
 on disk (the same ones scripts and the CLI use, so every run stays
 reproducible), Run asks for a save location the first time; from then on,
 running an edited system saves it automatically, and the *Save…* button in
-the palette (or the usual shortcut) works at any time. While a document is
+the palette (or the usual shortcut) works at any time. Every document saves
+only into its own folder, so systems built in parallel never overwrite each
+other; picking a folder that already holds a different system in *Save as*
+asks before replacing it. While a document is
 being edited, the systems browser is deselected and its inspector emptied,
 so the left column never shows a stale system; leaving edit mode asks about
 unsaved changes and restores the previously shown system.

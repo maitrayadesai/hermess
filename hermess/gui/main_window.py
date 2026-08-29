@@ -400,6 +400,21 @@ class MainWindow(QMainWindow):
                     "overwritten; choose a folder of your own.",
                 )
                 return False
+            # Choosing a folder that already holds another system must not
+            # clobber it silently (a document's own folder saves quietly).
+            if (folder / "sim_param.txt").exists():
+                box = QMessageBox(
+                    QMessageBox.Warning,
+                    "Folder already holds a system",
+                    f"{folder} already contains a system; saving replaces "
+                    "its files.",
+                    parent=self,
+                )
+                replace = box.addButton("Replace", QMessageBox.DestructiveRole)
+                box.addButton("Cancel", QMessageBox.RejectRole)
+                box.exec()
+                if box.clickedButton() is not replace:
+                    return False
         doc.save(folder)
         self._log.append_notice(f"Saved system to {folder}.")
         # Registering the folder selects it, which shows the saved system
