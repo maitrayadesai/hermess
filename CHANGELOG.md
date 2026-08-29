@@ -4,6 +4,28 @@ Notable changes to HERMESS. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/) as spelled out in `RELEASING.md`.
 
+## [1.3.0] - 2026-08-29
+
+### Added
+- Graphical system builder in the GUI: the *Edit* toggle on the topology
+  view opens a palette to place buses, connect lines and attach any shipped
+  or user-registered device model by clicking on the canvas. The parameter
+  forms are generated from the model classes, so every parameter appears
+  with the model's own default and description, and the control strategies
+  (AVR, governor, PSS, shaft; filter, angle, voltage, inner control, PLL)
+  are selected from dropdowns; fields left empty are not written, keeping
+  generated files as terse as hand-written ones. Includes a disturbance
+  sequence editor, undo/redo, and live validation in a status line.
+- Built systems are saved as ordinary system folders (`sim_param.txt` +
+  `sim_dist.txt`) that scripts, the CLI and version control handle like any
+  hand-written one; parameter values round-trip verbatim. `File > New
+  system` starts from a blank canvas, and editing a selected system works
+  on a copy. Running an edited system saves it automatically once a save
+  location has been chosen.
+- The GUI's pre-flight validation checks the summed line charging per bus
+  when dynamic lines are enabled, mirroring the setup guard from 1.2.2, so
+  the problem surfaces before the model is built.
+
 ## [1.2.2] - 2026-08-29
 
 ### Fixed

@@ -14,7 +14,7 @@ try:  # single-source the version from the installed package metadata
 
     release = _pkg_version("hermess")
 except Exception:  # building docs without an installed hermess
-    release = "1.2.2"
+    release = "1.3.0"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
