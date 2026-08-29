@@ -384,10 +384,20 @@ class MainWindow(QMainWindow):
             or self._inside_shipped(folder)
         )
         if needs_dialog:
+            # Forking an already-saved system suggests a sibling folder, so a
+            # variant naturally lands next to its original.
+            if (
+                folder is not None
+                and Path(folder).is_absolute()
+                and not self._inside_shipped(folder)
+            ):
+                suggestion = Path(folder).parent / f"{Path(folder).name}_variant"
+            else:
+                suggestion = Path.home() / doc.desc.name
             path, _filter = QFileDialog.getSaveFileName(
                 self,
                 "Save system as (a folder of this name is created)",
-                str(Path.home() / doc.desc.name),
+                str(suggestion),
             )
             if not path:
                 return False

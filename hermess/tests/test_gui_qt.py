@@ -523,6 +523,36 @@ def test_run_saves_silently_once_folder_known(app, tmp_path, monkeypatch):
     window.close()
 
 
+def test_save_as_forks_instead_of_overwriting(app, tmp_path, monkeypatch):
+    from PySide6.QtWidgets import QFileDialog
+
+    from hermess.gui.main_window import MainWindow
+    from hermess.gui.sysdoc import SystemDocument
+
+    window = MainWindow()
+    window._topology.begin_edit(SystemDocument.blank())
+    doc = window._topology.document
+    doc.add_bus()
+    doc.save(tmp_path / "original")
+    original_text = (tmp_path / "original" / "sim_param.txt").read_text()
+
+    doc.add_bus()  # the change that is worth keeping as a variant
+    suggestions = []
+
+    def fake_dialog(parent, caption, start, *args, **kwargs):
+        suggestions.append(start)
+        return str(tmp_path / "variant"), ""
+
+    monkeypatch.setattr(QFileDialog, "getSaveFileName", staticmethod(fake_dialog))
+    window._topology._request_save(save_as=True)
+    # The variant holds the new state; the original is untouched.
+    assert 'bus = "2"' in (tmp_path / "variant" / "sim_param.txt").read_text()
+    assert (tmp_path / "original" / "sim_param.txt").read_text() == original_text
+    assert suggestions[0].endswith("original_variant")  # suggested sibling name
+    window._runner.shutdown()
+    window.close()
+
+
 def test_save_as_refuses_to_clobber_another_system(app, tmp_path, monkeypatch):
     from PySide6.QtWidgets import QFileDialog, QMessageBox
 

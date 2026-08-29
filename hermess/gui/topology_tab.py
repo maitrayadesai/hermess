@@ -282,6 +282,14 @@ class TopologyTab(QWidget):
         save.clicked.connect(self._request_save)
         row.addWidget(save)
 
+        save_as = QPushButton("Save as…")
+        save_as.setToolTip(
+            "Save the current state into a new folder, keeping the original "
+            "system for comparison"
+        )
+        save_as.clicked.connect(lambda: self._request_save(save_as=True))
+        row.addWidget(save_as)
+
         self._undo_button = QPushButton("Undo")
         self._undo_button.clicked.connect(self._undo)
         self._redo_button = QPushButton("Redo")
@@ -398,9 +406,9 @@ class TopologyTab(QWidget):
         self._status.setVisible(False)
         self._view.unsetCursor()
 
-    def _request_save(self) -> None:
+    def _request_save(self, save_as: bool = False) -> None:
         if self.editing and self._save_handler is not None:
-            self._save_handler()
+            self._save_handler(save_as=save_as)
 
     def _active_tool(self) -> str:
         for tool, button in self._tool_buttons.items():
