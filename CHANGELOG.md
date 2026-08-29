@@ -4,6 +4,39 @@ Notable changes to HERMESS. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/) as spelled out in `RELEASING.md`.
 
+## [1.4.0] - 2026-08-29
+
+### Added
+- Lines are editable in the builder: double-clicking one opens its
+  parameter form in edit mode, and a detail pop-up with the pi-section
+  schematic in view mode.
+- *Save…* and *Save as…* buttons in the builder palette. *Save as…* forks
+  the current state into a new folder (suggested next to the original) so a
+  variant can be kept for comparison without touching the system it started
+  from; choosing a folder that already holds a different system asks before
+  replacing it.
+- A *Clear canvas* button that empties the edited system after a
+  confirmation and stays undoable, plus undo/redo shortcuts with proper
+  enabled states, and Escape to abandon a half-drawn line.
+- The validation enforces one injector per bus as an error (with the
+  low-impedance-branch remedy) and flags unproven device pairings and
+  duplicate unit identifiers, live in the builder's status line and at
+  pre-flight.
+
+### Changed
+- The builder names actual defaults instead of generic placeholders: the
+  strategy dropdowns show what the model default resolves to, the unit
+  identifier field shows the name that will be generated, and disturbance
+  fields show their defaults.
+- Completing a line, device or delete action drops the tool back to *Move*
+  so stray clicks stay inert, and the mouse cursor indicates the active
+  tool. While a document is edited, the systems browser is deselected and
+  its inspector emptied, restored when edit mode ends.
+
+### Fixed
+- Toggling edit mode off with unsaved changes now asks (save, discard or
+  keep editing) instead of dropping them silently.
+
 ## [1.3.0] - 2026-08-29
 
 ### Added
