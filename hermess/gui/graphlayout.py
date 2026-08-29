@@ -28,6 +28,38 @@ from __future__ import annotations
 import numpy as np
 
 
+def outward_directions(pos: np.ndarray, edges: "list[tuple[int, int]]") -> np.ndarray:
+    """Per-node unit vector into the locally empty sector: away from the
+    node's neighbors, which is where labels and device glyphs fit without
+    landing on lines or other buses. Falls back to the perpendicular of the
+    first edge for nodes whose neighbors cancel out (straight chains), and to
+    straight up for isolated nodes."""
+    n = pos.shape[0]
+    acc = np.zeros((n, 2))
+    first_edge_unit = {}
+    for i, j in edges:
+        span = pos[j] - pos[i]
+        norm = np.linalg.norm(span)
+        if norm < 1e-9:
+            continue
+        unit = span / norm
+        acc[i] += unit
+        acc[j] -= unit
+        first_edge_unit.setdefault(i, unit)
+        first_edge_unit.setdefault(j, -unit)
+    out = np.zeros((n, 2))
+    for i in range(n):
+        norm = np.linalg.norm(acc[i])
+        if norm > 1e-6:
+            out[i] = -acc[i] / norm
+        elif i in first_edge_unit:
+            unit = first_edge_unit[i]
+            out[i] = np.array([-unit[1], unit[0]])  # perpendicular
+        else:
+            out[i] = np.array([0.0, 1.0])
+    return out
+
+
 def spring_layout(
     n: int,
     edges: "list[tuple[int, int]]",
@@ -77,7 +109,7 @@ def spring_layout(
     # whole layout keeps air. Runs in the final (normalized) units and skips
     # the rescale afterwards, so the separation is not squeezed away again.
     # Deterministic (no randomness involved).
-    d_min = 0.65 / np.sqrt(n)
+    d_min = 0.72 / np.sqrt(n)
     with np.errstate(invalid="ignore"):
         for _ in range(150):
             delta = pos[:, None, :] - pos[None, :, :]

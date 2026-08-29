@@ -52,7 +52,7 @@ from PySide6.QtWidgets import (
 
 from hermess.gui import device_info, param_meta, theme
 from hermess.gui.disturbance_editor import DisturbanceManagerDialog
-from hermess.gui.graphlayout import spring_layout
+from hermess.gui.graphlayout import outward_directions, spring_layout
 from hermess.gui.info_dialog import InfoDialog
 from hermess.gui.param_form import DeviceFormDialog, SimpleFormDialog
 from hermess.gui.sysdoc import SystemDocument
@@ -356,6 +356,10 @@ class TopologyTab(QWidget):
         self._desc = desc
         self._annotations = {}
         self._pos_by_name = {}
+        if desc is not None:
+            # Dense systems start decluttered; hovering a glyph names it, and
+            # the Labels toggle brings the names back.
+            self._labels_toggle.setChecked(len(desc.devices) <= 20)
         self._render()
         if desc is not None and desc.buses():
             self._view.autoRange(padding=0.15)
@@ -845,34 +849,51 @@ class TopologyTab(QWidget):
             pxMode=True,
         )
 
-        for bus in buses:
-            label = pg.TextItem(anchor=(0.5, -0.4), color=theme.TEXT)
+        # Everything attached to a bus (device glyphs, their labels, the bus
+        # number) goes into the bus's locally empty sector: away from its own
+        # neighbors, not the graph center, so clusters stay clean.
+        edge_indices = [
+            (i, j) for i, j in (
+                (index.get(e.get("bus_i")), index.get(e.get("bus_j")))
+                for e in desc.lines
+            ) if i is not None and j is not None
+        ]
+        outward = outward_directions(self._pos, edge_indices)
+
+        for i, bus in enumerate(buses):
+            # Devices occupy the outward side; the bus number takes the
+            # opposite one, shifted along both axes so neighboring numbers
+            # spread apart instead of meeting halfway.
+            anchor_x = 0.5 + 0.45 * float(np.clip(outward[i][0], -1.0, 1.0))
+            anchor_y = -0.35 if outward[i][1] >= 0 else 1.3
+            label = pg.TextItem(anchor=(anchor_x, anchor_y), color=theme.TEXT)
             self._view.addItem(label)
             self._bus_labels.append(label)
 
-        # Device glyphs, fanned out around their bus away from the graph center.
-        center = self._pos.mean(axis=0)
         per_bus: dict[int, list] = {}
         for entry in desc.devices:
             i = index.get(entry.get("bus"))
             if i is not None:
                 per_bus.setdefault(i, []).append(entry)
         for i, entries in per_bus.items():
-            outward = self._pos[i] - center
-            base = np.arctan2(outward[1], outward[0]) if np.linalg.norm(outward) > 1e-9 else np.pi / 2
+            base = np.arctan2(outward[i][1], outward[i][0])
             for slot, entry in enumerate(entries):
-                angle = base + (slot - (len(entries) - 1) / 2) * 0.7
+                angle = base + (slot - (len(entries) - 1) / 2) * 0.9
                 symbol, color, _caption = _glyph_for(entry.kind)
                 connector = pg.PlotDataItem(pen=pg.mkPen("#B0B3B8", width=1))
+                name = entry.get("idx") or entry.kind
                 scatter = _ClickableScatter(
                     lambda entry=entry: self._device_double_clicked(entry),
                     symbol=symbol,
                     size=13,
                     pen=pg.mkPen(color),
                     brush=pg.mkBrush(pg.mkColor(color).lighter(160)),
+                    hoverable=True,
+                    tip=lambda x, y, data, text=f"{name} — {entry.kind}": text,
                 )
-                name = entry.get("idx") or entry.kind
-                label = pg.TextItem(name, anchor=(0.5, -0.35), color=color)
+                # The glyph's name continues outward, away from the diagram.
+                label_anchor = (0.5, 1.25) if np.sin(angle) >= 0 else (0.5, -0.35)
+                label = pg.TextItem(name, anchor=label_anchor, color=color)
                 label.setVisible(self._labels_toggle.isChecked())
                 for item in (connector, scatter, label):
                     self._view.addItem(item)
@@ -980,12 +1001,15 @@ class TopologyTab(QWidget):
         ).show()
 
     def _update_labels(self) -> None:
+        # Very large diagrams get smaller bus numbers; the text is pixel-sized
+        # while the layout is not, so this is the remaining density lever.
+        size = "9pt" if len(self._bus_labels) > 40 else "11pt"
         for bus, label in zip(self._desc.buses(), self._bus_labels):
             if bus in self._annotations:
                 vmag, vdeg = self._annotations[bus]
                 label.setHtml(
-                    f'<div style="text-align:center"><b>{bus}</b><br>'
+                    f'<div style="text-align:center; font-size:{size}"><b>{bus}</b><br>'
                     f'<span style="font-size:8pt">{vmag:.3f} ∠ {vdeg:.1f}°</span></div>'
                 )
             else:
-                label.setHtml(f"<b>{bus}</b>")
+                label.setHtml(f'<span style="font-size:{size}"><b>{bus}</b></span>')
