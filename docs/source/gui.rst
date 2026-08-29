@@ -63,9 +63,9 @@ carried as overrides; everything else follows the shipped defaults.
 
 To simulate systems of your own, use *Open folder…* and point it either at a
 single system folder (containing ``sim_param.txt`` and optionally
-``sim_dist.txt``) or at a directory holding several such folders. The GUI
-never edits system files: change them in your editor, press *Reload*, and run
-again.
+``sim_dist.txt``) or at a directory holding several such folders. Externally
+edited files are picked up with *Reload*; systems can also be built and
+modified graphically (see `Building systems`_).
 
 Pre-flight checks
 ^^^^^^^^^^^^^^^^^
@@ -106,6 +106,10 @@ diagrams as in :ref:`models`) and the parameters from the system file; for a
 bus, its initialization, the connected branches and devices, and the
 initialized voltage of the shown run.
 
+.. image:: _static/gui_topology_ieee39.png
+   :width: 100%
+   :alt: One-line diagram of the IEEE 39-bus system with converters.
+
 Building systems
 ^^^^^^^^^^^^^^^^
 
@@ -126,6 +130,14 @@ voltage, inner control, PLL) are chosen from dropdowns that regenerate the
 form. Fields left empty use the model defaults and are not written to the
 file, so generated files stay as terse as hand-written ones.
 
+.. image:: _static/gui_builder_canvas.png
+   :width: 100%
+   :alt: Edit mode with the tool palette and a system assembled on the canvas.
+
+.. image:: _static/gui_builder_form.png
+   :width: 70%
+   :alt: A parameter form generated from the model class, with strategy dropdowns.
+
 While editing, the status line below the canvas shows the live validation of
 the pre-flight checks (connectivity, slack bus, solver compatibility, shunt
 susceptance under dynamic lines), and every change is undoable. Saving
@@ -140,10 +152,6 @@ on disk (the same ones scripts and the CLI use, so every run stays
 reproducible), Run asks for a save location the first time; from then on,
 running an edited system saves it automatically, and the usual save
 shortcut works at any time.
-
-.. image:: _static/gui_topology_ieee39.png
-   :width: 100%
-   :alt: One-line diagram of the IEEE 39-bus system with converters.
 
 Time domain
 ^^^^^^^^^^^

@@ -116,7 +116,10 @@ hermess.registered("angle")         # what can be selected today
 An optional desktop GUI covers the interactive workflow: select a shipped or
 user-written system, adjust the simulation options, run with live progress, and
 inspect the one-line diagram, the time-domain trajectories, the small-signal
-modes and the initial power flow. Results export as plot-ready CSV.
+modes and the initial power flow. Systems can also be built graphically, by
+placing buses, lines and devices on the canvas with parameter forms generated
+from the models; the result is saved as an ordinary system folder. Results
+export as plot-ready CSV.
 
 ```bash
 pip install "hermess[gui]"   # from source: pip install -e ".[gui]", or uv sync --extra gui
