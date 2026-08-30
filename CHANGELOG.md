@@ -4,6 +4,29 @@ Notable changes to HERMESS. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/) as spelled out in `RELEASING.md`.
 
+## [1.6.0] - 2026-08-30
+
+### Added
+- `hermess.analysis`, the post-processing and notebook workflow as a public
+  API: signal addressing (`owner:quantity` with globs, lists, dicts and
+  device objects), pandas tables and CSV export (`signals`, `get`,
+  `to_dataframe`, `to_csv`, `metrics`, `summary`), one-line plotting
+  including the single-line system diagram (`plot`, `plot_states`,
+  `compare`, `plot_frequency`, `plot_voltages`, `plot_active_power`,
+  `plot_modes`, `plot_system`, `mark_events`), small-signal tables
+  (`small_signal`, `modal_table`, `participation_table`, `state_matrix`,
+  `power_flow_table`), raw accessors (`get_device`, `frequency_hz`,
+  `bus_voltage`, `state_index`, `device_label`) and text-level system-file
+  helpers (`copy_system`, `show_system`, `set_param`, `set_disturbances`,
+  `read_events`). One star-import gives a notebook the whole workflow. The
+  plots follow the active matplotlib style.
+- Quiet runs: the `show_progress` configuration field turns the progress
+  bar off, and `hermess.simulate(..., quiet=True)` is the shorthand (no
+  progress bar, warnings-only logging).
+- The returned model carries the scheduled disturbances as `dae.events`
+  (`(time, type, where)` tuples) and the resolved configuration as
+  `dae.cfg`.
+
 ## [1.5.1] - 2026-08-30
 
 ### Fixed
