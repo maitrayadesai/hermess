@@ -4,6 +4,39 @@ Notable changes to HERMESS. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/) as spelled out in `RELEASING.md`.
 
+## [1.5.0] - 2026-08-30
+
+### Added
+- Device-level algebraic signals in the time-domain view: the private
+  algebraic variables (e.g. the quasi-static filter quantities) and the
+  outputs the models expose symbolically, such as a grid-forming
+  converter's frequency `omega_c` (or a PLL's `omega_pll`), evaluated over
+  the stored trajectories and marked "(algebraic)" in the signal tree.
+  `SimulationResults` carries them per device unit.
+- Topology view controls: *Fit* (also the space bar) refits the diagram
+  while keeping the manual arrangement, and a *Labels* toggle shows or
+  hides the device names; dense systems start decluttered, with glyph
+  hover naming the unit.
+
+### Changed
+- The GUI has a refreshed visual design (underline tabs, toolbar icons,
+  filled active states, visible splitter handles) with no new
+  dependencies, and everyday details were polished: the window title names
+  the shown system with an unsaved marker, the progress bar is
+  indeterminate while the model builds, checked signals carry color chips
+  matching their curves, and the options dialog documents every field
+  with tooltips.
+- Large one-line diagrams lay out without overlaps: minimum node spacing
+  is enforced, device glyphs and labels go into each bus's locally empty
+  sector, and the bus number takes the opposite side.
+- Zooming on long large-amplitude records is smooth: traces beyond 20k
+  points render with a thin aliased pen (measured ~270x faster per zoom
+  step), visually indistinguishable at that density.
+
+### Fixed
+- Clicking an eigenvalue in the small-signal map no longer raises a numpy
+  truthiness error when the click selects nothing.
+
 ## [1.4.0] - 2026-08-29
 
 ### Added

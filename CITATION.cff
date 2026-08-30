@@ -11,8 +11,8 @@ abstract: >-
   differential-algebraic equations (DAEs), with synchronous machine, converter,
   static load and dynamic or quasi-static network models, disturbances and
   small-signal analysis. Simulation-only fork of PowerDynamicEstimator.
-version: 1.4.0
-date-released: 2026-08-29
+version: 1.5.0
+date-released: 2026-08-30
 license: GPL-3.0-or-later
 doi: 10.3929/ethz-c-000805609
 identifiers:
