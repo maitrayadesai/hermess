@@ -98,6 +98,7 @@ the accompanying paper; see :ref:`about` for the references, or the
    guide/system_files
    guide/disturbances
    guide/results
+   guide/analysis
    guide/sensitivities
    guide/custom_models
    guide/configuration

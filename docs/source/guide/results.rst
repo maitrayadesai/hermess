@@ -29,3 +29,6 @@ After a run with ``small_signal_analysis=True``:
 
 Individual devices keep their own states, so ``device.xf["omega"]`` gives the
 trajectory of one state of one device.
+
+For tables, selector-based extraction and one-line plots on top of these raw
+attributes, see :ref:`analysis and plotting <analysis>`.
