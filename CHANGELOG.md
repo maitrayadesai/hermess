@@ -4,6 +4,25 @@ Notable changes to HERMESS. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/) as spelled out in `RELEASING.md`.
 
+## [1.5.1] - 2026-08-30
+
+### Fixed
+- Derived outputs (`omega_c`, `omega_pll`) are reconstructed correctly
+  across a `SETPOINT` disturbance. The event bakes the new setpoint into
+  the rebuilt expressions as a numeric constant, and the post-run
+  evaluation used those final expressions for the whole run, shifting the
+  pre-event segment (by `Kp * (Pref_new - Pref_old)` for a grid-forming
+  converter's frequency). Each stored segment is now evaluated with the
+  expressions of its own equation build. Affects `SimulationResults` and
+  the GUI signal tree; the stored state and algebraic trajectories were
+  always correct.
+- `progress_callback` and `init_callback` cancel the run on any falsy
+  return other than `None`. A callback returning numpy bools (natural
+  when comparing against the reported fraction) previously failed the
+  exact `is False` test and the cancellation was silently ignored.
+- The angle-source module docstring no longer lists the shipped `VSM`
+  strategy as future work.
+
 ## [1.5.0] - 2026-08-30
 
 ### Added
