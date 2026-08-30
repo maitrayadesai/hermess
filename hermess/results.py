@@ -93,50 +93,96 @@ class SimulationResults:
 _DERIVED_OUTPUTS = ("omega_c", "omega_pll")
 
 
+class _SkipOutput(Exception):
+    """Raised when a derived output cannot be replayed from the stored data
+    (no expression on the device, or a dependency on unstored line states);
+    the output is skipped without a warning."""
+
+
 def _derived_outputs(dae, item) -> "dict[str, np.ndarray]":
     """Evaluate the symbolic outputs of one device over the saved run.
 
     Runs in the process that built the model (extraction happens right after
     the simulation), so the CasADi expressions are still alive; the returned
-    arrays are plain numpy, shape (n_units, nts). Limiter switch trajectories
-    are not stored, so an expression is evaluated at their initial values
-    (exact whenever ``incl_lim`` is off). Anything that cannot be replayed
-    from the stored data is skipped silently.
+    arrays are plain numpy, shape (n_units, nts). Device parameters and
+    setpoints are baked into the expressions as numeric constants and a
+    ``SETPOINT`` disturbance rebuilds them mid-run, so each stored segment is
+    evaluated with the expressions of its own equation build (the snapshots
+    recorded by ``DaeSim._snapshot_derived_exprs``). Limiter switch
+    trajectories are not stored, so an expression is evaluated at their
+    initial values (exact whenever ``incl_lim`` is off). Anything that cannot
+    be replayed from the stored data is skipped silently.
     """
     import casadi as ca
 
+    nts = dae.x_full.shape[1]
+    intervals = getattr(dae, "_expr_intervals", None) or [(0, None)]
+    try:
+        position = dae.device_list.index(item)
+    except ValueError:
+        position = None
+    boundaries = [start for start, _ in intervals] + [nts]
+
     outputs: dict[str, np.ndarray] = {}
-    substitution = None
     for name in _DERIVED_OUTPUTS:
-        expr = getattr(item, name, None)
-        if not isinstance(expr, ca.SX) or expr.numel() != item.n:
-            continue
+        segments = []
         try:
-            if substitution is None:
-                substitution = (
-                    ca.vertcat(
+            for k, (start, snapshot) in enumerate(intervals):
+                end = boundaries[k + 1]
+                if end <= start:
+                    continue
+                if snapshot is None:
+                    # No snapshots on this model (e.g. a run predating them):
+                    # fall back to the final expressions over the whole run.
+                    expr = getattr(item, name, None)
+                    x_sym, y_sym, s_sym = dae.x, dae.y, dae.s
+                    line_states = getattr(dae, "xl", None)
+                    omega_syms = ca.vertcat(
                         dae.omega_ref, dae.omega_ref_buses, dae.omega_ref_lines
-                    ),
-                    ca.vertcat(
+                    )
+                    omega_exprs = ca.vertcat(
                         dae.omega_ref_expr,
                         dae.omega_ref_buses_expr,
                         dae.omega_ref_lines_expr,
-                    ),
+                    )
+                else:
+                    if position is None:
+                        raise _SkipOutput
+                    expr = snapshot["exprs"][position].get(name)
+                    x_sym, y_sym, s_sym = (
+                        snapshot["x"],
+                        snapshot["y"],
+                        snapshot["s"],
+                    )
+                    line_states = snapshot["xl"]
+                    omega_syms = snapshot["omega_syms"]
+                    omega_exprs = snapshot["omega_exprs"]
+                if not isinstance(expr, ca.SX) or expr.numel() != item.n:
+                    raise _SkipOutput
+                resolved = ca.substitute(expr, omega_syms, omega_exprs)
+                if (
+                    line_states is not None
+                    and line_states.numel()
+                    and ca.depends_on(resolved, line_states)
+                ):
+                    raise _SkipOutput  # line trajectories are not stored
+                function = ca.Function("out", [x_sym, y_sym, s_sym], [resolved])
+                width = end - start
+                s_seg = np.repeat(
+                    np.asarray(dae.sinit).reshape(-1, 1), width, axis=1
                 )
-            resolved = ca.substitute(expr, *substitution)
-            line_states = getattr(dae, "xl", None)
-            if (
-                line_states is not None
-                and line_states.numel()
-                and ca.depends_on(resolved, line_states)
-            ):
-                continue  # line-current trajectories are not stored
-            function = ca.Function("out", [dae.x, dae.y, dae.s], [resolved])
-            nts = dae.x_full.shape[1]
-            s_traj = np.repeat(np.asarray(dae.sinit).reshape(-1, 1), nts, axis=1)
-            outputs[name] = np.asarray(
-                function.map(nts)(dae.x_full, dae.y_full, s_traj)
-            ).reshape(item.n, nts)
+                segments.append(
+                    np.asarray(
+                        function.map(width)(
+                            dae.x_full[:, start:end],
+                            dae.y_full[:, start:end],
+                            s_seg,
+                        )
+                    ).reshape(item.n, width)
+                )
+            outputs[name] = np.concatenate(segments, axis=1)
+        except _SkipOutput:
+            continue
         except Exception:
             logging.warning(
                 "Derived output %s of %s could not be evaluated.", name, item._name

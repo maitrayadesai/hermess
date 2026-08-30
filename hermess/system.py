@@ -2209,6 +2209,7 @@ class Dae:
         self.grid.gcall(self)
         self.grid.build_y()
         self.fgcall()
+        self._exprs_rebuilt = True
 
     def exec_dist(self):
         if self.line_dyn:
@@ -2253,6 +2254,7 @@ class Dae:
 
             # Rebuild CasADi integrator
             self.fgcall()
+            self._exprs_rebuilt = True
 
         else:
             self.grid.guncall(self)
@@ -2427,11 +2429,15 @@ class DaeSim(Dae):
         self.progress_callback = None
         #: Optional hook called once at the initialized operating point,
         #: after the small-signal analysis (when enabled) and before the time
-        #: stepping, with this model as its argument. Returning ``False``
-        #: cancels the run by raising
+        #: stepping, with this model as its argument. A falsy return other
+        #: than ``None`` cancels the run by raising
         #: :class:`~hermess.errors.SimulationCancelled` — e.g. to abort when
         #: :attr:`eigenvalues` show the operating point is unstable.
         self.init_callback = None
+        # Set by the rebuilds that recreate the symbolic expressions
+        # (exec_setpoint, dynamic-line exec_dist); the stepping loops then
+        # record a fresh derived-output snapshot for the post-run extraction.
+        self._exprs_rebuilt = False
         self.t0: float  # Start of the next DAE call
         self.tf: float  # End of the next DAE call
         self.line_dyn: bool  # Simulate with dynamic lines or not
@@ -2654,10 +2660,12 @@ class DaeSim(Dae):
         # Snapshot initial admittance state for post-processing branch currents
         self.grid.build_y()
         self._fault_intervals = [(0, self._snapshot_branch_params())]
+        self._expr_intervals = [(0, self._snapshot_derived_exprs())]
 
         # The model is built and initialized; give the caller one look at the
         # operating point (eigenvalues, power flow) before the time stepping.
-        if self.init_callback is not None and self.init_callback(self) is False:
+        verdict = None if self.init_callback is None else self.init_callback(self)
+        if verdict is not None and not verdict:
             raise SimulationCancelled(
                 "Simulation cancelled at the operating point by the init callback."
             )
@@ -2785,6 +2793,11 @@ class DaeSim(Dae):
                     self._fault_intervals.append(
                         (iter_forward, self._snapshot_branch_params())
                     )
+                    if self._exprs_rebuilt:
+                        self._expr_intervals.append(
+                            (iter_forward, self._snapshot_derived_exprs())
+                        )
+                        self._exprs_rebuilt = False
             pbar.close()
 
         else:
@@ -2854,6 +2867,11 @@ class DaeSim(Dae):
                     self._fault_intervals.append(
                         (n_cols, self._snapshot_branch_params())
                     )
+                    if self._exprs_rebuilt:
+                        self._expr_intervals.append(
+                            (n_cols, self._snapshot_derived_exprs())
+                        )
+                        self._exprs_rebuilt = False
 
                 self.t0 = self.tf[
                     -1
@@ -2917,15 +2935,55 @@ class DaeSim(Dae):
 
     def _report_progress(self, fraction: float) -> None:
         """Invoke :attr:`progress_callback`, if set, with the completed fraction
-        of the run clamped to [0, 1]. A callback returning ``False`` (exactly)
-        cancels the run by raising
+        of the run clamped to [0, 1]. A falsy return other than ``None``
+        (``False``, a numpy bool, 0) cancels the run by raising
         :class:`~hermess.errors.SimulationCancelled`."""
         if self.progress_callback is None:
             return
-        if self.progress_callback(min(max(fraction, 0.0), 1.0)) is False:
+        keep_going = self.progress_callback(min(max(fraction, 0.0), 1.0))
+        if keep_going is not None and not keep_going:
             raise SimulationCancelled(
                 f"Simulation cancelled at {fraction:.0%} by the progress callback."
             )
+
+    def _snapshot_derived_exprs(self) -> dict:
+        """Snapshot the symbolic derived outputs (``omega_c``, ``omega_pll``)
+        of every device together with the symbols of the current equation
+        build.
+
+        Device parameters and setpoints are baked into the expressions as
+        numeric constants, and :meth:`exec_setpoint` (or the dynamic-line
+        :meth:`exec_dist`) rebuilds everything from fresh symbols, so an
+        expression only reconstructs the trajectory segment that was
+        integrated with it. The post-run extraction
+        (:func:`hermess.results.extract_results`) evaluates each stored
+        segment with the snapshot of its own build.
+        """
+        from hermess.results import _DERIVED_OUTPUTS
+
+        exprs = []
+        for item in self.device_list:
+            entry = {}
+            for name in _DERIVED_OUTPUTS:
+                expr = getattr(item, name, None)
+                if isinstance(expr, ca.SX) and expr.numel() == item.n:
+                    entry[name] = expr
+            exprs.append(entry)
+        return {
+            "x": self.x,
+            "y": self.y,
+            "s": self.s,
+            "xl": getattr(self, "xl", None),
+            "omega_syms": ca.vertcat(
+                self.omega_ref, self.omega_ref_buses, self.omega_ref_lines
+            ),
+            "omega_exprs": ca.vertcat(
+                self.omega_ref_expr,
+                self.omega_ref_buses_expr,
+                self.omega_ref_lines_expr,
+            ),
+            "exprs": exprs,
+        }
 
     def _snapshot_branch_params(self) -> dict:
         """Snapshot the current numeric branch admittance parameters from Grid.build_y()."""
