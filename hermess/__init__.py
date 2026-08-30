@@ -80,6 +80,7 @@ def simulate(
     system_root: "str | Path | None" = None,
     progress_callback: Any = None,
     init_callback: Any = None,
+    quiet: bool = False,
     **overrides: Any,
 ) -> "DaeSim":
     """Run one simulation and return the finished :class:`~hermess.system.DaeSim`.
@@ -104,6 +105,9 @@ def simulate(
         at the operating point, before the time stepping; a falsy return other
         than ``None`` cancels the run (e.g. after inspecting
         ``dae.eigenvalues``).
+    :param quiet: Silence the run: no progress bar, warnings-only logging
+        (``show_progress=False``, ``log_level="WARNING"``). An explicit
+        override of either field still wins.
     :param overrides: Any field of :class:`~hermess.config.Config`
         (``T_end``, ``ts``, ``line_dyn``, ``omega_mode``, ``small_signal_analysis``,
         ``plot``, ...). Plotting is off by default here, unlike the shipped
@@ -124,6 +128,8 @@ def simulate(
         print_power_flow=False,
         small_signal_analysis=False,
     )
+    if quiet:
+        settings.update(show_progress=False, log_level="WARNING")
     settings.update(overrides)
     return _run(
         _default_config.updated(**settings),

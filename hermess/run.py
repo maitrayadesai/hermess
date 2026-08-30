@@ -127,6 +127,23 @@ def warn_filter_network_mismatch(device_list, line_dyn: bool) -> None:
             )
 
 
+def _event_list(dist) -> "list[tuple[float, str, str]]":
+    """The scheduled disturbances as ``(time, type, where)`` tuples, in time
+    order. Snapshotted before the stepping consumes the disturbance element
+    and attached to the returned model as ``dae.events``."""
+    events = []
+    for k in range(dist.n):
+        typ = str(dist.type[k])
+        if "LINE" in typ:
+            where = f"{dist.bus_i[k]}-{dist.bus_j[k]}"
+        elif typ == "SETPOINT":
+            where = f"{dist.device[k]}:{dist.param[k]} = {dist.value[k]:g}"
+        else:
+            where = str(dist.bus[k])
+        events.append((float(dist.time[k]), typ, where))
+    return sorted(events)
+
+
 def run(config: Config, progress_callback=None, init_callback=None) -> system.DaeSim:
     """Initialize and run the dynamic simulation.
 
@@ -236,6 +253,9 @@ def run(config: Config, progress_callback=None, init_callback=None) -> system.Da
 
     system.dae_sim.progress_callback = progress_callback
     system.dae_sim.init_callback = init_callback
+    system.dae_sim.show_progress = config.show_progress
+    system.dae_sim.events = _event_list(system.disturbance_sim)
+    system.dae_sim.cfg = config
 
     system.dae_sim.check_initialization()
 

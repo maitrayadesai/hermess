@@ -2438,6 +2438,18 @@ class DaeSim(Dae):
         # (exec_setpoint, dynamic-line exec_dist); the stepping loops then
         # record a fresh derived-output snapshot for the post-run extraction.
         self._exprs_rebuilt = False
+        #: Show the tqdm progress bar during the stepping (set from
+        #: ``Config.show_progress`` by :func:`hermess.run.run`).
+        self.show_progress = True
+        #: The scheduled disturbances as ``(time, type, where)`` tuples in
+        #: time order, snapshotted from the system files by
+        #: :func:`hermess.run.run` before the stepping consumes them (read by
+        #: :func:`hermess.analysis.mark_events` and
+        #: :func:`hermess.analysis.summary`).
+        self.events = []
+        #: The resolved :class:`~hermess.config.Config` of the run, attached
+        #: by :func:`hermess.run.run`.
+        self.cfg = None
         self.t0: float  # Start of the next DAE call
         self.tf: float  # End of the next DAE call
         self.line_dyn: bool  # Simulate with dynamic lines or not
@@ -2698,7 +2710,12 @@ class DaeSim(Dae):
                     )
                 return block_cache[n_block]
 
-            pbar = tqdm(total=self.nts - 1, desc="Simulation", unit="step")
+            pbar = tqdm(
+                total=self.nts - 1,
+                desc="Simulation",
+                unit="step",
+                disable=not self.show_progress,
+            )
             while iter_forward < self.nts - 1:
                 remaining = self.nts - 1 - iter_forward
                 # First step index at which check_disturbance() would execute
@@ -2815,6 +2832,7 @@ class DaeSim(Dae):
                 desc="Simulation",
                 unit="%",
                 bar_format="{l_bar}{bar}| {n:.1f}/{total:.0f}% [{elapsed}<{remaining}]",
+                disable=not self.show_progress,
             )
 
             for i in range(len(dist.time)):

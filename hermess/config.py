@@ -83,6 +83,10 @@ class Config(BaseModel):
         # model is recovered by substitution, so the run itself is unchanged
         # up to floating point rounding). See hermess/parametric.py.
     )
+    show_progress: bool = (
+        True  # Show the tqdm progress bar during the time stepping; turn off
+        # for batch runs and notebooks.
+    )
     log_level: Levels
 
     def updated(self, **kwargs: Any) -> "Config":
