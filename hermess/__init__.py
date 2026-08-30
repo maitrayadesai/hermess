@@ -98,11 +98,12 @@ def simulate(
         shipped with the package). Point it at your own directory to run a system
         you wrote or edited.
     :param progress_callback: Optional hook called during the time stepping with
-        the completed fraction in [0, 1]; returning ``False`` cancels the run by
-        raising :class:`~hermess.errors.SimulationCancelled`.
+        the completed fraction in [0, 1]; a falsy return other than ``None``
+        cancels the run by raising :class:`~hermess.errors.SimulationCancelled`.
     :param init_callback: Optional hook called once with the initialized model
-        at the operating point, before the time stepping; returning ``False``
-        cancels the run (e.g. after inspecting ``dae.eigenvalues``).
+        at the operating point, before the time stepping; a falsy return other
+        than ``None`` cancels the run (e.g. after inspecting
+        ``dae.eigenvalues``).
     :param overrides: Any field of :class:`~hermess.config.Config`
         (``T_end``, ``ts``, ``line_dyn``, ``omega_mode``, ``small_signal_analysis``,
         ``plot``, ...). Plotting is off by default here, unlike the shipped

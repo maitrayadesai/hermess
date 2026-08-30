@@ -30,7 +30,7 @@ active-power droop and the power-measurement state ``Pc_tilde`` live here. It is
 the mandatory axis: a grid-forming converter sets its own frequency from the droop
 off nominal (``DroopAngle``, exposing ``host.omega_c``); a grid-following
 converter rides on a PLL's frequency (``PLLAngle``, reading ``host.pll_frequency``).
-Future variants: VSM (swing ODE), dVOC, matching control.
+Future variants: dVOC, matching control.
 
 The angle source owns the ``Pc_tilde`` state and the droop, but the first-order
 power-measurement filter equation ``d Pc_tilde/dt = omega_f (Pc - Pc_tilde)`` is

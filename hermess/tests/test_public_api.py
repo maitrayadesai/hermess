@@ -309,3 +309,23 @@ def test_inverters_publish_their_terminal_power():
     f = ca.Function("Pc", [dae.x, dae.y], [inv.Pc])
     pc0 = np.asarray(f(dae.xinit, dae.yinit)).ravel()
     assert np.allclose(pc0, np.asarray(dae.xinit)[inv.Pc_tilde[:]], atol=1e-6)
+
+
+def test_progress_callback_numpy_false_cancels():
+    from hermess.errors import SimulationCancelled
+
+    with pytest.raises(SimulationCancelled):
+        hermess.simulate(
+            "3_bus", system_root=FIXTURE_ROOT, T_end=1.0, ts=0.01,
+            progress_callback=lambda fraction: np.bool_(fraction < 0.5),
+        )
+
+
+def test_init_callback_numpy_false_cancels():
+    from hermess.errors import SimulationCancelled
+
+    with pytest.raises(SimulationCancelled):
+        hermess.simulate(
+            "3_bus", system_root=FIXTURE_ROOT, T_end=0.5, ts=0.01,
+            init_callback=lambda dae: np.bool_(False),
+        )
