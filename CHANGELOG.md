@@ -4,6 +4,23 @@ Notable changes to HERMESS. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/) as spelled out in `RELEASING.md`.
 
+## [1.6.1] - 2026-08-31
+
+### Changed
+- Relaxed the dependency floors to what the suite actually requires:
+  `numpy>=2.0` (from 2.2.4), `pandas>=2.2.2` (from 2.2.3, the first
+  numpy-2-compatible pandas) and `matplotlib>=3.8.4` (from 3.8.3, which
+  declares `numpy<2` and can never coexist with the required numpy). The
+  full test suite passes against exactly this oldest stack. On
+  environments with a preinstalled scientific stack (e.g. Google Colab),
+  `pip install hermess` now leaves numpy and pandas untouched instead of
+  upgrading them under a live kernel.
+- CasADi's numpy-mode `FutureWarning` (casadi issue #2959, printed at every
+  first simulation per call site on casadi 3.7) is silenced by explicitly
+  keeping the legacy behavior, `GlobalOptions.setNumpyMode(-1)`: results are
+  bit-identical, only the notice goes away. The migration to the
+  casadi-aware numpy mode remains deliberate future work.
+
 ## [1.6.0] - 2026-08-30
 
 ### Added

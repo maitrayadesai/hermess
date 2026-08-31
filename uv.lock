@@ -1142,7 +1142,7 @@ wheels = [
 
 [[package]]
 name = "hermess"
-version = "1.6.0"
+version = "1.6.1"
 source = { editable = "." }
 dependencies = [
     { name = "casadi" },
@@ -1223,9 +1223,9 @@ validation = [
 [package.metadata]
 requires-dist = [
     { name = "casadi", specifier = ">=3.6.5" },
-    { name = "matplotlib", specifier = ">=3.8.3" },
-    { name = "numpy", specifier = ">=2.2.4" },
-    { name = "pandas", specifier = ">=2.2.3" },
+    { name = "matplotlib", specifier = ">=3.8.4" },
+    { name = "numpy", specifier = ">=2.0" },
+    { name = "pandas", specifier = ">=2.2.2" },
     { name = "pydantic", specifier = ">=2.10.3" },
     { name = "pyqtgraph", marker = "extra == 'gui'", specifier = ">=0.13.7" },
     { name = "pyside6", marker = "extra == 'gui'", specifier = ">=6.6" },
