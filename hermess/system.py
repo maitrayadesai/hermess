@@ -22,6 +22,16 @@ from hermess.devices.device import Line, BusInit, Disturbance
 from hermess.config import config
 from hermess.errors import SimulationCancelled
 import casadi as ca
+
+# CasADi 3.7 prints a FutureWarning the first time a numpy function touches a
+# casadi value (issue #2959) and asks the caller to choose a numpy mode. Keep
+# the legacy behavior explicitly: bit-identical results, and the notice stays
+# out of every first simulation. The migration to the casadi-aware numpy mode
+# is deliberate future work against the reference traces.
+try:
+    ca.GlobalOptions.setNumpyMode(-1)
+except AttributeError:  # older casadi without the option
+    pass
 import numpy as np
 import pandas as pd
 from tabulate import tabulate

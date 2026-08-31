@@ -329,3 +329,10 @@ def test_init_callback_numpy_false_cancels():
             "3_bus", system_root=FIXTURE_ROOT, T_end=0.5, ts=0.01,
             init_callback=lambda dae: np.bool_(False),
         )
+
+
+def test_simulate_prints_no_casadi_numpy_notice(recwarn):
+    hermess.simulate("3_bus", system_root=FIXTURE_ROOT, T_end=0.1, ts=0.01)
+    notices = [w for w in recwarn
+               if "casadi" in str(w.message).lower() and "numpy" in str(w.message).lower()]
+    assert not notices
