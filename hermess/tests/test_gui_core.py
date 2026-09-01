@@ -29,6 +29,7 @@ import pytest
 
 import hermess
 from hermess.gui import device_info, param_meta, sysparse, validation
+from hermess.gui.sysdoc import SystemDocument
 from hermess.gui.export import export_csv
 from hermess.gui.graphlayout import spring_layout
 from hermess.gui.worker import RunRequest, simulation_worker, stability_gate
@@ -87,6 +88,18 @@ def test_validate_flags_disconnected_network(tmp_path):
     assert len(errors) == 1
     assert "not connected" in errors[0].message
     assert "3" in errors[0].message and "4" in errors[0].message
+
+
+def test_buses_without_shunt():
+    doc = SystemDocument.blank()
+    doc.add_bus()
+    doc.add_bus()
+    doc.add_line("1", "2", {"b": "0"})
+    assert validation.buses_without_shunt(doc.desc) == ["1", "2"]
+    doc.add_line("1", "2", {"b": "0.02"})
+    assert validation.buses_without_shunt(doc.desc) == []
+    doc.add_line("1", "2", {"b": "oops"})  # unparseable: never a finding
+    assert validation.buses_without_shunt(doc.desc) == []
 
 
 def test_validate_solver_rules():

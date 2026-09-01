@@ -159,7 +159,11 @@ writes an ordinary system folder (``sim_param.txt`` + ``sim_dist.txt``) to a
 location of your choice, never into the installed package; the saved system
 appears in the browser and runs, exports and versions like any other.
 Re-saving a hand-written system rewrites its files without preserving
-comments, so editing an imported system defaults to *Save as*.
+comments, so editing an imported system defaults to *Save as*. When a saved
+network's lines carry no charging (so it cannot run with dynamic lines), the
+GUI offers once to write a ``sim_settings.txt`` with ``line_dyn = false``
+next to it, making the system run out of the box everywhere; declining is
+remembered and nothing is ever reclassified silently.
 
 No saving is needed while composing. Because a run executes from the files
 on disk (the same ones scripts and the CLI use, so every run stays

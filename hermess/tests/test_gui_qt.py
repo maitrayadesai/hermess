@@ -723,6 +723,85 @@ def test_window_title_tracks_state(app):
     window.close()
 
 
+def _click_role(monkeypatch, role):
+    from PySide6.QtWidgets import QMessageBox
+
+    monkeypatch.setattr(QMessageBox, "exec", lambda self: 0)
+    monkeypatch.setattr(
+        QMessageBox,
+        "clickedButton",
+        lambda self: next(
+            b for b in self.buttons() if self.buttonRole(b) == role
+        ),
+    )
+
+
+def test_save_offers_sim_settings_for_bare_network(app, tmp_path, monkeypatch):
+    from PySide6.QtWidgets import QFileDialog, QMessageBox
+
+    from hermess.gui.main_window import MainWindow
+    from hermess.gui.sysdoc import SystemDocument
+
+    window = MainWindow()
+    window._overrides = {}
+    tab = window._topology
+    tab.begin_edit(SystemDocument.blank())
+    doc = tab.document
+    doc.add_bus()
+    doc.add_bus()
+    doc.add_line("1", "2", {"b": "0"})  # no charging: dynamic lines impossible
+
+    target = tmp_path / "bare_net"
+    monkeypatch.setattr(
+        QFileDialog, "getSaveFileName", staticmethod(lambda *a, **k: (str(target), ""))
+    )
+    # Accepting the prompt writes the shipped default...
+    _click_role(monkeypatch, QMessageBox.AcceptRole)
+    assert window._save_system() is True
+    settings = (target / "sim_settings.txt").read_text()
+    assert "line_dyn = false" in settings
+    # ...which the effective configuration then honors (no shunt error).
+    assert window._preflight() is True
+    # A system that already decides line_dyn is never asked again.
+    monkeypatch.setattr(
+        QMessageBox, "exec", lambda self: (_ for _ in ()).throw(AssertionError)
+    )
+    window._offer_line_dyn_settings(target, doc.desc)
+    window._runner.shutdown()
+    window.close()
+
+
+def test_save_prompt_decline_is_remembered(app, tmp_path, monkeypatch):
+    from PySide6.QtWidgets import QFileDialog, QMessageBox
+
+    from hermess.gui.main_window import MainWindow
+    from hermess.gui.sysdoc import SystemDocument
+
+    window = MainWindow()
+    window._overrides = {}
+    tab = window._topology
+    tab.begin_edit(SystemDocument.blank())
+    doc = tab.document
+    doc.add_bus()
+    doc.add_bus()
+    doc.add_line("1", "2", {"b": "0"})
+
+    target = tmp_path / "declined"
+    monkeypatch.setattr(
+        QFileDialog, "getSaveFileName", staticmethod(lambda *a, **k: (str(target), ""))
+    )
+    _click_role(monkeypatch, QMessageBox.RejectRole)
+    assert window._save_system() is True
+    assert not (target / "sim_settings.txt").exists()
+    # Declining is remembered for this system: no dialog on the next save.
+    monkeypatch.setattr(
+        QMessageBox, "exec", lambda self: (_ for _ in ()).throw(AssertionError)
+    )
+    window._offer_line_dyn_settings(target, doc.desc)
+    window._runner.shutdown()
+    window.close()
+
+
 def test_settings_roundtrip(app, tmp_path):
     import hermess
     from hermess.gui.main_window import MainWindow

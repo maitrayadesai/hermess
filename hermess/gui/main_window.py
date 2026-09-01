@@ -65,6 +65,7 @@ class MainWindow(QMainWindow):
         self._runs: list = []  # (label, SimulationResults)
         self._last_selection = None  # (name, root) for reverting a selection
         self._reverting = False
+        self._shunt_prompt_declined: set = set()  # folders; once per system
         self._runner = SimulationRunner(self)
 
         # Central viewer tabs
@@ -451,10 +452,66 @@ class MainWindow(QMainWindow):
                     return False
         doc.save(folder)
         self._log.append_notice(f"Saved system to {folder}.")
+        self._offer_line_dyn_settings(Path(folder), doc.desc)
         # Registering the folder selects it, which shows the saved system
         # read-only; Edit re-opens it.
         self._systems.add_folder(folder, select=True)
         return True
+
+    def _offer_line_dyn_settings(self, folder: Path, desc) -> None:
+        """After saving a system that cannot run with dynamic lines (bare
+        buses, no sim_settings.txt deciding line_dyn), offer once to write
+        the shipped default that makes it run out of the box. Explicit by
+        design: reclassifying the network model is never done silently."""
+        if str(folder) in self._shunt_prompt_declined:
+            return
+        try:
+            defaults = hermess._system_defaults(folder.name, folder.parent)
+        except Exception:
+            return  # a malformed settings file is the run's problem to report
+        if "line_dyn" in defaults:
+            return  # the system already decides
+        from hermess.config import config as default_config
+
+        if not default_config.line_dyn:
+            return
+        # A system without lines has a connectivity problem, not a network-
+        # model one; the prompt is about lines that carry no charging.
+        if not desc.lines:
+            return
+        bare = validation.buses_without_shunt(desc)
+        if not bare:
+            return
+        box = QMessageBox(
+            QMessageBox.Question,
+            "Ship quasi-static lines with this system?",
+            f"Bus(es) {', '.join(bare)} have no line charging b, so this "
+            "network cannot run with dynamic lines. Save a sim_settings.txt "
+            "with line_dyn = false, so the system runs out of the box (from "
+            "the GUI, scripts and the command line alike)?",
+            parent=self,
+        )
+        write_button = box.addButton("Write sim_settings.txt", QMessageBox.AcceptRole)
+        box.addButton("Not now", QMessageBox.RejectRole)
+        box.exec()
+        if box.clickedButton() is not write_button:
+            self._shunt_prompt_declined.add(str(folder))
+            return
+        settings_path = folder / "sim_settings.txt"
+        line = (
+            "line_dyn = false  # buses without line charging cannot use the "
+            "dynamic network\n"
+        )
+        if settings_path.exists():
+            existing = settings_path.read_text()
+            joiner = "" if existing.endswith("\n") or not existing else "\n"
+            settings_path.write_text(existing + joiner + line)
+        else:
+            settings_path.write_text(
+                "# Per-system defaults, applied by hermess.simulate and the "
+                "GUI\n" + line
+            )
+        self._log.append_notice(f"Wrote {settings_path}.")
 
     def _resolve_edited_system(self) -> bool:
         """Before running while editing: make sure the document is saved and

@@ -95,6 +95,25 @@ def _is_dae_device(entry) -> bool:
     return entry.get("filter") == "LCL_static" or "DAE" in entry.kind
 
 
+def buses_without_shunt(desc) -> "list[str]":
+    """Buses whose summed line charging b is zero, which the dynamic network
+    model rejects (b acts as the bus capacitance). Empty when any b value is
+    unparseable, so a typo does not masquerade as a modeling problem."""
+    buses = desc.buses()
+    if not buses:
+        return []
+    b_sum = {bus: 0.0 for bus in buses}
+    for e in desc.lines:
+        try:
+            b_val = float(e.get("b", "0") or "0")
+        except ValueError:
+            return []
+        for key in ("bus_i", "bus_j"):
+            if e.get(key) in b_sum:
+                b_sum[e.get(key)] += b_val
+    return sorted(bus for bus, total in b_sum.items() if total == 0.0)
+
+
 def validate(desc, overrides: dict) -> "list[Issue]":
     """Validate the parsed system against the effective run options.
 
@@ -227,19 +246,8 @@ def validate(desc, overrides: dict) -> "list[Issue]":
     # With line_dyn the line charging b is the bus capacitance of the dynamic
     # network; GridSim.setup rejects any bus whose summed b is zero.
     if line_dyn and buses:
-        b_sum = {bus: 0.0 for bus in buses}
-        parseable = True
-        for e in desc.lines:
-            try:
-                b_val = float(e.get("b", "0") or "0")
-            except ValueError:
-                parseable = False
-                continue
-            for key in ("bus_i", "bus_j"):
-                if e.get(key) in b_sum:
-                    b_sum[e.get(key)] += b_val
-        bare = sorted(bus for bus, total in b_sum.items() if total == 0.0)
-        if bare and parseable:
+        bare = buses_without_shunt(desc)
+        if bare:
             issues.append(
                 _error(
                     f"Bus(es) {', '.join(bare)} have zero summed line charging "
