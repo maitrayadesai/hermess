@@ -173,6 +173,10 @@ def simulation_worker(conn, request: RunRequest, cancel_event) -> None:
 
         # Mirrors hermess.simulate(): quiet by default, every figure and
         # printout suppressed; the results container carries the data instead.
+        # Like simulate(), the per-system defaults from sim_settings.txt sit
+        # between the package defaults and the user's explicit overrides.
+        from hermess import _system_defaults
+
         settings: dict[str, Any] = dict(
             testsystemfile=request.system,
             system_root=request.system_root,
@@ -182,6 +186,7 @@ def simulation_worker(conn, request: RunRequest, cancel_event) -> None:
             print_power_flow=False,
             small_signal_figures=False,
         )
+        settings.update(_system_defaults(request.system, request.system_root))
         settings.update(request.overrides)
         cfg = default_config.updated(**settings)
         root.setLevel(cfg.get_log_level())

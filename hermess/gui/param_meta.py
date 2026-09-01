@@ -250,16 +250,30 @@ def businit_meta() -> ParamMeta:
     return ParamMeta(kind="BusInit", params=params, descriptions=dict(instance._descr))
 
 
-#: Disturbance types with the fields each one uses (the Disturbance class
-#: holds the union; which fields apply per type is event semantics).
-DISTURBANCE_FIELDS = {
-    "FAULT_BUS": ["time", "bus", "y"],
-    "CLEAR_FAULT_BUS": ["time", "bus"],
-    "FAULT_LINE": ["time", "bus_i", "bus_j", "y"],
-    "OPEN_LINE": ["time", "bus_i", "bus_j"],
-    "LOAD": ["time", "bus", "p_delta", "q_delta"],
-    "SETPOINT": ["time", "device", "param", "value"],
-}
+def disturbance_fields() -> "dict[str, tuple[list[str], list[str]]]":
+    """Per event type, the (required, optional) field names beyond ``type``,
+    introspected from the core's own event specification so the editor can
+    never drift from what :meth:`Disturbance.add` accepts."""
+    from hermess.devices.device import Disturbance
+
+    return {
+        typ: (["time", *required], list(optional))
+        for typ, (required, optional) in Disturbance._EVENT_FIELDS.items()
+    }
+
+
+def disturbance_field_meaning(name: str) -> str:
+    """The core's one-line explanation (with units) of one event field."""
+    from hermess.devices.device import Disturbance
+
+    return Disturbance._FIELD_MEANING.get(name, "")
+
+
+def disturbance_example(typ: str) -> str:
+    """The core's example file line for one event type."""
+    from hermess.devices.device import Disturbance
+
+    return Disturbance._EVENT_EXAMPLES.get(typ, "")
 
 
 def disturbance_defaults() -> "dict[str, str]":

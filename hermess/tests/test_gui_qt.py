@@ -377,9 +377,51 @@ def test_disturbance_form_dialog(app):
         ["1", "2"], params={"type": "LOAD", "time": "1.0", "bus": "2"}
     )
     assert set(dialog._fields) == {"time", "bus", "p_delta", "q_delta"}
+    assert dialog._required == ["time", "bus"]
     dialog._type.setCurrentText("OPEN_LINE")
     assert set(dialog._fields) == {"time", "bus_i", "bus_j"}
+    assert "OPEN_LINE" in dialog._example.text()  # the core's file-form example
     assert "t = 1.0" in summarize(Entry("Disturbance", {"time": "1.0", "type": "LOAD"}))
+
+
+def test_preflight_respects_system_defaults(app, tmp_path, monkeypatch):
+    from PySide6.QtWidgets import QMessageBox
+
+    from hermess.gui.main_window import MainWindow
+
+    # A network whose lines carry no charging fails pre-flight with the
+    # package default line_dyn=True, unless its sim_settings.txt turns
+    # dynamic lines off, as hermess.simulate would.
+    system = tmp_path / "bare"
+    system.mkdir()
+    (system / "sim_param.txt").write_text(
+        'Line, bus_i = "1", bus_j = "2", r = 0.01, x = 0.1\n'
+        'BusInit, bus = "1", p = 0, v = 1.0, type = "slack"\n'
+        'BusInit, bus = "2", p = 10, q = 0, type = "PQ"\n'
+    )
+    monkeypatch.setattr(QMessageBox, "exec", lambda self: 0)
+    window = MainWindow()
+    window._overrides = {}  # ignore overrides restored from earlier tests
+    window._systems.add_folder(system)
+    assert window._preflight() is False  # zero shunt susceptance blocks
+    (system / "sim_settings.txt").write_text("line_dyn = false\n")
+    assert window._preflight() is True  # the shipped default lifts it
+    window._runner.shutdown()
+    window.close()
+
+
+def test_options_dialog_uses_system_defaults(app):
+    from hermess.gui.options_dialog import OptionsDialog
+
+    dialog = OptionsDialog({}, system_defaults={"line_dyn": False})
+    # Untouched dialog: the system default is the baseline, not an override.
+    dialog._accept()
+    assert dialog.overrides() == {}
+    # Explicitly turning dynamic lines back on becomes an override, even
+    # though it equals the package default.
+    dialog._widgets["line_dyn"].setChecked(True)
+    dialog._accept()
+    assert dialog.overrides() == {"line_dyn": True}
 
 
 def test_topology_edit_mode(app):

@@ -28,7 +28,7 @@ import numpy as np
 import pytest
 
 import hermess
-from hermess.gui import device_info, sysparse, validation
+from hermess.gui import device_info, param_meta, sysparse, validation
 from hermess.gui.export import export_csv
 from hermess.gui.graphlayout import spring_layout
 from hermess.gui.worker import RunRequest, simulation_worker, stability_gate
@@ -322,6 +322,43 @@ def test_schematic_mapping():
     for entry in (machine, gfl):
         for _caption, filename in device_info.schematics_for(entry):
             assert (root / filename).exists(), filename
+
+
+def test_worker_applies_system_defaults(tmp_path):
+    # sim_settings.txt sits between package defaults and GUI overrides, as in
+    # hermess.simulate; explicit overrides still win.
+    source = hermess.SYSTEMS_DIR / "3bus_loadstep"
+    target = tmp_path / "with_settings"
+    target.mkdir()
+    for name in ("sim_param.txt", "sim_dist.txt"):
+        (target / name).write_text((source / name).read_text())
+    (target / "sim_settings.txt").write_text("line_dyn = false\n")
+
+    conn = _ListConn()
+    simulation_worker(
+        conn,
+        RunRequest(
+            system="with_settings",
+            system_root=str(tmp_path),
+            overrides={"T_end": 0.2},
+        ),
+        threading.Event(),
+    )
+    results = conn.messages[-1][1]
+    assert conn.messages[-1][0] == "done"
+    assert results.config["line_dyn"] is False  # from sim_settings.txt
+    assert results.config["T_end"] == 0.2  # the explicit override still wins
+
+
+def test_disturbance_metadata_mirrors_core():
+    from hermess.devices.device import Disturbance
+
+    fields = param_meta.disturbance_fields()
+    assert set(fields) == set(Disturbance._EVENT_FIELDS)  # nothing drifts
+    required, optional = fields["LOAD"]
+    assert required == ["time", "bus"] and optional == ["p_delta", "q_delta"]
+    assert "[MW]" in param_meta.disturbance_field_meaning("p_delta")
+    assert 'type = "SETPOINT"' in param_meta.disturbance_example("SETPOINT")
 
 
 def test_worker_reports_errors():

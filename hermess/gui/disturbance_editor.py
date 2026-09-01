@@ -21,12 +21,16 @@ follow the selected type, and a manager listing the sequence."""
 
 from __future__ import annotations
 
+import html
+
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
     QDialogButtonBox,
     QFormLayout,
     QHBoxLayout,
+    QLabel,
     QLineEdit,
     QListWidget,
     QListWidgetItem,
@@ -35,7 +39,13 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
-from hermess.gui.param_meta import DISTURBANCE_FIELDS, disturbance_defaults
+from hermess.gui import theme
+from hermess.gui.param_meta import (
+    disturbance_defaults,
+    disturbance_example,
+    disturbance_field_meaning,
+    disturbance_fields,
+)
 from hermess.gui.sysparse import Entry
 
 _BUS_FIELDS = {"bus", "bus_i", "bus_j"}
@@ -62,15 +72,19 @@ class DisturbanceFormDialog(QDialog):
         self._buses = buses
         params = dict(params or {})
 
+        self._spec = disturbance_fields()
         self._type = QComboBox()
-        self._type.addItems(list(DISTURBANCE_FIELDS))
-        if params.get("type") in DISTURBANCE_FIELDS:
+        self._type.addItems(list(self._spec))
+        if params.get("type") in self._spec:
             self._type.setCurrentText(params["type"])
         self._type.currentTextChanged.connect(self._rebuild)
 
         self._form = QFormLayout()
         self._fields: "dict[str, QComboBox | QLineEdit]" = {}
         self._initial = params
+        self._example = QLabel("")
+        self._example.setWordWrap(True)
+        self._example.setTextInteractionFlags(Qt.TextSelectableByMouse)
 
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         buttons.accepted.connect(self._accept)
@@ -81,8 +95,21 @@ class DisturbanceFormDialog(QDialog):
         outer.addRow("type", self._type)
         layout.addLayout(outer)
         layout.addLayout(self._form)
+        layout.addWidget(self._example)
         layout.addWidget(buttons)
         self._rebuild()
+
+    @staticmethod
+    def _field_label(name: str, required: bool) -> QLabel:
+        """Field name plus the core's explanation (with units) underneath."""
+        meaning = html.escape(disturbance_field_meaning(name))
+        suffix = "" if required else " <i>(optional)</i>"
+        label = QLabel(
+            f"<b>{name}</b>{suffix}<br>"
+            f'<span style="color:{theme.MUTED}; font-size:9pt">{meaning}</span>'
+        )
+        label.setTextFormat(Qt.RichText)
+        return label
 
     def _rebuild(self) -> None:
         current = {name: self._value_of(w) for name, w in self._fields.items()}
@@ -92,9 +119,8 @@ class DisturbanceFormDialog(QDialog):
             if item.widget():
                 item.widget().deleteLater()
         self._fields = {}
-        for name in DISTURBANCE_FIELDS[self._type.currentText()]:
-            if name == "type":
-                continue
+        required, optional = self._spec[self._type.currentText()]
+        for name in [*required, *optional]:
             if name in _BUS_FIELDS and self._buses:
                 widget = QComboBox()
                 widget.setEditable(True)  # allow buses not yet placed
@@ -106,10 +132,16 @@ class DisturbanceFormDialog(QDialog):
             else:
                 widget = QLineEdit(current.get(name, ""))
                 default = disturbance_defaults().get(name, "")
-                if default:
+                if name in optional and default:
                     widget.setPlaceholderText(f"default: {default}")
-            self._form.addRow(name, widget)
+            self._form.addRow(self._field_label(name, name in required), widget)
             self._fields[name] = widget
+        self._required = list(required)
+        example = html.escape(disturbance_example(self._type.currentText()))
+        self._example.setText(
+            f'<span style="color:{theme.MUTED}; font-size:9pt">'
+            f"File form &nbsp;{example}</span>"
+        )
 
     @staticmethod
     def _value_of(widget) -> str:
@@ -126,10 +158,8 @@ class DisturbanceFormDialog(QDialog):
                     float(values[name])
                 except ValueError:
                     problems.append(f"{name}: \"{values[name]}\" is not a number")
-        if not values.get("time"):
-            problems.append("time must be set")
-        for name in self._fields:
-            if name in _BUS_FIELDS and not values.get(name):
+        for name in self._required:
+            if not values.get(name):
                 problems.append(f"{name} must be set")
         if problems:
             QMessageBox.warning(self, "Invalid disturbance", "\n".join(problems))

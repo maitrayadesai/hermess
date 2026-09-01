@@ -178,7 +178,7 @@ class MainWindow(QMainWindow):
 
         # Wiring
         self._topology.set_validator(
-            lambda desc: validation.validate(desc, self._overrides)
+            lambda desc: validation.validate(desc, self._effective_overrides())
         )
         self._topology.set_save_handler(self._save_system)
         self._topology.documentChanged.connect(self._on_document_changed)
@@ -242,7 +242,7 @@ class MainWindow(QMainWindow):
         if folder is None:
             return True
         issues = validation.validate(
-            sysparse.parse_system(folder), self._overrides
+            sysparse.parse_system(folder), self._effective_overrides()
         )
         if not issues:
             return True
@@ -570,8 +570,32 @@ class MainWindow(QMainWindow):
 
     # ---- dialogs -------------------------------------------------------------
 
+    def _current_system_defaults(self) -> dict:
+        """The sim_settings.txt defaults of the system that would run now
+        (the edited document's folder while editing). They sit between the
+        package defaults and the user's overrides, as in hermess.simulate."""
+        if self._topology.editing:
+            folder = self._topology.document.desc.folder
+        else:
+            folder = self._systems.system_folder()
+        if folder is None or not Path(folder).is_absolute():
+            return {}
+        try:
+            return hermess._system_defaults(Path(folder).name, Path(folder).parent)
+        except Exception:
+            # A malformed file must not break the GUI; the run itself reports
+            # the parse error readably.
+            return {}
+
+    def _effective_overrides(self) -> dict:
+        return {**self._current_system_defaults(), **self._overrides}
+
     def _edit_options(self) -> None:
-        dialog = OptionsDialog(self._overrides, self)
+        dialog = OptionsDialog(
+            self._overrides,
+            system_defaults=self._current_system_defaults(),
+            parent=self,
+        )
         if dialog.exec():
             self._overrides = dialog.overrides()
             summary = ", ".join(f"{k}={v}" for k, v in self._overrides.items())

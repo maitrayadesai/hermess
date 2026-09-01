@@ -142,11 +142,15 @@ def _is_optional(annotation) -> bool:
 class OptionsDialog(QDialog):
     """Edits config overrides; :meth:`overrides` returns the resulting dict."""
 
-    def __init__(self, overrides: dict, parent=None):
+    def __init__(self, overrides: dict, system_defaults: "dict | None" = None, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Simulation options")
         self.setMinimumWidth(480)
-        self._defaults = default_config.model_dump()
+        # The baseline the form diffs against: package defaults overlaid with
+        # the selected system's sim_settings.txt (as hermess.simulate applies
+        # them), so an untouched dialog runs exactly what a script would.
+        self._system_defaults = dict(system_defaults or {})
+        self._defaults = {**default_config.model_dump(), **self._system_defaults}
         self._widgets: dict[str, QWidget] = {}
         self._result = dict(overrides)
 
@@ -180,6 +184,18 @@ class OptionsDialog(QDialog):
         buttons.button(QDialogButtonBox.RestoreDefaults).clicked.connect(self._restore)
 
         layout = QVBoxLayout(self)
+        if self._system_defaults:
+            from PySide6.QtWidgets import QLabel
+
+            summary = ", ".join(
+                f"{k} = {v}" for k, v in self._system_defaults.items()
+            )
+            note = QLabel(
+                f"This system ships defaults (sim_settings.txt): {summary}. "
+                "They apply unless changed here."
+            )
+            note.setWordWrap(True)
+            layout.addWidget(note)
         layout.addWidget(tabs)
         layout.addWidget(buttons)
 

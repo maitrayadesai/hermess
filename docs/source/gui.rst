@@ -59,7 +59,10 @@ are edited in the options dialog (Simulation → Options), which exposes the
 fields of :class:`~hermess.config.Config`: end time, time step, integration
 scheme and its options, reference-frame mode, dynamic or quasi-static lines,
 limiters, and the small-signal analysis switch. Only values you change are
-carried as overrides; everything else follows the shipped defaults.
+carried as overrides; everything else follows the shipped defaults, overlaid
+with the selected system's own ``sim_settings.txt`` when it has one (the
+dialog names those defaults), exactly as :func:`hermess.simulate` applies
+them.
 
 To simulate systems of your own, use *Open folder…* and point it either at a
 single system folder (containing ``sim_param.txt`` and optionally
@@ -121,7 +124,9 @@ first one becomes the slack), *+ Line* connects two clicked buses,
 *+ Device* offers every available model, shipped or registered through
 :func:`hermess.register`, and attaches the chosen one to a clicked bus,
 *Delete* removes what you click, and *Disturbances…* edits the event
-sequence. Double-clicking an element in edit mode, lines included, opens its
+sequence, with every field labeled by the core's own explanation and units,
+required fields enforced, and the equivalent ``sim_dist.txt`` line shown for
+the selected event type. Double-clicking an element in edit mode, lines included, opens its
 parameter form instead of the detail pop-up. *File > New system* starts from
 a blank canvas, *Clear canvas* empties the current one after a confirmation
 (and stays undoable), and entering edit mode on a selected system edits a
