@@ -74,6 +74,10 @@ schedule a ``SETPOINT`` before any ``LOAD`` step.
 - **param** (*str*) – Name of the setpoint, e.g. ``Pref``.
 - **value** (*float*) – New setpoint value, in device per unit.
 
+Every row is validated when the system loads: an unknown type, a misspelled
+field or a missing required field stops the run immediately with the list of
+fields the type takes, their units and an example row.
+
 The shipped systems in :ref:`test_cases` are worked examples of both files, and
 the notebooks in :ref:`examples` walk through them step by step.
 

@@ -82,6 +82,11 @@ Run the demonstration scenario:
 
    hermess run ieee39_conv --small-signal
 
+If the ``hermess`` command is not found (typical on Windows when pip warns
+that the scripts directory is not on ``PATH``, e.g. after a user-site
+install), ``python -m hermess`` is the same program; installing into a
+virtual environment avoids the problem entirely.
+
 This simulates ten seconds of the IEEE 39-bus converter system
 (:ref:`ieee39_conv`) with dynamic line models and a small-signal analysis at
 the operating point, so expect a runtime of a few minutes, and plots the bus

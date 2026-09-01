@@ -23,7 +23,6 @@ returns the finished :class:`~hermess.system.DaeSim`; the built-in plotting
 of the command-line entry point lives here as well.
 """
 
-from matplotlib import cm
 
 from hermess.utils import data_loader
 from hermess.config import Config
@@ -282,7 +281,7 @@ def fplot(config: Config):
 
     if config.plot_voltage:
         plt.figure(figsize=(15, 11))
-        viridis = cm.get_cmap("viridis", system.dae_sim.grid.nn)
+        viridis = matplotlib.colormaps["viridis"].resampled(system.dae_sim.grid.nn)
 
         for i, node in enumerate(system.dae_sim.grid.buses):
             try:

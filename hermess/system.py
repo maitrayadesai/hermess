@@ -2163,7 +2163,7 @@ class Dae:
                             self.exec_dist()
                             params_changed = True
                         case _:
-                            logging.ERROR(
+                            logging.error(
                                 f"Disturbance type {dist.type[0]} not found - skipped."
                             )
                             for key, value in dist._params.items():
@@ -2599,13 +2599,38 @@ class DaeSim(Dae):
         if FG is None:
             FG = self.FG
         p = np.concatenate((s0, sl0))
-        if self.n_priv > 0:
-            nv = self.nv
-            res = FG(
-                x0=np.concatenate((x0, y0[:nv], i0)), z0=y0[nv:], p=p
-            )
-        else:
-            res = FG(x0=np.concatenate((x0, y0, i0)), p=p)
+        try:
+            if self.n_priv > 0:
+                nv = self.nv
+                res = FG(
+                    x0=np.concatenate((x0, y0[:nv], i0)), z0=y0[nv:], p=p
+                )
+            else:
+                res = FG(x0=np.concatenate((x0, y0, i0)), p=p)
+        except RuntimeError as err:
+            if "IDACalcIC" not in str(err) and "IDA_CONV_FAIL" not in str(err):
+                raise
+            at_start = self.t0 <= self.T_start + 1e-12
+            if at_start:
+                hint = (
+                    "The dynamic-network initialization at t = 0 did not "
+                    "converge. The solver could not find consistent initial "
+                    "line currents and voltages; common causes are an "
+                    "infeasible or extreme operating point (check the initial "
+                    "power flow), very small line charging b, or unrealistic "
+                    "device parameters."
+                )
+            else:
+                hint = (
+                    f"Reinitialization after the disturbance at "
+                    f"t = {self.t0:g} s did not converge. The solver could "
+                    "not restart from the post-event state; common causes "
+                    "are a too-severe disturbance (a very large fault "
+                    "admittance y or load step) or the system losing "
+                    "stability. Try a smaller disturbance, a finer output "
+                    "step ts, or tighter integrator tolerances."
+                )
+            raise RuntimeError(hint) from err
 
         xf = np.array(res["xf"])
         if xf.ndim == 1:
@@ -3597,6 +3622,7 @@ class DaeSim(Dae):
         states that never reach it (in the shown modes) are dropped; the row axis
         is capped at ``max_states`` strongest participants.
         """
+        import matplotlib
         import matplotlib.pyplot as plt
 
         if not modes:
@@ -3627,7 +3653,7 @@ class DaeSim(Dae):
 
         vmax = max(float(pf.max()), 1e-9)
         pf_masked = np.ma.masked_less(pf, min_participation)
-        cmap = plt.get_cmap("viridis").copy()
+        cmap = matplotlib.colormaps["viridis"].copy()
         cmap.set_bad("#ECECEC")
 
         def mode_label(m):

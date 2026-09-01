@@ -257,6 +257,82 @@ class Disturbance(Element):
         self.param = np.array([], dtype=str)
         self.value = np.array([], dtype=float)
 
+    #: The fields each event type uses (beyond ``time`` and ``type``);
+    #: required first, then optional-with-default.
+    _EVENT_FIELDS = {
+        "FAULT_LINE": (("bus_i", "bus_j"), ("y",)),
+        "CLEAR_FAULT_LINE": (("bus_i", "bus_j"), ()),
+        "OPEN_LINE": (("bus_i", "bus_j"), ()),
+        "LOAD": (("bus",), ("p_delta", "q_delta")),
+        "FAULT_BUS": (("bus",), ("y",)),
+        "CLEAR_FAULT_BUS": (("bus",), ()),
+        "SETPOINT": (("device", "param", "value"), ()),
+    }
+
+    _FIELD_MEANING = {
+        "time": "event time [s]",
+        "bus_i": "sending-end bus name of the line",
+        "bus_j": "receiving-end bus name of the line",
+        "y": "fault admittance [p.u. on the system base] (default 10)",
+        "bus": "bus name",
+        "p_delta": "active-power step [MW], positive = more load (default 0)",
+        "q_delta": "reactive-power step [MVAr] (default 0)",
+        "device": "device id (idx) whose setpoint is stepped",
+        "param": "setpoint name to step, e.g. Pref",
+        "value": "new setpoint value [device p.u.]",
+    }
+
+    _EVENT_EXAMPLES = {
+        "FAULT_LINE": 'Disturbance, time = 1.0, type = "FAULT_LINE", bus_i = "1", bus_j = "2", y = 30',
+        "CLEAR_FAULT_LINE": 'Disturbance, time = 1.1, type = "CLEAR_FAULT_LINE", bus_i = "1", bus_j = "2"',
+        "OPEN_LINE": 'Disturbance, time = 1.1, type = "OPEN_LINE", bus_i = "1", bus_j = "2"',
+        "LOAD": 'Disturbance, time = 1.0, type = "LOAD", bus = "2", p_delta = 10, q_delta = 0',
+        "FAULT_BUS": 'Disturbance, time = 1.0, type = "FAULT_BUS", bus = "2", y = 20',
+        "CLEAR_FAULT_BUS": 'Disturbance, time = 1.1, type = "CLEAR_FAULT_BUS", bus = "2"',
+        "SETPOINT": 'Disturbance, time = 1.0, type = "SETPOINT", device = "GFMI2", param = "Pref", value = 0.7',
+    }
+
+    @classmethod
+    def _fields_help(cls, typ: str) -> str:
+        required, optional = cls._EVENT_FIELDS[typ]
+        lines = [f'A "{typ}" disturbance takes:']
+        for f in ("time",) + required:
+            lines.append(f"  {f:<8} {cls._FIELD_MEANING[f]}")
+        for f in optional:
+            lines.append(f"  {f:<8} {cls._FIELD_MEANING[f]} [optional]")
+        lines.append(f"Example: {cls._EVENT_EXAMPLES[typ]}")
+        return "\n".join(lines)
+
+    def add(self, idx=None, name=None, **kwargs):
+        """Validate one disturbance row before storing it: the type must be
+        known, its required fields present, and no stray fields allowed (a
+        typo in a field name must not silently change the event)."""
+        typ = kwargs.get("type")
+        if typ is None or typ not in self._EVENT_FIELDS:
+            raise ValueError(
+                f"unknown disturbance type {typ!r}; supported types: "
+                + ", ".join(f'"{t}"' for t in self._EVENT_FIELDS)
+                + ". Each is documented in the disturbances guide."
+            )
+        required, optional = self._EVENT_FIELDS[typ]
+        allowed = {"type", "time", "u", *required, *optional}
+        unknown = sorted(k for k in kwargs if k not in allowed)
+        if unknown:
+            raise ValueError(
+                f"unknown field(s) {', '.join(unknown)} on a \"{typ}\" "
+                "disturbance row.\n" + self._fields_help(typ)
+            )
+        missing = sorted(
+            f for f in ("time",) + required
+            if kwargs.get(f) is None
+        )
+        if missing:
+            raise ValueError(
+                f"missing field(s) {', '.join(missing)} on a \"{typ}\" "
+                "disturbance row.\n" + self._fields_help(typ)
+            )
+        super().add(idx=idx, name=name, **kwargs)
+
     def sort_chrono(self):
         sorted_indices = np.argsort(self.time)
 
