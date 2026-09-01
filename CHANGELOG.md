@@ -4,6 +4,48 @@ Notable changes to HERMESS. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/) as spelled out in `RELEASING.md`.
 
+## [1.7.0] - 2026-09-01
+
+All of this release grew out of one first-time Windows test drive by an
+external user; thanks for the reports.
+
+### Added
+- Per-system defaults: an optional `sim_settings.txt` in a system folder
+  carries the configuration the system needs to run out of the box (one
+  `field = value` per line, JSON values, `Config` field names).
+  `hermess.simulate`, the command line and the GUI apply it between the
+  package defaults and explicit arguments, so anything passed explicitly
+  still wins. The 25 shipped networks whose buses carry no shunt
+  susceptance now default to the quasi-static network instead of failing
+  the dynamic-network guard on a bare run.
+- The GUI's disturbance editor explains itself: every field is labeled
+  with the core's meaning and units, required fields are enforced per
+  event type, optional fields show their defaults, and the equivalent
+  `sim_dist.txt` line is displayed. The tables come from the core
+  (`Disturbance._EVENT_FIELDS`), so editor and simulator cannot drift.
+- Saving a built network whose lines carry no charging offers once to
+  write a `sim_settings.txt` with `line_dyn = false` next to it.
+
+### Changed
+- Disturbance rows are validated when the system loads: an unknown type,
+  a misspelled field or a missing required field stops the run with the
+  fields, units and an example row for that type, instead of the stray
+  field being silently ignored.
+- An `IDACalcIC` convergence failure under dynamic lines raises a
+  readable message, separately for the initialization at t = 0 and for
+  the restart after a disturbance, with the raw solver error attached as
+  the cause.
+
+### Fixed
+- The built-in result plots (the default `hermess run` path) and the
+  participation heatmap used matplotlib APIs removed in 3.9
+  (`cm.get_cmap`, `plt.get_cmap`) and crashed on any current
+  matplotlib. The plot path now has a smoke test.
+- The unknown-disturbance branch called `logging.ERROR(...)` (an int)
+  and would have crashed if ever reached.
+- The installation guide covers the Windows case where the `hermess`
+  command is not on `PATH` after a user-site install.
+
 ## [1.6.1] - 2026-08-31
 
 ### Changed
