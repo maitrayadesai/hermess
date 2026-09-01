@@ -336,3 +336,31 @@ def test_simulate_prints_no_casadi_numpy_notice(recwarn):
     notices = [w for w in recwarn
                if "casadi" in str(w.message).lower() and "numpy" in str(w.message).lower()]
     assert not notices
+
+
+def test_system_defaults_file(tmp_path):
+    import shutil
+
+    shutil.copytree(FIXTURE_ROOT / "3_bus", tmp_path / "case")
+    (tmp_path / "case" / "sim_settings.txt").write_text(
+        "# defaults for this system\nline_dyn = false\nts = 0.01\n"
+    )
+    dae = hermess.simulate("case", system_root=tmp_path, T_end=0.1)
+    assert dae.line_dyn is False and dae.t == 0.01
+    # an explicit argument wins over the file
+    dae = hermess.simulate("case", system_root=tmp_path, T_end=0.1, line_dyn=True, ts=0.05)
+    assert dae.line_dyn is True and dae.t == 0.05
+
+
+def test_system_defaults_rejects_unknown_field(tmp_path):
+    import shutil
+
+    shutil.copytree(FIXTURE_ROOT / "3_bus", tmp_path / "case")
+    (tmp_path / "case" / "sim_settings.txt").write_text("line_dny = false\n")
+    with pytest.raises(ValueError, match="line_dny"):
+        hermess.simulate("case", system_root=tmp_path, T_end=0.1)
+
+
+def test_quasi_static_only_systems_run_out_of_the_box():
+    dae = hermess.simulate("kundur", T_end=0.011, ts=0.01, quiet=True)
+    assert dae.line_dyn is False

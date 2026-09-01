@@ -75,6 +75,53 @@ def list_systems(root: "str | Path | None" = None) -> list:
     return sorted(str(p.parent.relative_to(root)) for p in root.rglob("sim_param.txt"))
 
 
+def _system_defaults(system: str, system_root) -> dict:
+    """Read the optional per-system defaults file ``<system>/sim_settings.txt``.
+
+    One ``field = value`` per line (``#`` comments allowed), each field a
+    :class:`~hermess.config.Config` name, values in JSON. A system ships the
+    settings it needs to run out of the box, e.g. ``line_dyn = false`` for a
+    network whose transformer branches carry no charging; anything passed to
+    :func:`simulate` explicitly still wins. Only :func:`simulate` (and the
+    command line, which uses it) reads this file; building a
+    :class:`~hermess.config.Config` manually for :func:`hermess.run.run`
+    keeps full manual control.
+    """
+    import json
+
+    from hermess.config import Config
+
+    root = (
+        Path(system_root).expanduser()
+        if system_root is not None
+        else Path(__file__).parent / "systems"
+    )
+    path = root / system / "sim_settings.txt"
+    if not path.exists():
+        return {}
+    defaults = {}
+    for number, raw in enumerate(path.read_text().splitlines(), 1):
+        line = raw.split("#", 1)[0].strip()
+        if not line:
+            continue
+        if "=" not in line:
+            raise ValueError(f"{path}:{number}: expected 'field = value', got {raw!r}")
+        key, value = (part.strip() for part in line.split("=", 1))
+        if key not in Config.model_fields:
+            raise ValueError(
+                f"{path}:{number}: {key!r} is not a configuration field"
+            )
+        try:
+            defaults[key] = json.loads(value)
+        except json.JSONDecodeError:
+            lowered = value.lower()
+            if lowered in ("true", "false"):
+                defaults[key] = lowered == "true"
+            else:
+                defaults[key] = value.strip("\'\"")
+    return defaults
+
+
 def simulate(
     system: str,
     system_root: "str | Path | None" = None,
@@ -128,6 +175,7 @@ def simulate(
         print_power_flow=False,
         small_signal_analysis=False,
     )
+    settings.update(_system_defaults(system, settings["system_root"]))
     if quiet:
         settings.update(show_progress=False, log_level="WARNING")
     settings.update(overrides)

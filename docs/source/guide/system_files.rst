@@ -131,6 +131,29 @@ must be exactly one slack bus.
 - **v** (*float*) – Bus voltage magnitude in per unit.
 - **type** (*str*) – One of ``"PQ"``, ``"PV"`` or ``"slack"``.
 
+Per-system defaults: ``sim_settings.txt``
+-----------------------------------------
+
+A system folder may carry an optional third file, ``sim_settings.txt``, with
+the configuration defaults the system needs to run out of the box, one
+``field = value`` per line (``#`` comments allowed, values in JSON, fields
+from :class:`~hermess.config.Config`):
+
+::
+
+   # Buses of this network carry no shunt susceptance (no line charging b),
+   # so it cannot run as a dynamic network; simulate it quasi-static.
+   line_dyn = false
+
+:func:`hermess.simulate` (and therefore the command line) applies these
+between the package defaults and your own arguments, so anything you pass
+explicitly still wins. Building a :class:`~hermess.config.Config` manually
+for :func:`hermess.run.run` bypasses the file and keeps full manual control.
+Several shipped networks, among them ``kundur``, ``ieee39`` and the South
+East Australian family, use it to default to the quasi-static network,
+because their transformer branches carry no charging susceptance and the
+dynamic network needs a capacitance at every bus.
+
 Limitations
 -----------
 

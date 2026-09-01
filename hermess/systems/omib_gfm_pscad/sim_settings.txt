@@ -1,0 +1,6 @@
+# Per-system defaults, read by hermess.simulate (and the command line);
+# anything passed explicitly wins. See the system-files guide.
+#
+# Buses of this network carry no shunt susceptance (no line charging b),
+# so it cannot run as a dynamic network; simulate it quasi-static.
+line_dyn = false
