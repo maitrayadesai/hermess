@@ -30,6 +30,13 @@ import hermess
 from hermess.__main__ import main
 
 
+@pytest.fixture(autouse=True)
+def plain_help(monkeypatch):
+    """argparse colors its help on Python 3.14+ (ANSI escapes inside "usage:
+    hermess"); PYTHON_COLORS=0 takes precedence over FORCE_COLOR and a tty."""
+    monkeypatch.setenv("PYTHON_COLORS", "0")
+
+
 def test_no_arguments_prints_help_and_exits_cleanly(capsys):
     assert main([]) == 0
     out = capsys.readouterr().out
