@@ -73,6 +73,13 @@ For the operating point and the small-signal analysis:
    participation_table(dae, mode=1)  # participation factors of one mode
    state_matrix(dae, as_frame=True)  # the linearization, labeled
 
+The modes are those of the initial operating point, i.e. the system as it
+was built and initialized at ``T_start``, before any disturbance. A run that
+contains a load step, a fault or a setpoint change reports the same modes
+as the disturbance-free run of the same system, whether the analysis is
+requested before the stepping (``small_signal_analysis=True``) or afterwards
+from these helpers. The post-disturbance system is not analyzed.
+
 Plotting
 --------
 

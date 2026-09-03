@@ -2431,6 +2431,11 @@ class DaeSim(Dae):
         # Gated by config; when True the small-signal eigenvalue analysis is run
         # and its figures shown at the operating point before the simulation.
         self.small_signal_analysis: bool = False
+        # The initial equation build and operating point, captured by
+        # :meth:`simulate` before any disturbance rebuilds the equations, so
+        # :meth:`eigenvalue_analysis` always linearizes the system the run
+        # started from (see :meth:`_snapshot_linearization`).
+        self._linearization_snapshot: Optional[dict] = None
         #: Optional hook called during :meth:`simulate` with the completed
         #: fraction in [0, 1]. Returning ``False`` cancels the run by raising
         #: :class:`~hermess.errors.SimulationCancelled`. Granularity: one call
@@ -2681,6 +2686,12 @@ class DaeSim(Dae):
                 omega_lines=self.omega_ref_lines,
                 dyn_update=True,
             )
+        # Capture the initial equation build at the initial operating point.
+        # Every disturbance rebuilds the equations in place, so a later
+        # eigenvalue_analysis() reads this snapshot instead of the current
+        # (post-disturbance) equations.
+        self._linearization_snapshot = self._snapshot_linearization()
+
         # Small-signal analysis (gated by config) runs at the operating point,
         # before the time-stepping loop, so its results are produced even if the
         # simulation later fails. The blocking show below guarantees the figures
@@ -3168,22 +3179,19 @@ class DaeSim(Dae):
         self.i_full[2::4, start:end] = It_re_B
         self.i_full[3::4, start:end] = It_im_B
 
-    def eigenvalue_analysis(self) -> None:
-        """Linearize the DAE at the operating point and analyze its modes.
+    def _snapshot_linearization(self) -> dict:
+        """Capture what :meth:`eigenvalue_analysis` linearizes: the current
+        equation build with the reference frequency substituted, its symbols,
+        and the initial operating point.
 
-        Eliminates the algebraic variables to obtain the reduced state matrix
-        ``A`` (``dx/dt = A dx``), then computes its eigenvalues and the
-        participation factors of every mode. The results are stored on the
-        object rather than returned: :attr:`A`, :attr:`eigenvalues`,
-        :attr:`state_names`, :attr:`participation_factors`,
-        :attr:`participation_factors_normalized` and :attr:`modes`.
-
-        Run automatically before the simulation when
-        ``config.small_signal_analysis`` is set. See :meth:`print_modal_report`
-        and :meth:`participation_table` for the readable summaries, and
-        :meth:`plot_eigenvalues` for the s-plane scatter.
+        :meth:`simulate` takes this snapshot once, at the initial operating
+        point and before the time stepping. Every disturbance afterwards
+        rebuilds ``f``/``g``/``fnode``/``fl`` in place (and a line event
+        edits ``slinit``), so the object's live equations no longer describe
+        the system the run started from, and the initial point is not an
+        equilibrium of them. The snapshot keeps the pair that belongs
+        together.
         """
-
         # Helper for Reference frequency substitution
         W_sym = ca.vertcat(
             self.omega_ref, self.omega_ref_buses, self.omega_ref_lines
@@ -3192,15 +3200,67 @@ class DaeSim(Dae):
             self.omega_ref_expr, self.omega_ref_buses_expr, self.omega_ref_lines_expr
         )  # function of states
 
-        # Substitute reference frequency expression in all equations
-        if self.f is not None:
-            f = ca.substitute(self.f, W_sym, W_expr)
-        if self.g is not None:
-            g = ca.substitute(self.g, W_sym, W_expr)
-        if self.fnode is not None:
-            fnode = ca.substitute(self.fnode, W_sym, W_expr)
-        if self.fl is not None:
-            fl = ca.substitute(self.fl, W_sym, W_expr)
+        def _sub(expr):
+            return None if expr is None else ca.substitute(expr, W_sym, W_expr)
+
+        def _num(vec):
+            return None if vec is None else np.array(vec, dtype=float).copy()
+
+        return {
+            "f": _sub(self.f),
+            "g": _sub(self.g),
+            "fnode": _sub(getattr(self, "fnode", None)),
+            "fl": _sub(getattr(self, "fl", None)),
+            "x": self.x,
+            "y": self.y,
+            "xl": getattr(self, "xl", None),
+            "s": self.s,
+            "sl": getattr(self, "sl", None),
+            "xinit": _num(self.xinit),
+            "yinit": _num(self.yinit),
+            "xlinit": _num(getattr(self, "xlinit", None)),
+            "sinit": _num(self.sinit),
+            "slinit": _num(getattr(self, "slinit", None)),
+        }
+
+    def eigenvalue_analysis(self) -> None:
+        """Linearize the DAE at the initial operating point and analyze its
+        modes.
+
+        Eliminates the algebraic variables to obtain the reduced state matrix
+        ``A`` (``dx/dt = A dx``), then computes its eigenvalues and the
+        participation factors of every mode. The results are stored on the
+        object rather than returned: :attr:`A`, :attr:`eigenvalues`,
+        :attr:`state_names`, :attr:`participation_factors`,
+        :attr:`participation_factors_normalized` and :attr:`modes`.
+
+        The linearization is always that of the system the run started
+        from: the initial equation build, evaluated at the initial operating
+        point. Calling this method after a run that contained disturbances
+        gives the same result as calling it before the time stepping (or as
+        ``config.small_signal_analysis=True``), because :meth:`simulate`
+        snapshots the initial build before any disturbance rebuilds the
+        equations. The post-disturbance system is not analyzed.
+
+        Run automatically before the simulation when
+        ``config.small_signal_analysis`` is set. See :meth:`print_modal_report`
+        and :meth:`participation_table` for the readable summaries, and
+        :meth:`plot_eigenvalues` for the s-plane scatter.
+        """
+
+        # The initial build, captured by simulate(); before a run (or on a
+        # model driven by hand) fall back to the live equations, which are
+        # then still the initial ones.
+        snap = self._linearization_snapshot
+        if snap is None:
+            snap = self._snapshot_linearization()
+        f, g, fnode, fl = snap["f"], snap["g"], snap["fnode"], snap["fl"]
+        x_sym, y_sym, xl_sym, s_sym, sl_sym = (
+            snap["x"], snap["y"], snap["xl"], snap["s"], snap["sl"]
+        )
+        xinit, yinit, xlinit, sinit, slinit = (
+            snap["xinit"], snap["yinit"], snap["xlinit"], snap["sinit"], snap["slinit"]
+        )
 
         if self.line_dyn and self.n_priv > 0:
             # Mixed DAE: the network (voltages y_volt + line currents xl) is
@@ -3209,20 +3269,18 @@ class DaeSim(Dae):
             # g_priv = g[nv:]) from the differential block [x, y_volt, xl]. Note
             # g[:nv] are the device injections that feed fnode, not independent
             # algebraic equations here.
-            y_volt = self.y[: self.nv]
-            y_priv = self.y[self.nv :]
+            y_volt = y_sym[: self.nv]
+            y_priv = y_sym[self.nv :]
             g_priv = g[self.nv :]
             nd = self.nx + self.nv + self.nl  # differential variable count
             J = ca.jacobian(
                 ca.vertcat(f, fnode, fl, g_priv),
-                ca.vertcat(self.x, y_volt, self.xl, y_priv),
+                ca.vertcat(x_sym, y_volt, xl_sym, y_priv),
             )
             jacobian_func = ca.Function(
-                "jacobian_func", [self.x, self.y, self.xl, self.s, self.sl], [J]
+                "jacobian_func", [x_sym, y_sym, xl_sym, s_sym, sl_sym], [J]
             )
-            Ac = jacobian_func(
-                self.xinit, self.yinit, self.xlinit, self.sinit, self.slinit
-            )
+            Ac = jacobian_func(xinit, yinit, xlinit, sinit, slinit)
             Ac = np.array(Ac)
             fd_d = Ac[:nd, :nd]
             fd_a = Ac[:nd, nd:]
@@ -3240,20 +3298,18 @@ class DaeSim(Dae):
         elif self.line_dyn:
             J = ca.jacobian(
                 ca.vertcat(f, fnode, fl),
-                ca.vertcat(self.x, self.y, self.xl),
+                ca.vertcat(x_sym, y_sym, xl_sym),
             )
             jacobian_func = ca.Function(
-                "jacobian_func", [self.x, self.y, self.xl, self.s, self.sl], [J]
+                "jacobian_func", [x_sym, y_sym, xl_sym, s_sym, sl_sym], [J]
             )
-            Ac = jacobian_func(
-                self.xinit, self.yinit, self.xlinit, self.sinit, self.slinit
-            )
+            Ac = jacobian_func(xinit, yinit, xlinit, sinit, slinit)
             As = Ac[: self.nx + self.ny + self.nl, : self.nx + self.ny + self.nl]
 
         else:
-            J = ca.jacobian(ca.vertcat(f, g), ca.vertcat(self.x, self.y))
-            jacobian_func = ca.Function("jacobian_func", [self.x, self.y, self.s], [J])
-            Ac = jacobian_func(self.xinit, self.yinit, self.sinit)
+            J = ca.jacobian(ca.vertcat(f, g), ca.vertcat(x_sym, y_sym))
+            jacobian_func = ca.Function("jacobian_func", [x_sym, y_sym, s_sym], [J])
+            Ac = jacobian_func(xinit, yinit, sinit)
 
             Ac = np.array(Ac)
             fx = Ac[: self.nx, : self.nx]
