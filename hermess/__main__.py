@@ -30,7 +30,7 @@ from pathlib import Path
 try:
     __version__ = version("hermess")  # Must match the name in pyproject.toml
 except PackageNotFoundError:  # running from source without an install
-    __version__ = "1.7.1"
+    __version__ = "1.7.2"
 
 
 def _cmd_list(args: argparse.Namespace, parser: argparse.ArgumentParser) -> int:

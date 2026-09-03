@@ -4,7 +4,7 @@ Notable changes to HERMESS. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/) as spelled out in `RELEASING.md`.
 
-## [Unreleased]
+## [1.7.2] - 2026-09-04
 
 ### Fixed
 - Python 3.14 compatibility: the faulted-line admittance no longer passes
