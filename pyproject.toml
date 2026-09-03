@@ -82,8 +82,10 @@ build-backend = "uv_build"
 # Flat layout: the package lives at ./hermess, not ./src/hermess.
 module-root = ""
 # Ship tests in the sdist (repo mirror) but keep them out of installed wheels;
-# references/ alone is 8 MB of CSVs.
-wheel-exclude = ["hermess/tests/**"]
+# references/ alone is 8 MB of CSVs. The SEA benchmark generator scripts are
+# repo-only developer tools: they write system files next to themselves, which
+# in an installed wheel would mean rewriting site-packages.
+wheel-exclude = ["hermess/tests/**", "hermess/systems/sea14gen/*.py"]
 
 [tool.pytest.ini_options]
 pythonpath = "hermess"

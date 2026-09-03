@@ -136,10 +136,12 @@ def copy_system(name: str, dest: str | Path = "systems", overwrite: bool = False
 
     Edit the copy, never the installed package. Pass the returned path as
     ``system_root`` to :func:`hermess.simulate`. Re-running without
-    ``overwrite`` keeps your edits.
+    ``overwrite`` keeps your edits. A ``dest`` inside the shipped systems
+    folder (``hermess.SYSTEMS_DIR``) is refused with a ``PermissionError``
+    before anything is touched.
     """
-    dest = Path(dest)
-    target = dest / name
+    dest = hermess._assert_not_shipped(dest, "copy a system into")
+    target = hermess._assert_not_shipped(dest / name, "copy a system into")
     if overwrite and target.exists():
         shutil.rmtree(target)
     if not target.exists():
@@ -194,9 +196,11 @@ def set_param(root: str | Path, name: str, idx: str, **values) -> None:
     Kp=0.05)`` or ``set_param(root, "3bus_loadstep", "GFMI2", angle='"VSM"',
     H_v=2.0)``. A parameter that does not exist yet is appended to the
     record. Numbers are written with ``repr``; pass strings with their quotes
-    (``angle='"VSM"'``).
+    (``angle='"VSM"'``). The systems shipped with the package are read-only:
+    a ``root`` inside ``hermess.SYSTEMS_DIR`` raises a ``PermissionError``
+    (make a copy with :func:`copy_system` first).
     """
-    path = Path(root) / name / "sim_param.txt"
+    path = hermess._assert_not_shipped(Path(root) / name, "edit") / "sim_param.txt"
     lines = path.read_text().splitlines()
     hit = False
     for rec in _records("\n".join(lines)):
@@ -229,10 +233,14 @@ def set_disturbances(root: str | Path, name: str, rows: Iterable[str] | str) -> 
             'Disturbance, time = 1.0, type = "FAULT_BUS", bus = "2", y = 20',
             'Disturbance, time = 1.1, type = "CLEAR_FAULT_BUS", bus = "2"',
         ])
+
+    The systems shipped with the package are read-only: a ``root`` inside
+    ``hermess.SYSTEMS_DIR`` raises a ``PermissionError`` (make a copy with
+    :func:`copy_system` first).
     """
     if isinstance(rows, str):
         rows = [r for r in rows.splitlines() if r.strip()]
-    path = Path(root) / name / "sim_dist.txt"
+    path = hermess._assert_not_shipped(Path(root) / name, "edit") / "sim_dist.txt"
     header = "# Disturbances for this local copy of the system (edit freely).\n"
     path.write_text(header + "\n".join(r.strip() for r in rows) + "\n")
 

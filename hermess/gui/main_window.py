@@ -389,12 +389,9 @@ class MainWindow(QMainWindow):
         self._update_title()
 
     def _inside_shipped(self, folder: Path) -> bool:
-        try:
-            return Path(folder).resolve().is_relative_to(
-                hermess.SYSTEMS_DIR.resolve()
-            )
-        except (OSError, ValueError):
-            return False
+        # One definition for the whole package: the same check protects the
+        # scripting helpers and SystemDocument.save.
+        return hermess._is_shipped(folder)
 
     def _save_system(self, save_as: bool = False) -> bool:
         """Save the edited system; returns True when it was written."""
@@ -464,6 +461,10 @@ class MainWindow(QMainWindow):
         the shipped default that makes it run out of the box. Explicit by
         design: reclassifying the network model is never done silently."""
         if str(folder) in self._shunt_prompt_declined:
+            return
+        # The save above already refuses the shipped systems; never write a
+        # settings file into the package either.
+        if self._inside_shipped(folder):
             return
         try:
             defaults = hermess._system_defaults(folder.name, folder.parent)

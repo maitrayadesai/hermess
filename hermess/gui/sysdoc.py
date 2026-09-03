@@ -35,6 +35,7 @@ import copy
 import datetime
 from pathlib import Path
 
+import hermess
 from hermess.gui.sysparse import Entry, SystemDescription, parse_system
 
 # Values of these keys are strings in the file grammar and must be quoted on
@@ -267,8 +268,13 @@ class SystemDocument:
         return self._header("sim_dist.txt") + body + ("\n" if body else "")
 
     def save(self, folder: "str | Path") -> Path:
-        """Write the system files into ``folder`` (created if needed)."""
-        folder = Path(folder)
+        """Write the system files into ``folder`` (created if needed).
+
+        The systems shipped with the package are read-only: a ``folder``
+        inside ``hermess.SYSTEMS_DIR`` raises a ``PermissionError`` before
+        anything is written.
+        """
+        folder = hermess._assert_not_shipped(folder, "save a system into")
         folder.mkdir(parents=True, exist_ok=True)
         (folder / "sim_param.txt").write_text(self.sim_param_text())
         (folder / "sim_dist.txt").write_text(self.sim_dist_text())

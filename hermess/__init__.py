@@ -58,6 +58,35 @@ __all__ = [
 SYSTEMS_DIR = Path(__file__).parent / "systems"
 
 
+def _is_shipped(path) -> bool:
+    """True when ``path`` lies inside the systems shipped with the package."""
+    try:
+        return Path(path).expanduser().resolve().is_relative_to(SYSTEMS_DIR.resolve())
+    except (OSError, ValueError):
+        return False
+
+
+def _assert_not_shipped(path, what: str = "write to") -> Path:
+    """Refuse a write into the systems shipped with the package.
+
+    Every helper that writes system files (:func:`hermess.analysis.set_param`,
+    :func:`hermess.analysis.set_disturbances`,
+    :func:`hermess.analysis.copy_system`, the GUI's save) calls this first,
+    so the installed package can never be edited by accident. Returns the
+    expanded path; raises :class:`PermissionError` when it resolves to a
+    location under :data:`SYSTEMS_DIR`.
+    """
+    path = Path(path).expanduser()
+    if _is_shipped(path):
+        raise PermissionError(
+            f"Refusing to {what} {path}: it is inside the systems shipped with "
+            f"the package ({SYSTEMS_DIR}). Work on a copy instead: "
+            "hermess.analysis.copy_system(name, dest) makes one, and the "
+            "returned path is the system_root to simulate from."
+        )
+    return path
+
+
 def __getattr__(name: str) -> Any:
     # Lazy re-exports of the results container, so `import hermess` does not
     # pull pandas until results are actually extracted.

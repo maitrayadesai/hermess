@@ -22,6 +22,8 @@ through the API produces a system the simulator actually runs."""
 
 import numpy as np
 
+import pytest
+
 import hermess
 from hermess.gui import param_meta, sysparse, validation
 from hermess.gui.sysdoc import LINE_DEFAULTS, SystemDocument
@@ -162,6 +164,21 @@ def test_serializer_round_trip(tmp_path):
     ):
         assert after.params == before.params  # values round-trip verbatim
     assert not doc.dirty
+
+
+def test_save_refuses_the_shipped_systems():
+    """SystemDocument.save is guarded on its own, not only through the window."""
+    folder = hermess.SYSTEMS_DIR / "3bus"
+    before = {p.name: p.read_bytes() for p in folder.iterdir() if p.is_file()}
+    doc = SystemDocument.load(hermess.SYSTEMS_DIR / "3bus_loadstep")
+    doc.add_bus()
+    with pytest.raises(PermissionError, match="copy_system"):
+        doc.save(folder)
+    with pytest.raises(PermissionError):
+        doc.save(hermess.SYSTEMS_DIR / "brand_new")
+    assert not (hermess.SYSTEMS_DIR / "brand_new").exists()
+    assert {p.name: p.read_bytes() for p in folder.iterdir() if p.is_file()} == before
+    assert doc.dirty  # nothing was saved
 
 
 def test_serializer_quoting(tmp_path):

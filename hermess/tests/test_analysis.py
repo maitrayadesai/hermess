@@ -188,6 +188,35 @@ def test_copy_show_and_edit_system(tmp_path, capsys):
     assert "GFMI2" in shown and "©" not in shown and "Licensed under" not in shown
 
 
+def _shipped_files(name: str) -> dict:
+    folder = hermess.SYSTEMS_DIR / name
+    return {p.name: p.read_bytes() for p in folder.iterdir() if p.is_file()}
+
+
+def test_helpers_refuse_to_edit_the_shipped_systems():
+    """Nothing in hermess.analysis can write into the installed package."""
+    before = _shipped_files("3bus_loadstep")
+    row = 'Disturbance, time = 1.0, type = "LOAD", bus = "2", p_delta = 99'
+
+    with pytest.raises(PermissionError, match="copy_system"):
+        an.set_param(hermess.SYSTEMS_DIR, "3bus_loadstep", "GFMI2", Kp=99.0)
+    with pytest.raises(PermissionError):
+        an.set_disturbances(hermess.SYSTEMS_DIR, "3bus_loadstep", [row])
+    with pytest.raises(PermissionError):
+        an.copy_system("3bus_loadstep", dest=hermess.SYSTEMS_DIR)
+    with pytest.raises(PermissionError):
+        an.copy_system("3bus_loadstep", dest=hermess.SYSTEMS_DIR, overwrite=True)
+    # A path that only resolves into the package (relative parts, a string)
+    # is caught the same way.
+    with pytest.raises(PermissionError):
+        an.set_param(str(hermess.SYSTEMS_DIR / "3bus" / ".."), "3bus_loadstep", "GFMI2", Kp=99.0)
+    with pytest.raises(PermissionError):
+        an.copy_system("3bus_loadstep", dest=hermess.SYSTEMS_DIR / "sea14gen", overwrite=True)
+
+    assert (hermess.SYSTEMS_DIR / "3bus_loadstep").is_dir()
+    assert _shipped_files("3bus_loadstep") == before
+
+
 def test_quiet_run_is_silent(capfd):
     hermess.simulate("3bus_loadstep", T_end=0.1, ts=0.01, quiet=True)
     captured = capfd.readouterr()

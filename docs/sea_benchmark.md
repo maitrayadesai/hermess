@@ -19,7 +19,9 @@ hermess/systems/sea14gen/
   case1/ ...       # generated system files
 ```
 
-Build and validate (case 1..6):
+Build and validate (case 1..6). The scripts are repo-only developer tools,
+excluded from the wheel: they write the case folders next to themselves, so run
+them from a source checkout, never against an installed package.
 
 ```
 python hermess/systems/sea14gen/build_sea_system.py 1
