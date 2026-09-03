@@ -4,6 +4,31 @@ Notable changes to HERMESS. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/) as spelled out in `RELEASING.md`.
 
+## [1.7.1] - 2026-09-03
+
+### Changed
+- The systems shipped with the package are read-only for every helper
+  that writes system files. `hermess.analysis.set_param`,
+  `set_disturbances` and `copy_system` (also with `overwrite=True`, before
+  any deletion) and the GUI's `SystemDocument.save` raise a
+  `PermissionError` pointing to `copy_system` when the target resolves to
+  a folder under `hermess.SYSTEMS_DIR`; the GUI's post-save
+  `sim_settings.txt` offer skips such folders. The SEA benchmark generator
+  scripts (`hermess/systems/sea14gen/*.py`), which write their case folders
+  next to themselves, are no longer packaged in the wheel.
+
+### Fixed
+- `DaeSim.eigenvalue_analysis` (and so `hermess.analysis.small_signal`,
+  `modal_table`, `participation_table`, `state_matrix` and `plot_modes`)
+  called after a run with a disturbance linearized the post-disturbance
+  equations at the pre-disturbance operating point, which is not an
+  equilibrium of them: the modes moved and a spurious real eigenvalue near
+  zero appeared with an "operating point seems unstable" log. The run now
+  snapshots the initial equation build at the initial operating point
+  before the stepping, and the analysis always uses it, so a post-run
+  analysis equals the pre-run one (`small_signal_analysis=True`) and the
+  disturbance-free run of the same system. Trajectories are unchanged.
+
 ## [1.7.0] - 2026-09-01
 
 All of this release grew out of one first-time Windows test drive by an

@@ -1,6 +1,6 @@
 [project]
 name = "hermess"
-version = "1.7.0"
+version = "1.7.1"
 description = "Hybrid EMT/RMS Modern Electric power System Simulator"
 readme = "README.md"
 license = "GPL-3.0-or-later"
