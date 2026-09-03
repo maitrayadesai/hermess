@@ -316,11 +316,13 @@ class Grid:
                 gtemp = complex(g[faulted_line])
                 btemp = complex(b[faulted_line])
 
-                zt = complex(rtemp, xtemp)
+                # Written as r + jx rather than complex(r, x): the entries may
+                # already be complex, which complex() rejects from Python 3.14.
+                zt = rtemp + 1j * xtemp
                 yt = self.line_fault_adm[faulted_line]
 
                 zp = zt * (1 + zt * yt / 4)
-                yp = zt * yt / zp + complex(gtemp, btemp)
+                yp = zt * yt / zp + (gtemp + 1j * btemp)
 
                 r[faulted_line] = zp.real
                 x[faulted_line] = zp.imag
@@ -3709,8 +3711,7 @@ class DaeSim(Dae):
 
         vmax = max(float(pf.max()), 1e-9)
         pf_masked = np.ma.masked_less(pf, min_participation)
-        cmap = matplotlib.colormaps["viridis"].copy()
-        cmap.set_bad("#ECECEC")
+        cmap = matplotlib.colormaps["viridis"].with_extremes(bad="#ECECEC")
 
         def mode_label(m):
             if m["is_complex"]:

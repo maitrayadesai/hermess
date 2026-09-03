@@ -4,6 +4,15 @@ Notable changes to HERMESS. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/) as spelled out in `RELEASING.md`.
 
+## [Unreleased]
+
+### Fixed
+- Python 3.14 compatibility: the faulted-line admittance no longer passes
+  complex values to `complex()` (deprecated in 3.14, an error later), the
+  participation heatmap uses `Colormap.with_extremes` instead of the
+  deprecated `set_bad`, and the CLI tests keep argparse help uncolored.
+  Results are unchanged.
+
 ## [1.7.1] - 2026-09-03
 
 ### Changed

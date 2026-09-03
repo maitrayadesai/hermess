@@ -28,6 +28,9 @@ Two safeguards keep the suite headless:
    built-in pop-up figures, so the fixture re-forces the non-interactive Agg
    backend before every test. (Importing the package leaves the backend alone;
    see ``test_public_api.test_import_does_not_hijack_the_matplotlib_backend``.)
+
+The fixture also closes every figure a test left open, so the plotting tests
+do not accumulate figures (and matplotlib's "more than 20 figures" warning).
 """
 
 import os
@@ -46,3 +49,6 @@ def _headless_no_blocking_plots():
     matplotlib.use("Agg", force=True)
     config.small_signal_analysis = False
     yield
+    import matplotlib.pyplot as plt
+
+    plt.close("all")
